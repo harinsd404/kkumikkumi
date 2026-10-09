@@ -1,0 +1,10 @@
+packages:
+  - apps/*
+  - packages/*
+
+# pnpm 11: 빌드 스크립트는 allowBuilds에서 true인 패키지만 실행된다.
+allowBuilds:
+  # electron 바이너리 다운로드
+  electron: true
+  # postinstall은 바이너리 확인용. 실행은 플랫폼 패키지(@esbuild/darwin-*)가 담당한다.
+  esbuild: false
