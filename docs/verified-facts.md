@@ -37,3 +37,10 @@
 | `will-navigate`/`will-redirect`의 url 인자 | 두 번째 인자 `url`은 `@deprecated`. `details.url`(Event params)을 사용한다                                                                                                                                                                          | `electron.d.ts`                                                                                               | 44.7.0     | 2026-10-10 |
 | sandbox preload와 ESM                      | "Sandboxed preload scripts are run as plain JavaScript without an ESM context." 따라서 sandbox: true면 preload는 CJS로 번들해야 한다. sandbox preload의 `require`는 `electron`(contextBridge, ipcRenderer 등), `events`, `timers`, `url`만 가능하다 | https://www.electronjs.org/docs/latest/tutorial/esm , https://www.electronjs.org/docs/latest/tutorial/sandbox | 44.7.0     | 2026-10-10 |
 | CSP와 Vite dev                             | `script-src 'self'`로 dev 페이지 로드와 React 렌더 중 CSP 위반은 없었다. 단, dev 서버가 끊기면 Vite 클라이언트의 재연결 blob worker가 CSP에 막힌다(dev 전용이라 허용하지 않음)                                                                      | `ELECTRON_ENABLE_LOGGING=1` 실측                                                                              | vite 7.3.7 | 2026-10-10 |
+
+## zod
+
+| 항목                                               | 결론                                                                                                    | 출처                                                           | 버전  | 확인일     |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | ----- | ---------- |
+| `z.strictObject`                                   | 미지의 키가 있으면 오류(`z.object`는 제거, `z.looseObject`는 통과). 가져오기 입력의 미지 키 거부에 사용 | https://zod.dev/api?id=objects , `zod/v4/classic/schemas.d.ts` | 4.6.5 | 2026-10-12 |
+| `superRefine` + `ctx.addIssue({ code: 'custom' })` | 여러 이슈를 한 번에 추가할 수 있고 deprecated 아님(`.check()`는 저수준 대안)                            | https://zod.dev/api                                            | 4.6.5 | 2026-10-12 |

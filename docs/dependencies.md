@@ -14,3 +14,4 @@
 | vitest 5.0.3                                                                     | 루트 (dev)    | 단위 테스트, vite 설정 공유                           | jest                                     |
 | eslint 10, typescript-eslint 8, @eslint/js, globals, eslint-plugin-react-hooks 7 | 루트 (dev)    | 최소 린트 + 렌더러/스키마의 electron import 금지 규칙 | biome                                    |
 | prettier 3.9.9                                                                   | 루트 (dev)    | 포맷                                                  | biome                                    |
+| zod 4.6.5                                                                        | schema        | 스키마 단일 출처(CLAUDE.md), 시드가 zod 4 문법        | valibot(시드 재작성 필요)                |

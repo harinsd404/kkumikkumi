@@ -41,7 +41,7 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
 ## 가정 (미확정, 변경 가능)
 
 - 창 비율 전역 고정(16:10).
-- 크기표와 그리드: S=1x1, M=2x1, L=2x2, 8x5. 허용 크기는 packages/schema의 ALLOWED_SIZES 초안.
+- 크기표와 그리드(디자인 캔버스 기준, 2026-10-12 시드 반영): 8x5 그리드(1칸 200px), S=2x1, M=2x2, L=4x3. 허용 크기: calendar M/L, todo S/M/L, timer S/M, image S/M/L. 단일 출처는 packages/schema의 SIZE_CELLS/ALLOWED_SIZES.
 - 이미지 블록/스티커 업로드는 PNG/JPG/WebP 허용, 펫 이미지는 PNG만.
 - 펫 이동 방식(작은 창 이동 vs 하단 오버레이)은 M0 스파이크 결과로 결정.
 
@@ -104,17 +104,14 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
 
 ## 마일스톤
 
-- [ ] **P0 골격 + 스키마 패키지**
+- 순서 변경(2026-10-12, 사용자 지시): 펫(M0 스파이크, M5 통합)은 데스크탑 보드 구현(M1~M4) 이후로 미룬다. 진행 순서는 아래 나열 순서를 따른다.
+
+- [x] **P0 골격 + 스키마 패키지**
   - pnpm 워크스페이스: apps/desktop(@kkumikkumi/desktop), packages/schema(@kkumikkumi/schema) (spikes/는 워크스페이스 밖).
   - apps/desktop: electron-vite 기반 Electron + React + TS strict. 문제가 있으면 대안(electron-forge + vite 등)을 근거와 함께 제시하고 결정을 기다린다.
   - 보안 기본값 적용, ESLint/Prettier(최소), Vitest. 루트 스크립트: dev, build, typecheck, lint, test.
-  - \_seed/theme.ts, userdata.ts를 packages/schema/src로 옮겨 export. \_seed/validate.seed.ts의 케이스를 Vitest로 포팅(스케치 레이아웃, 겹침, calendar S 금지, 범위 초과, 없는 에셋 참조, 펫 PNG 아님, 미지의 키 거부, 캔버스 밖 아이템, 중복 에셋/ID, 기본 펫, 타이머/일정/규칙 제약). 끝나면 \_seed/ 삭제.
+  - (완료) \_seed/theme.ts, userdata.ts를 packages/schema/src로 옮겨 export. \_seed/validate.seed.ts의 케이스를 Vitest로 포팅(스케치 레이아웃, 겹침, calendar S 금지, 범위 초과, 없는 에셋 참조, 펫 PNG 아님, 미지의 키 거부, 캔버스 밖 아이템, 중복 에셋/ID, 기본 펫, 타이머/일정/규칙 제약). 끝나면 \_seed/ 삭제.
   - 그리드 판정 순수 함수(canPlace, findFreeSlot)를 schema 패키지에서 export하고 테스트.
-
-- [ ] **M0 펫 프로토타입(스파이크)** — 코드 품질이 아니라 "되는가"를 검증. 수동 확인이 끝나기 전에는 체크하지 않는다.
-  - spikes/pet-proto/ 에 독립 Electron 프로젝트. 키 내용/키 코드는 읽지도 로깅하지도 않는다.
-  - 검증: (1) 투명+frameless+항상 위 창에 PNG 표시, 작은 창 setBounds 이동과 FPS/프레임 간격 로그 (2) 클릭 통과 + 펫 위에서만 드래그 (3) 풀스크린/다른 Space/다중 모니터 표시와 Dock 부작용 (4) 타이핑 감지 후보 비교: powerMonitor.getSystemIdleTime(기준선) → CoreGraphics 호출(koffi) → Swift CLI 헬퍼, 전역 훅은 최후 수단 (5) on/off 시 창/폴링/자식 프로세스 완전 종료 (6) app.getAppMetrics()로 idle/걷기 CPU와 메모리 기록 (7) 이동 방식 A(작은 창 이동)와 C(하단 얇은 오버레이)를 스위치로 비교.
-  - 산출물: docs/spikes/pet-results.md(항목 / 방법 / 자동 결과 / 수동 확인 필요 / 판정 / 비고), 수동 체크리스트, 이동 방식과 감지 방식 추천.
 
 - [ ] **M1 저장소, 에셋, IPC**
   - SQLite(better-sqlite3 우선 검토, 문제 시 대안 비교). main에서만 연다. PRAGMA user_version 마이그레이션 러너 + 테스트. 테이블: todo_lists, todo_items, calendar_events, timer_state, theme_rules, settings. 리포지토리(DB 핸들 주입) + zod 검증 + in-memory 테스트.
@@ -143,6 +140,11 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
   - 캘린더: 월/주 보기, weekStartsOn, 시각/종일 일정 CRUD, 타임존/DST 테스트, 마감일 있는 투두를 읽기 전용으로 표시. 날짜 라이브러리는 번들 크기와 함께 비교해 선택. 반복 일정 없음.
   - 타이머: idle → running → paused 상태 머신, endsAt 기반 순수 계산, pausedRemainingMs, 절전 복귀(powerMonitor resume)와 앱 재시작 복원(종료 시각이 지났으면 즉시 완료), 완료 알림(권한 거부 시 앱 내 표시), 프리셋, display(digital/ring), 상태 변경을 main 이벤트 버스로 발행(focus + running = 집중 모드).
   - 블록 UI는 S/M/L마다 레이아웃이 다르다. 사용자 데이터는 테마와 독립. 시간 로직은 fake timers 테스트.
+
+- [ ] **M0 펫 프로토타입(스파이크)** — 코드 품질이 아니라 "되는가"를 검증. 수동 확인이 끝나기 전에는 체크하지 않는다.
+  - spikes/pet-proto/ 에 독립 Electron 프로젝트. 키 내용/키 코드는 읽지도 로깅하지도 않는다.
+  - 검증: (1) 투명+frameless+항상 위 창에 PNG 표시, 작은 창 setBounds 이동과 FPS/프레임 간격 로그 (2) 클릭 통과 + 펫 위에서만 드래그 (3) 풀스크린/다른 Space/다중 모니터 표시와 Dock 부작용 (4) 타이핑 감지 후보 비교: powerMonitor.getSystemIdleTime(기준선) → CoreGraphics 호출(koffi) → Swift CLI 헬퍼, 전역 훅은 최후 수단 (5) on/off 시 창/폴링/자식 프로세스 완전 종료 (6) app.getAppMetrics()로 idle/걷기 CPU와 메모리 기록 (7) 이동 방식 A(작은 창 이동)와 C(하단 얇은 오버레이)를 스위치로 비교.
+  - 산출물: docs/spikes/pet-results.md(항목 / 방법 / 자동 결과 / 수동 확인 필요 / 판정 / 비고), 수동 체크리스트, 이동 방식과 감지 방식 추천.
 
 - [ ] **M5 펫 통합** — M0 결론을 따른다. 모호하면 구현 전에 질문.
   - PlatformAdapter(getKeyboardIdleSeconds, getMusicState 스텁, 오버레이 창 헬퍼). macOS만 구현.
