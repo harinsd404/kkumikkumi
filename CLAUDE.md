@@ -22,7 +22,8 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
   - 이미지 블록: 그리드 image 블록과 자유 image 아이템이 같은 ImageContent 구조를 공유.
 - 리사이즈: 고정 논리 캔버스(1600x1000, 8x5 그리드)를 균일 스케일로 그리고 창 비율을 잠근다. 반응형 재배치 없음.
 - 데이터: 로컬 전용(계정/서버/동기화 없음). 모든 엔티티에 UUID, schemaVersion, updatedAt. outbox/tombstone/deviceId는 만들지 않는다.
-- 저장: 사용자 데이터는 SQLite, 테마는 폴더(theme.json + assets/<hash>.<ext>).
+- 저장: 사용자 데이터는 SQLite(node:sqlite, 2026-10-12 결정 — better-sqlite3는 Electron 44 prebuild 없음), 테마는 폴더(theme.json + assets/<hash>.<ext>).
+- 에셋: sharp로 재인코딩. 저장 포맷은 PNG/JPEG로 정규화(WebP는 투명이면 PNG, 아니면 JPEG), 펫은 PNG만. 긴 변 상한 image 3200px / pet 512px.
 - 캘린더: 내부 일정만. 시각 일정은 startUtc/endUtc + tzid, 종일 일정은 날짜 문자열. 반복 일정은 MVP 제외(recurrence: null 예약).
 - 타이머: setInterval 카운트다운 금지. endsAt 타임스탬프로 남은 시간 계산. 절전 복귀/앱 재시작 후 복원.
 - 폰트: 번들 폰트 목록에서만 선택. 테마에는 fontId만 저장, 없는 ID는 기본 폰트로 대체. OFL 계열만 번들, 라이선스 확인 후 docs/fonts.md에 기록.
@@ -113,7 +114,7 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
   - (완료) \_seed/theme.ts, userdata.ts를 packages/schema/src로 옮겨 export. \_seed/validate.seed.ts의 케이스를 Vitest로 포팅(스케치 레이아웃, 겹침, calendar S 금지, 범위 초과, 없는 에셋 참조, 펫 PNG 아님, 미지의 키 거부, 캔버스 밖 아이템, 중복 에셋/ID, 기본 펫, 타이머/일정/규칙 제약). 끝나면 \_seed/ 삭제.
   - 그리드 판정 순수 함수(canPlace, findFreeSlot)를 schema 패키지에서 export하고 테스트.
 
-- [ ] **M1 저장소, 에셋, IPC**
+- [x] **M1 저장소, 에셋, IPC**
   - SQLite(better-sqlite3 우선 검토, 문제 시 대안 비교). main에서만 연다. PRAGMA user_version 마이그레이션 러너 + 테스트. 테이블: todo_lists, todo_items, calendar_events, timer_state, theme_rules, settings. 리포지토리(DB 핸들 주입) + zod 검증 + in-memory 테스트.
   - 테마 저장소: userData/themes/<id>/theme.json + assets/. 원자적 저장(임시 파일 후 rename), 복제, 삭제, 고아 에셋 prune, 읽기 시 검증(실패해도 파일은 건드리지 않음), 스키마 마이그레이션 훅. 첫 실행 시 스케치 레이아웃 기본 테마 생성.
   - 에셋 파이프라인(main): PNG/JPG/WebP(펫은 PNG만), LIMITS 적용, 디코딩 → 축소 → 재인코딩 → sha256(재인코딩 바이트) → assets/<hash>.<ext>. nativeImage vs sharp 비교 후 선택. PNG 알파 유무 판별 함수(경고용). 손상/확장자 위조/과대 해상도 테스트.

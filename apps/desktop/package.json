@@ -8,12 +8,15 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.web.json"
+    "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.web.json",
+    "test:electron": "ELECTRON_RUN_AS_NODE=1 electron ../../node_modules/vitest/vitest.mjs run src/main"
   },
   "dependencies": {
     "@kkumikkumi/schema": "workspace:*",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "sharp": "0.35.5",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@types/node": "^24.19.1",

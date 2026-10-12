@@ -6,7 +6,7 @@ import { EpochMs, HexColor, Uuid } from './theme'
  * 저장소: SQLite 권장. 아래는 행 단위 검증 + 타입 용도.
  * ════════════════════════════════════════════════════════════ */
 
-const DateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/) // 로컬 날짜 (타임존 무관)
+export const DateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/) // 로컬 날짜 (타임존 무관)
 const TimeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)
 
 const isValidTz = (tz: string) => {

@@ -1,6 +1,4 @@
-export interface KkumiApi {
-  readonly platform: string
-}
+import type { KkumiApi } from '../shared/api'
 
 declare global {
   interface Window {
