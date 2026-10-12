@@ -13,11 +13,22 @@ export interface EditTools {
   status: SaveStatus
 }
 
+/** 보드 창 안에서 보여 줄 화면 */
+export type AppPage = 'board' | 'todo' | 'calendar' | 'timer'
+
+export interface PageNav {
+  current: AppPage
+  /** 지금 갈 수 있는 화면(구현된 세부 페이지만) */
+  pages: readonly { id: AppPage; label: string }[]
+  onNavigate(page: AppPage): void
+}
+
 interface Props {
   themeName: string | null
   editing: boolean
   onToggleEdit(): void
   tools?: EditTools
+  nav?: PageNav
 }
 
 const BLOCK_MENU = [
@@ -51,10 +62,26 @@ const statusText = (s: SaveStatus): string => {
 }
 
 /** 앱이 그리는 타이틀바(시안 3:1080). 신호등 버튼은 시스템 것(hiddenInset). 테마 전환 드롭다운은 M6. */
-export function TitleBar({ themeName, editing, onToggleEdit, tools }: Props) {
+export function TitleBar({ themeName, editing, onToggleEdit, tools, nav }: Props) {
   return (
     <header className={`app-titlebar ${editing ? 'is-editing' : ''}`}>
       <div className="tb-left">
+        {!editing && nav && (
+          <div className="tb-tabs" role="tablist" aria-label="화면">
+            {nav.pages.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                role="tab"
+                className="tb-tab"
+                aria-selected={nav.current === p.id}
+                onClick={() => nav.onNavigate(p.id)}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        )}
         {editing && tools && (
           <>
             <Menu label="+ 블록">
@@ -127,14 +154,16 @@ export function TitleBar({ themeName, editing, onToggleEdit, tools }: Props) {
             {statusText(tools.status)}
           </span>
         )}
-        <button
-          type="button"
-          className="tb-btn tb-primary"
-          onClick={onToggleEdit}
-          aria-pressed={editing}
-        >
-          {editing ? '완료' : '편집'}
-        </button>
+        {(!nav || nav.current === 'board') && (
+          <button
+            type="button"
+            className="tb-btn tb-primary"
+            onClick={onToggleEdit}
+            aria-pressed={editing}
+          >
+            {editing ? '완료' : '편집'}
+          </button>
+        )}
       </div>
     </header>
   )

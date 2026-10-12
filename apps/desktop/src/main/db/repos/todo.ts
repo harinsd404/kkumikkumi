@@ -19,6 +19,7 @@ const toItem = (r: Row): TodoItem =>
     done: bool(r['done']!),
     completedAt: r['completed_at'],
     dueDate: r['due_date'],
+    note: r['note'],
     order: r['ord'],
     createdAt: r['created_at'],
     updatedAt: r['updated_at'],
@@ -113,8 +114,8 @@ export class TodoRepo {
     const i = TodoItemSchema.parse(item)
     this.db
       .prepare(
-        `INSERT INTO todo_items (id, list_id, title, done, completed_at, due_date, ord, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO todo_items (id, list_id, title, done, completed_at, due_date, note, ord, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         i.id,
@@ -123,6 +124,7 @@ export class TodoRepo {
         int(i.done),
         i.completedAt,
         i.dueDate,
+        i.note,
         i.order,
         i.createdAt,
         i.updatedAt,
@@ -134,10 +136,20 @@ export class TodoRepo {
     const i = TodoItemSchema.parse(item)
     const { changes } = this.db
       .prepare(
-        `UPDATE todo_items SET list_id = ?, title = ?, done = ?, completed_at = ?, due_date = ?, ord = ?, updated_at = ?
+        `UPDATE todo_items SET list_id = ?, title = ?, done = ?, completed_at = ?, due_date = ?, note = ?, ord = ?, updated_at = ?
          WHERE id = ?`,
       )
-      .run(i.listId, i.title, int(i.done), i.completedAt, i.dueDate, i.order, i.updatedAt, i.id)
+      .run(
+        i.listId,
+        i.title,
+        int(i.done),
+        i.completedAt,
+        i.dueDate,
+        i.note,
+        i.order,
+        i.updatedAt,
+        i.id,
+      )
     if (changes === 0) throw new NotFoundError('todo_item')
     return i
   }

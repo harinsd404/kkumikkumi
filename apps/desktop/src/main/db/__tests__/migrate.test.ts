@@ -25,6 +25,19 @@ describe('migrate', () => {
     ])
   })
 
+  it('002: v1 DB의 기존 할 일은 빈 메모로 남는다', () => {
+    const db = openDb(':memory:')
+    migrate(db, migrations.slice(0, 1))
+    db.exec(`INSERT INTO todo_lists VALUES ('l', '목록', 0, 1, 1)`)
+    db.exec(`INSERT INTO todo_items (id, list_id, title, done, completed_at, due_date, ord, created_at, updated_at)
+             VALUES ('i', 'l', '할 일', 0, NULL, NULL, 0, 1, 1)`)
+    expect(migrate(db, migrations)).toEqual({ from: 1, to: migrations.length })
+    expect(db.prepare('SELECT title, note FROM todo_items').get()).toEqual({
+      title: '할 일',
+      note: '',
+    })
+  })
+
   it('두 번 실행해도 아무것도 하지 않는다', () => {
     const db = openDb(':memory:')
     migrate(db, migrations)

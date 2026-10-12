@@ -507,7 +507,7 @@ body {
   margin: 0;
   padding: 8px 18px;
   border-radius: 999px;
-  background: var(--d-control);
+  background: var(--t-control);
   font-size: 15px;
   font-weight: 700;
 }
@@ -521,13 +521,13 @@ body {
 .dlg-field > span {
   font-size: 13px;
   font-weight: 600;
-  color: var(--d-sub);
+  color: var(--t-sub);
 }
 .dlg-field input,
 .dlg-field textarea {
   padding: 4px 2px;
   border: 0;
-  border-bottom: 1.5px solid var(--d-sub);
+  border-bottom: 1.5px solid var(--t-sub);
   border-radius: 0;
   background: transparent;
   color: inherit;
@@ -538,7 +538,7 @@ body {
 }
 .dlg-field input:focus,
 .dlg-field textarea:focus {
-  border-bottom-color: var(--d-accent);
+  border-bottom-color: var(--t-accent);
 }
 .dlg-row {
   display: flex;
@@ -560,10 +560,10 @@ body {
   background: #dbdddf;
 }
 .dlg-check input:checked + .dlg-box {
-  background: var(--d-check);
+  background: var(--t-check);
 }
 .dlg-check input:focus-visible + .dlg-box {
-  outline: 2px solid var(--d-accent);
+  outline: 2px solid var(--t-accent);
   outline-offset: 2px;
 }
 .dlg-box img {
@@ -587,7 +587,7 @@ body {
   cursor: pointer;
 }
 .dlg-swatch[aria-checked='true'] {
-  box-shadow: 0 0 0 2px var(--d-text);
+  box-shadow: 0 0 0 2px var(--t-text);
 }
 .dlg-error {
   margin: 0;
@@ -606,14 +606,14 @@ body {
   padding: 8px 18px;
   border: 0;
   border-radius: 999px;
-  background: var(--d-control);
+  background: var(--t-control);
   color: inherit;
   font: inherit;
   font-weight: 600;
   cursor: pointer;
 }
 .dlg-actions .is-primary {
-  background: var(--d-accent);
+  background: var(--t-accent);
 }
 .dlg-actions .is-danger {
   background: transparent;
@@ -624,7 +624,7 @@ body {
   cursor: default;
 }
 .dlg button:focus-visible {
-  outline: 2px solid var(--d-accent);
+  outline: 2px solid var(--t-accent);
   outline-offset: 2px;
 }
 .sr-only {
@@ -695,4 +695,39 @@ form.ki-row {
 }
 .ki-buttons .is-danger {
   color: #c0392b;
+}
+
+/* ── 화면 전환 탭(타이틀바 왼쪽) / 세부 페이지 영역 ── */
+.tb-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: #fbf3e2;
+}
+.tb-tab {
+  height: 22px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #85705f;
+  font:
+    600 12px 'Pretendard',
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+}
+.tb-tab[aria-selected='true'] {
+  background: #ffffff;
+  color: #4a3a36;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
+}
+.tb-tab:focus-visible {
+  outline: 2px solid #4f86c6;
+  outline-offset: 1px;
+}
+.app-page {
+  position: absolute;
+  inset: 0;
 }

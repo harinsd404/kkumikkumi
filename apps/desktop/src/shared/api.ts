@@ -65,7 +65,13 @@ export interface IpcSpec {
   'todo.items.update': {
     in: {
       id: string
-      patch: { title?: string; done?: boolean; dueDate?: string | null; listId?: string }
+      patch: {
+        title?: string
+        done?: boolean
+        dueDate?: string | null
+        note?: string
+        listId?: string
+      }
     }
     out: TodoItem
   }

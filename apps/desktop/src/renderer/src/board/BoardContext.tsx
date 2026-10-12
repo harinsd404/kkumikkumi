@@ -21,7 +21,16 @@ export interface BoardData {
   version?: number
 }
 
-export type TodoPatch = { title?: string; done?: boolean; dueDate?: string | null }
+export type TodoPatch = {
+  title?: string
+  done?: boolean
+  dueDate?: string | null
+  note?: string
+  listId?: string
+}
+
+/** 세부 페이지가 있는 블록 타입 */
+export type PageType = 'todo' | 'calendar' | 'timer'
 
 /**
  * 블록이 사용자 데이터를 바꾸는 통로. 앱이 IPC로 구현해 주입한다(보드는 electron에 의존하지 않음).
@@ -43,6 +52,8 @@ export interface BoardActions {
   timer: {
     command(c: TimerCommand): void
   }
+  /** 블록의 세부 페이지 열기(사용 모드에서 블록 오른쪽 위 버튼). 없는 타입은 버튼을 그리지 않는다. */
+  pages?: Partial<Record<PageType, () => void>>
 }
 
 export interface BoardContextValue {

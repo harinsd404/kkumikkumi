@@ -240,6 +240,7 @@ export function createHandlers(d: HandlerDeps): Handlers {
         done: false,
         completedAt: null,
         dueDate: dueDate ?? null,
+        note: '',
         order: repos.todo.nextItemOrder(list.id),
         createdAt: now,
         updatedAt: now,
@@ -253,6 +254,7 @@ export function createHandlers(d: HandlerDeps): Handlers {
             title: TodoItemSchema.shape.title.optional(),
             done: z.boolean().optional(),
             dueDate: DateStr.nullable().optional(),
+            note: TodoItemSchema.shape.note.optional(),
             listId: Uuid.optional(),
           }),
         })
@@ -267,6 +269,7 @@ export function createHandlers(d: HandlerDeps): Handlers {
         ...cur,
         title: patch.title ?? cur.title,
         dueDate: patch.dueDate === undefined ? cur.dueDate : patch.dueDate,
+        note: patch.note ?? cur.note,
         listId: patch.listId ?? cur.listId,
         order: movedList ? repos.todo.nextItemOrder(patch.listId!) : cur.order,
         done,

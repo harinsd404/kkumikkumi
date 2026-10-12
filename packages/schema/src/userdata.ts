@@ -35,6 +35,7 @@ export const TodoItemSchema = z.strictObject({
   done: z.boolean(),
   completedAt: EpochMs.nullable(),
   dueDate: DateStr.nullable(), // 캘린더 표시용 (시각 없는 날짜)
+  note: z.string().max(2000),
   order: z.number().int(),
   createdAt: EpochMs,
   updatedAt: EpochMs,

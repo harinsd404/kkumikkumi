@@ -1,7 +1,6 @@
 import { blockRect, type Asset, type Theme } from '@kkumikkumi/schema'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Board } from '../board/Board'
-import { fontStack } from '../board/fonts'
 import { blockBox } from '../board/layout'
 import { EditorOverlay } from '../editor/EditorOverlay'
 import { Inspector } from '../editor/Inspector'
@@ -11,8 +10,16 @@ import { keyToCommand } from '../editor/state/shortcuts'
 import { useEditor, type EditorApi } from '../editor/useEditor'
 import { makeAssetUrl } from './assetUrl'
 import { EventDialog } from './EventDialog'
-import { TitleBar } from './TitleBar'
+import { TodoPage } from '../pages/TodoPage'
+import { themeVars } from './themeVars'
+import { TitleBar, type AppPage, type PageNav } from './TitleBar'
 import { useUserData } from './useUserData'
+
+/** 구현된 화면(세부 페이지는 단계별로 추가) */
+const PAGES: PageNav['pages'] = [
+  { id: 'board', label: '보드' },
+  { id: 'todo', label: '할 일' },
+]
 
 const ASSET_ERRORS: Record<string, string> = {
   unsupported_format: 'PNG, JPG, WebP 이미지만 넣을 수 있어요',
@@ -38,7 +45,13 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
   const user = useUserData(ed.showNotice)
   const now = useMinuteClock()
   const [editing, setEditing] = useState(false)
+  const [page, setPage] = useState<AppPage>('board')
   const theme = ed.theme
+  // 블록의 "크게 보기" 버튼이 세부 페이지로 보낸다
+  const boardActions = useMemo(
+    () => ({ ...user.actions, pages: { todo: () => setPage('todo') } }),
+    [user.actions],
+  )
   const assetUrl = useMemo(() => makeAssetUrl(theme), [theme])
 
   // 창을 닫을 때 남은 변경 저장
@@ -149,6 +162,7 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
         themeName={theme.name}
         editing={editing}
         onToggleEdit={() => (editing ? void exitEdit() : setEditing(true))}
+        nav={{ current: page, pages: PAGES, onNavigate: setPage }}
         tools={{
           onAddBlock: (type, size) => {
             const id = crypto.randomUUID()
@@ -167,42 +181,49 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
         }}
       />
       <main className="app-board">
-        <Board
-          theme={theme}
-          assetUrl={assetUrl}
-          data={user.data}
-          actions={user.actions}
-          now={now}
-          mode={editing ? 'edit' : 'use'}
-          overlay={
-            editing
-              ? (scale) => (
-                  <EditorOverlay
-                    ed={ed}
-                    scale={scale}
-                    onDropFile={async (file, at) => {
-                      const bytes = new Uint8Array(await file.arrayBuffer())
-                      const r = await importAsset({ bytes })
-                      if (!r) return
-                      // 이미지 블록 위에 놓으면 그 블록의 이미지로(블록마다 따로)
-                      const target = imageBlockAt(ed.theme, at)
-                      if (target) {
-                        ed.dispatch({
-                          type: 'block/props',
-                          id: target.id,
-                          patch: { assetHash: r.asset.hash },
-                        })
-                        ed.select({ kind: 'block', id: target.id })
-                        return
-                      }
-                      // 투명 영역이 있으면 스티커(잘리지 않게), 아니면 이미지
-                      addDecor(r.hasTransparency ? 'sticker' : 'image', r.asset, at)
-                    }}
-                  />
-                )
-              : undefined
-          }
-        />
+        {page === 'todo' && (
+          <div className="app-page" style={themeVars(theme)}>
+            <TodoPage todos={user.data.todos} actions={user.actions} lists={user.lists} now={now} />
+          </div>
+        )}
+        {page === 'board' && (
+          <Board
+            theme={theme}
+            assetUrl={assetUrl}
+            data={user.data}
+            actions={boardActions}
+            now={now}
+            mode={editing ? 'edit' : 'use'}
+            overlay={
+              editing
+                ? (scale) => (
+                    <EditorOverlay
+                      ed={ed}
+                      scale={scale}
+                      onDropFile={async (file, at) => {
+                        const bytes = new Uint8Array(await file.arrayBuffer())
+                        const r = await importAsset({ bytes })
+                        if (!r) return
+                        // 이미지 블록 위에 놓으면 그 블록의 이미지로(블록마다 따로)
+                        const target = imageBlockAt(ed.theme, at)
+                        if (target) {
+                          ed.dispatch({
+                            type: 'block/props',
+                            id: target.id,
+                            patch: { assetHash: r.asset.hash },
+                          })
+                          ed.select({ kind: 'block', id: target.id })
+                          return
+                        }
+                        // 투명 영역이 있으면 스티커(잘리지 않게), 아니면 이미지
+                        addDecor(r.hasTransparency ? 'sticker' : 'image', r.asset, at)
+                      }}
+                    />
+                  )
+                : undefined
+            }
+          />
+        )}
         {editing && (
           <Inspector
             ed={ed}
@@ -215,8 +236,7 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
         {user.editing && !editing && (
           <EventDialog
             target={user.editing}
-            palette={theme.defaults.palette}
-            fontFamily={fontStack(theme.defaults.fontId)}
+            theme={theme}
             onCreate={user.events.create}
             onUpdate={user.events.update}
             onDelete={user.events.remove}

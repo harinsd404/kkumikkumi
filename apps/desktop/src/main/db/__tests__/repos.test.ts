@@ -36,6 +36,7 @@ const item = (n: number, listId: string, o: Partial<TodoItem> = {}): TodoItem =>
   done: false,
   completedAt: null,
   dueDate: null,
+  note: '',
   order: n,
   createdAt: n,
   updatedAt: n,

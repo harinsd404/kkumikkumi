@@ -1,5 +1,5 @@
-import type { CalendarEvent, Palette } from '@kkumikkumi/schema'
-import { useEffect, useId, useRef, useState, type CSSProperties } from 'react'
+import type { CalendarEvent, Theme } from '@kkumikkumi/schema'
+import { useEffect, useId, useRef, useState } from 'react'
 import checkUrl from '../board/icons/check.svg'
 import {
   eventToForm,
@@ -8,24 +8,12 @@ import {
   type EventForm,
   type EventInput,
 } from '../board/calendar'
-
-/** 보드와 같은 팔레트/폰트를 CSS 변수로 넘긴다 */
-const dialogVars = (p: Palette, fontFamily: string) =>
-  ({
-    fontFamily,
-    color: p.text,
-    '--d-sub': p.subText,
-    '--d-accent': p.accent,
-    '--d-check': p.check,
-    '--d-control': p.control,
-    '--d-text': p.text,
-  }) as CSSProperties
+import { themeVars } from './themeVars'
 
 interface Props {
   target: { date: string } | { event: CalendarEvent }
-  palette: Palette
-  /** 테마 기본 폰트(CSS font-family) */
-  fontFamily: string
+  /** 팔레트/폰트를 보드와 맞춘다 */
+  theme: Theme
   onCreate(e: EventInput): Promise<boolean>
   onUpdate(id: string, e: EventInput): Promise<boolean>
   onDelete(id: string): Promise<boolean>
@@ -33,16 +21,9 @@ interface Props {
 }
 
 /** 일정 추가/수정 창. 보드 축소와 상관없이 읽기 쉬운 크기로 앱 레이어에 띄운다. */
-export function EventDialog({
-  target,
-  palette,
-  fontFamily,
-  onCreate,
-  onUpdate,
-  onDelete,
-  onClose,
-}: Props) {
+export function EventDialog({ target, theme, onCreate, onUpdate, onDelete, onClose }: Props) {
   const existing = 'event' in target ? target.event : null
+  const palette = theme.defaults.palette
   const colors = [
     palette.accent,
     palette.check,
@@ -102,7 +83,7 @@ export function EventDialog({
     <div className="dlg-backdrop" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
       <form
         className="dlg"
-        style={dialogVars(palette, fontFamily)}
+        style={themeVars(theme)}
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${id}-t`}
