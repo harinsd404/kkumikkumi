@@ -1,5 +1,7 @@
 # 폰트 라이선스 검토
 
+현재 번들: Pretendard(400/500/600/700, 각 약 770KB), 갈무리11(400/700, 505KB + 167KB). 합계 약 3.8MB. 라이선스 원문(`pretendard/dist/LICENSE.txt`, `galmuri/ofl.md`)을 폰트와 함께 빌드 산출물에 포함한다(`apps/desktop/src/renderer/src/board/fonts.ts`).
+
 번들 조건은 CLAUDE.md "확정 결정사항 > 폰트"를 따른다. 테마 파일에는 폰트 파일이 아니라 fontId만 들어가므로 테마 공유는 폰트 재배포가 아니다.
 이 문서는 법률 자문이 아니다. 배포(M8) 전에 각 출처를 다시 확인한다.
 

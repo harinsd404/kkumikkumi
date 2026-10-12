@@ -17,22 +17,35 @@ export const CANVAS = { width: 1600, height: 1000, cols: 8, rows: 5 } as const
 export const CELL = { w: CANVAS.width / CANVAS.cols, h: CANVAS.height / CANVAS.rows } as const // 200x200
 
 /**
- * S/M/L → 그리드 셀 크기 (디자인 캔버스 기준으로 확정)
- * 논리 크기: S=400x200, M=400x400, L=800x600 (1칸 200px, 8x5 그리드)
+ * 블록 타입별 크기표 (2026-10-12 디자인 시안 기준). 크기 이름은 타입마다 셀 수가 다르다.
+ * 1칸 = 200x200 논리 px, 8x5 그리드. W(배너)는 image 전용.
+ * - calendar: M=2x2(주간용), L=4x3
+ * - todo:     S=2x2, M=2x3, L=4x3
+ * - timer:    S=2x1, M=2x2
+ * - image:    S=2x1, M=2x2, L=4x3, W=8x1
  */
-export const SIZE_CELLS = {
-  S: { w: 2, h: 1 },
-  M: { w: 2, h: 2 },
-  L: { w: 4, h: 3 },
-} as const
+export const BLOCK_SIZES = {
+  calendar: { M: { w: 2, h: 2 }, L: { w: 4, h: 3 } },
+  todo: { S: { w: 2, h: 2 }, M: { w: 2, h: 3 }, L: { w: 4, h: 3 } },
+  timer: { S: { w: 2, h: 1 }, M: { w: 2, h: 2 } },
+  image: { S: { w: 2, h: 1 }, M: { w: 2, h: 2 }, L: { w: 4, h: 3 }, W: { w: 8, h: 1 } },
+} as const satisfies Record<
+  string,
+  Partial<Record<'S' | 'M' | 'L' | 'W', { w: number; h: number }>>
+>
 
-/** 블록 타입별 허용 크기 */
-export const ALLOWED_SIZES = {
-  calendar: ['M', 'L'],
-  todo: ['S', 'M', 'L'],
-  timer: ['S', 'M'],
-  image: ['S', 'M', 'L'],
-} as const
+export type BlockType = keyof typeof BLOCK_SIZES
+
+/** 블록 타입별 허용 크기 (BLOCK_SIZES에서 파생) */
+export const ALLOWED_SIZES = Object.fromEntries(
+  Object.entries(BLOCK_SIZES).map(([type, sizes]) => [type, Object.keys(sizes)]),
+) as unknown as { readonly [T in BlockType]: readonly (keyof (typeof BLOCK_SIZES)[T])[] }
+
+/** (타입, 크기) → 셀 수. 허용되지 않는 조합이면 null */
+export function blockCells(type: BlockType, size: string): { w: number; h: number } | null {
+  const table: Partial<Record<string, { w: number; h: number }>> = BLOCK_SIZES[type]
+  return table[size] ?? null
+}
 
 export const LIMITS = {
   maxBlocks: 40,
@@ -63,7 +76,7 @@ const decorShape = {
   radius: z.number().min(0).max(64),
   border: z.strictObject({
     width: z.number().min(0).max(16),
-    color: HexColor,
+    color: HexColor.nullable(), // null = 테마 팔레트 accent
   }),
   shadow: z.enum(['none', 'soft', 'medium', 'strong']),
 }
@@ -76,7 +89,7 @@ export const StyleSchema = z.strictObject({
   ...decorShape,
   bg: HexColor.nullable(), // null = 투명
   fontId: FontId.nullable(), // null = 테마 기본
-  textColor: HexColor.nullable(), // null = 테마 기본
+  textColor: HexColor.nullable(), // null = 테마 팔레트 text
 })
 
 /* ───────── 이미지 콘텐츠 (그리드 image 블록 / 자유 image 아이템 공용) ───────── */
@@ -94,7 +107,7 @@ export const ImageContentSchema = z.strictObject({
 
 /* ───────── 그리드 블록 ───────── */
 
-const SizeSchema = z.enum(['S', 'M', 'L'])
+const SizeSchema = z.enum(['S', 'M', 'L', 'W'])
 
 const blockBase = {
   id: Uuid,
@@ -200,8 +213,14 @@ export const AssetSchema = z.strictObject({
   bytes: z.number().int().min(1).max(LIMITS.maxAssetBytes),
 })
 
+/** 내장 배경 무늬 (앱에 들어 있는 SVG를 마스크로 그리고 color로 칠한다. 테마 파일에는 id만 저장) */
+export const PatternSchema = z.strictObject({
+  id: z.enum(['stars', 'dots']),
+  color: HexColor,
+})
+
 export const BackgroundSchema = z.discriminatedUnion('type', [
-  z.strictObject({ type: z.literal('color'), color: HexColor }),
+  z.strictObject({ type: z.literal('color'), color: HexColor, pattern: PatternSchema.nullable() }),
   z.strictObject({
     type: z.literal('image'),
     assetHash: Sha256,
@@ -209,16 +228,30 @@ export const BackgroundSchema = z.discriminatedUnion('type', [
   }),
 ])
 
-/** 블록이 차지하는 그리드 사각형 (SIZE_CELLS 기준) */
+/**
+ * 테마 팔레트. 블록 내부 요소의 색은 여기서 온다(블록 style은 덮어쓰기용).
+ * text: 제목 / subText: 요일·날짜·보조 글자 / accent: 강조 테두리 / check: 체크된 체크박스
+ * surface: 날짜 칸 등 안쪽 면 / control: 원형 버튼 배경
+ */
+export const PaletteSchema = z.strictObject({
+  text: HexColor,
+  subText: HexColor,
+  accent: HexColor,
+  check: HexColor,
+  surface: HexColor,
+  control: HexColor,
+})
+
+/** 블록이 차지하는 그리드 사각형. 타입에 허용되지 않는 크기면 null */
 export const blockRect = (b: {
+  type: BlockType
   col: number
   row: number
-  size: keyof typeof SIZE_CELLS
-}): GridRect => ({
-  col: b.col,
-  row: b.row,
-  ...SIZE_CELLS[b.size],
-})
+  size: string
+}): GridRect | null => {
+  const cells = blockCells(b.type, b.size)
+  return cells ? { col: b.col, row: b.row, ...cells } : null
+}
 
 /* ───────── 테마 ───────── */
 
@@ -235,7 +268,7 @@ const ThemeBase = z.strictObject({
     cols: z.literal(CANVAS.cols),
     rows: z.literal(CANVAS.rows),
   }),
-  defaults: z.strictObject({ fontId: FontId, textColor: HexColor }),
+  defaults: z.strictObject({ fontId: FontId, palette: PaletteSchema }),
   background: BackgroundSchema,
   blocks: z.array(BlockSchema).max(LIMITS.maxBlocks),
   freeItems: z.array(FreeItemSchema).max(LIMITS.maxFreeItems),
@@ -250,10 +283,11 @@ export const ThemeSchema = ThemeBase.superRefine((t, ctx) => {
   /* 1) 그리드: 허용 크기 / 범위 / 겹침 (판정은 grid.ts와 공유) */
   const placed: GridRect[] = []
   t.blocks.forEach((b, i) => {
-    if (!(ALLOWED_SIZES[b.type] as readonly string[]).includes(b.size)) {
-      issue(['blocks', i, 'size'], `${b.type} 블록은 ${b.size} 크기를 쓸 수 없음`)
-    }
     const rect = blockRect(b)
+    if (!rect) {
+      issue(['blocks', i, 'size'], `${b.type} 블록은 ${b.size} 크기를 쓸 수 없음`)
+      return
+    }
     if (!isInsideGrid(CANVAS, rect)) {
       issue(['blocks', i], '그리드 범위를 벗어남')
       return
@@ -320,5 +354,7 @@ export type FreeItem = z.infer<typeof FreeItemSchema>
 export type Pet = z.infer<typeof PetSchema>
 export type Asset = z.infer<typeof AssetSchema>
 export type BlockSize = z.infer<typeof SizeSchema>
+export type Palette = z.infer<typeof PaletteSchema>
+export type Pattern = z.infer<typeof PatternSchema>
 
 export const parseTheme = (raw: unknown) => ThemeSchema.safeParse(raw)

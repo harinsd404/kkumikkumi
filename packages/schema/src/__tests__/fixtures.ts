@@ -11,7 +11,7 @@ type ThemeInput = z.input<typeof ThemeSchema>
 const style = {
   opacity: 1,
   radius: 16,
-  border: { width: 0, color: '#000000' },
+  border: { width: 0, color: null },
   shadow: 'soft',
   bg: '#ffffff',
   fontId: null,
@@ -30,7 +30,6 @@ const content = {
   shape: 'rect',
 } as const
 
-// 디자인 캔버스의 보드 레이아웃: 캘린더 L(좌상), 이미지 M, 투두 M, 타이머 S, 이미지 S. 아래 2줄은 자유 배치 영역
 const designTheme: ThemeInput = {
   schemaVersion: 1,
   id: U(1),
@@ -38,25 +37,36 @@ const designTheme: ThemeInput = {
   createdAt: 0,
   updatedAt: 0,
   canvas: { ...CANVAS },
-  defaults: { fontId: 'pretendard', textColor: '#222222' },
-  background: { type: 'color', color: '#f5f5f5' },
+  defaults: {
+    fontId: 'pretendard',
+    palette: {
+      text: '#4a3a36',
+      subText: '#85705f',
+      accent: '#d9b48a',
+      check: '#f6ebb5',
+      surface: '#fff8e4',
+      control: '#fdefc9',
+    },
+  },
+  background: { type: 'color', color: '#fffae7', pattern: { id: 'dots', color: '#ded2be' } },
+  // 디자인 시안 레이아웃: 배너 W(8x1), 캘린더 L(4x3), 투두 M(2x3) + 오른쪽 열에 타이머 S, 이미지 S
   blocks: [
     {
       id: U(2),
       type: 'calendar',
       size: 'L',
       col: 0,
-      row: 0,
+      row: 1,
       style,
       props: { view: 'month', weekStartsOn: 0 },
     },
-    { id: U(3), type: 'image', size: 'M', col: 4, row: 0, style, props: content },
+    { id: U(3), type: 'image', size: 'W', col: 0, row: 0, style, props: content },
     {
       id: U(4),
       type: 'todo',
       size: 'M',
-      col: 6,
-      row: 0,
+      col: 4,
+      row: 1,
       style,
       props: { listId: null, showCompleted: false },
     },
@@ -64,8 +74,8 @@ const designTheme: ThemeInput = {
       id: U(7),
       type: 'timer',
       size: 'S',
-      col: 4,
-      row: 2,
+      col: 6,
+      row: 1,
       style,
       props: { presetsMin: [25, 5], display: 'ring' },
     },

@@ -156,13 +156,7 @@ export class ThemeStore {
     const t = createDefaultTheme(
       {
         theme: this.deps.newId(),
-        blocks: [
-          this.deps.newId(),
-          this.deps.newId(),
-          this.deps.newId(),
-          this.deps.newId(),
-          this.deps.newId(),
-        ],
+        blocks: [this.deps.newId(), this.deps.newId(), this.deps.newId()],
       },
       now,
       n,

@@ -138,6 +138,16 @@ export const SettingsSchema = z.strictObject({
   manualOverride: z.strictObject({ themeId: Uuid, until: EpochMs.nullable() }).nullable(),
 })
 
+/* ───────── 창 상태 (앱 상태: 테마/내보내기와 무관) ───────── */
+
+export const WindowStateSchema = z.strictObject({
+  x: z.number().int(),
+  y: z.number().int(),
+  width: z.number().int().min(1).max(20000),
+  height: z.number().int().min(1).max(20000),
+})
+
+export type WindowState = z.infer<typeof WindowStateSchema>
 export type TodoList = z.infer<typeof TodoListSchema>
 export type TodoItem = z.infer<typeof TodoItemSchema>
 export type CalendarEvent = z.infer<typeof CalendarEventSchema>

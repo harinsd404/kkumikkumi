@@ -24,7 +24,7 @@ describe('ThemeSchema', () => {
   describe('그리드', () => {
     it('블록 겹침 거부', () => {
       const t = baseTheme()
-      t.blocks[1].col = 1
+      t.blocks[0].col = 3 // 캘린더(4칸)가 투두(col 4)를 덮음
       expectBad(t, '겹침')
     })
     it('calendar S 금지', () => {
@@ -44,15 +44,19 @@ describe('ThemeSchema', () => {
     })
     it('타이머 M 허용', () => {
       const t = baseTheme()
-      t.blocks[3].size = 'M'
-      t.blocks[3].row = 3
-      t.blocks[4].col = 6
-      t.blocks[4].row = 4
+      t.blocks[3].size = 'M' // (6,1) 2x2
+      t.blocks[4].row = 3
       expectOk(t)
     })
     it('타이머 L 금지', () => {
       const t = baseTheme()
       t.blocks[3].size = 'L'
+      expectBad(t, '쓸 수 없음')
+    })
+
+    it('배너(W)는 image 전용', () => {
+      const t = baseTheme()
+      t.blocks[2].size = 'W'
       expectBad(t, '쓸 수 없음')
     })
   })
@@ -122,8 +126,34 @@ describe('ThemeSchema', () => {
 })
 
 describe('blockRect', () => {
-  it('SIZE_CELLS로 사각형을 만든다', () => {
-    expect(blockRect({ col: 1, row: 2, size: 'S' })).toEqual({ col: 1, row: 2, w: 2, h: 1 })
-    expect(blockRect({ col: 0, row: 0, size: 'L' })).toEqual({ col: 0, row: 0, w: 4, h: 3 })
+  it('타입별 크기표로 사각형을 만든다', () => {
+    expect(blockRect({ type: 'timer', col: 1, row: 2, size: 'S' })).toEqual({
+      col: 1,
+      row: 2,
+      w: 2,
+      h: 1,
+    })
+    expect(blockRect({ type: 'todo', col: 1, row: 2, size: 'S' })).toEqual({
+      col: 1,
+      row: 2,
+      w: 2,
+      h: 2,
+    })
+    expect(blockRect({ type: 'todo', col: 4, row: 1, size: 'M' })).toEqual({
+      col: 4,
+      row: 1,
+      w: 2,
+      h: 3,
+    })
+    expect(blockRect({ type: 'image', col: 0, row: 0, size: 'W' })).toEqual({
+      col: 0,
+      row: 0,
+      w: 8,
+      h: 1,
+    })
+  })
+  it('허용되지 않는 조합은 null', () => {
+    expect(blockRect({ type: 'calendar', col: 0, row: 0, size: 'S' })).toBeNull()
+    expect(blockRect({ type: 'todo', col: 0, row: 0, size: 'W' })).toBeNull()
   })
 })

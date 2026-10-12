@@ -1,0 +1,82 @@
+import { CANVAS, blockRect, type FreeItem, type Theme } from '@kkumikkumi/schema'
+import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { Background } from './Background'
+import {
+  BoardProvider,
+  type BoardContextValue,
+  type BoardData,
+  type BoardMode,
+} from './BoardContext'
+import { BlockView } from './BlockView'
+import { FreeItemView } from './FreeItemView'
+import { blockBox, fitScale } from './layout'
+import './board.css'
+
+export interface BoardProps {
+  theme: Theme
+  assetUrl(hash: string): string | null
+  data?: BoardData
+  mode?: BoardMode
+  now?: Date
+}
+
+const byZ = (a: FreeItem, b: FreeItem) => a.z - b.z
+
+/**
+ * 보드 렌더러(순수 React, electron 의존 없음).
+ * 1600x1000 논리 캔버스를 부모 크기에 맞춰 균일 스케일. 렌더 순서: 배경 → back 자유 아이템 → 그리드 블록 → front 자유 아이템.
+ */
+export function Board({ theme, assetUrl, data = {}, mode = 'use', now }: BoardProps) {
+  const hostRef = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState({ w: 0, h: 0 })
+
+  useLayoutEffect(() => {
+    const el = hostRef.current
+    if (!el) return
+    const ro = new ResizeObserver(([entry]) => {
+      if (entry) setSize({ w: entry.contentRect.width, h: entry.contentRect.height })
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  const ctx = useMemo<BoardContextValue>(
+    () => ({ mode, theme, assetUrl, data, now: now ?? new Date() }),
+    [mode, theme, assetUrl, data, now],
+  )
+
+  const { scale, offsetX, offsetY } = fitScale(size.w, size.h)
+  const canvasStyle: CSSProperties = {
+    width: CANVAS.width,
+    height: CANVAS.height,
+    transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
+  }
+  const back = theme.freeItems.filter((f) => f.layer === 'back').sort(byZ)
+  const front = theme.freeItems.filter((f) => f.layer === 'front').sort(byZ)
+
+  return (
+    <BoardProvider value={ctx}>
+      <div ref={hostRef} className="kb-host" data-mode={mode}>
+        <div className="kb-canvas" style={canvasStyle}>
+          <Background />
+          <div className="kb-layer">
+            {back.map((f) => (
+              <FreeItemView key={f.id} item={f} />
+            ))}
+          </div>
+          <div className="kb-layer">
+            {theme.blocks.map((b) => {
+              const rect = blockRect(b)
+              return rect ? <BlockView key={b.id} block={b} box={blockBox(rect)} /> : null
+            })}
+          </div>
+          <div className="kb-layer">
+            {front.map((f) => (
+              <FreeItemView key={f.id} item={f} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </BoardProvider>
+  )
+}

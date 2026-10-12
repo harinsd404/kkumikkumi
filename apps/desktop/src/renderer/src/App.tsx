@@ -1,28 +1,46 @@
-import { useEffect, useState } from 'react'
+import type { Theme } from '@kkumikkumi/schema'
+import { useEffect, useMemo, useState } from 'react'
+import { makeAssetUrl } from './app/assetUrl'
+import { TitleBar } from './app/TitleBar'
+import { Board } from './board/Board'
+import type { BoardData } from './board/BoardContext'
+import './app/app.css'
 
-// M1 연결 확인용 임시 화면. 보드 렌더러는 M2에서 만든다.
+type Load =
+  | { state: 'loading' }
+  | { state: 'error'; code: string }
+  | { state: 'ready'; theme: Theme; data: BoardData }
+
 export function App() {
-  const [status, setStatus] = useState('불러오는 중…')
+  const [load, setLoad] = useState<Load>({ state: 'loading' })
 
   useEffect(() => {
     void (async () => {
       const settings = await window.kkumi.invoke('settings.get')
-      if (!settings.ok) return setStatus(`설정 오류: ${settings.error.code}`)
+      if (!settings.ok) return setLoad({ state: 'error', code: settings.error.code })
       const theme = await window.kkumi.invoke('themes.get', { id: settings.value.activeThemeId })
-      if (!theme.ok) return setStatus(`테마 오류: ${theme.error.code}`)
+      if (!theme.ok) return setLoad({ state: 'error', code: theme.error.code })
       const todo = await window.kkumi.invoke('todo.items.list', { listId: null })
-      if (!todo.ok) return setStatus(`투두 오류: ${todo.error.code}`)
-      setStatus(
-        `활성 테마: ${theme.value.name} · 블록 ${theme.value.blocks.length}개 · 기본 목록: ${todo.value.list.name}`,
-      )
+      setLoad({ state: 'ready', theme: theme.value, data: todo.ok ? { todo: todo.value } : {} })
     })()
   }, [])
 
+  const assetUrl = useMemo(
+    () => (load.state === 'ready' ? makeAssetUrl(load.theme) : () => null),
+    [load],
+  )
+
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', padding: 24 }}>
-      <h1>꾸미꾸미</h1>
-      <p>platform: {window.kkumi.platform}</p>
-      <p data-testid="status">{status}</p>
-    </main>
+    <div className="app">
+      <TitleBar themeName={load.state === 'ready' ? load.theme.name : null} />
+      <main className="app-board">
+        {load.state === 'ready' && (
+          <Board theme={load.theme} assetUrl={assetUrl} data={load.data} />
+        )}
+        {load.state === 'error' && (
+          <p className="app-error">보드를 불러오지 못했어요 ({load.code})</p>
+        )}
+      </main>
+    </div>
   )
 }

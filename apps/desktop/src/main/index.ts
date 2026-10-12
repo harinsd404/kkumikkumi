@@ -1,19 +1,31 @@
 import { randomUUID } from 'node:crypto'
 import { readFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
-import { app, BrowserWindow, dialog, type WebContents } from 'electron'
+import { app, BrowserWindow, dialog, screen, type WebContents } from 'electron'
 import { APP_DISPLAY_NAME, APP_INTERNAL_NAME } from '../shared/identity'
 import { AssetError, DEFAULT_PIPELINE_OPTIONS } from './assets/pipeline'
+import { handleAssetProtocol, registerAssetScheme } from './assets/protocol'
 import { bootstrap, type AppCore } from './bootstrap'
+import { applyDevUserData, maybeCaptureAndQuit } from './devCapture'
 import { createHandlers } from './ipc/handlers'
 import { registerIpc } from './ipc/register'
 import { devServerUrl, isAppUrl, rendererIndexPath } from './security'
+import {
+  BOARD_RATIO,
+  fitWindowBounds,
+  MIN_BOARD_WIDTH,
+  TITLE_BAR_HEIGHT,
+  windowSizeForBoard,
+} from './window/geometry'
 
 // userData 폴더를 내부 식별자로 고정한다(패키지 이름이나 표시 이름에 의존하지 않도록). ready 전에 설정해야 한다.
 app.setName(APP_DISPLAY_NAME)
 app.setPath('userData', join(app.getPath('appData'), APP_INTERNAL_NAME))
+applyDevUserData()
 
 let core: AppCore | null = null
+
+registerAssetScheme()
 
 // DB와 테마 파일을 한 프로세스만 쓰도록 단일 인스턴스로 제한한다.
 const isPrimary = app.requestSingleInstanceLock()
@@ -40,11 +52,24 @@ function hardenWebContents(contents: WebContents): void {
 }
 
 function createBoardWindow(): BrowserWindow {
+  const saved = core?.repos.windowState.get() ?? null
+  const bounds = fitWindowBounds(
+    saved,
+    screen.getAllDisplays().map((d) => d.workArea),
+    screen.getPrimaryDisplay().workArea,
+  )
+  const min = windowSizeForBoard(MIN_BOARD_WIDTH)
   const win = new BrowserWindow({
-    width: 1200,
-    height: 750,
+    ...bounds,
+    minWidth: min.width,
+    minHeight: min.height,
+    useContentSize: true,
     show: false,
     title: APP_DISPLAY_NAME,
+    // 타이틀바는 앱이 그린다(보드 위 36px). 신호등 버튼은 시스템 것을 쓰고 위치만 맞춘다.
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 14, y: 12 },
+    backgroundColor: '#ffffff',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -54,7 +79,27 @@ function createBoardWindow(): BrowserWindow {
       webviewTag: false,
     },
   })
+  // extraSize: 콘텐츠 안쪽의 타이틀바 높이. 창-콘텐츠 크기 차이는 API가 이미 반영한다(electron.d.ts).
+  win.setAspectRatio(BOARD_RATIO, { width: 0, height: TITLE_BAR_HEIGHT })
   win.once('ready-to-show', () => win.show())
+  maybeCaptureAndQuit(win)
+
+  let saveTimer: NodeJS.Timeout | undefined
+  const saveBounds = () => {
+    if (win.isDestroyed() || win.isFullScreen() || win.isMinimized()) return
+    const b = win.getContentBounds()
+    core?.repos.windowState.save({ x: b.x, y: b.y, width: b.width, height: b.height })
+  }
+  const scheduleSave = () => {
+    clearTimeout(saveTimer)
+    saveTimer = setTimeout(saveBounds, 500)
+  }
+  win.on('resize', scheduleSave)
+  win.on('move', scheduleSave)
+  win.on('close', () => {
+    clearTimeout(saveTimer)
+    saveBounds()
+  })
 
   if (devServerUrl) {
     void win.loadURL(devServerUrl)
@@ -96,8 +141,8 @@ void app.whenReady().then(async () => {
       userDataDir: app.getPath('userData'),
       now: Date.now,
       newId: randomUUID,
-      defaultThemeName: '기본',
-      defaultListName: '할 일',
+      defaultThemeName: '푸딩 아침',
+      defaultListName: '오늘의 할 일',
     })
   } catch (err) {
     console.error(`[boot] ${err instanceof Error ? err.name : 'error'}`)
@@ -105,7 +150,16 @@ void app.whenReady().then(async () => {
     app.quit()
     return
   }
-  registerIpc(createHandlers({ ...core, now: Date.now, newId: randomUUID, pickImageFile }))
+  handleAssetProtocol(core.themes)
+  registerIpc(
+    createHandlers({
+      ...core,
+      now: Date.now,
+      newId: randomUUID,
+      pickImageFile,
+      defaultListName: '오늘의 할 일',
+    }),
+  )
 
   createBoardWindow()
   app.on('activate', () => {

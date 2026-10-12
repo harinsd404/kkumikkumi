@@ -66,7 +66,10 @@ describe('ThemeStore', () => {
   it('save: 검증 실패면 파일을 바꾸지 않는다', async () => {
     const t = await store.create('a')
     const before = await readFile(join(root, t.id, 'theme.json'), 'utf8')
-    const bad = { ...t, blocks: [{ ...t.blocks[0]!, size: 'S' as const }] }
+    const bad = {
+      ...t,
+      blocks: t.blocks.map((b) => (b.type === 'calendar' ? { ...b, size: 'S' as const } : b)),
+    }
     expect(await code(store.save(bad))).toBe('invalid_schema')
     expect(await readFile(join(root, t.id, 'theme.json'), 'utf8')).toBe(before)
   })

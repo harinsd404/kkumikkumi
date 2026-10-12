@@ -4,6 +4,7 @@ import { SettingsRepo } from './settings'
 import { ThemeRuleRepo } from './themeRules'
 import { TimerRepo } from './timer'
 import { TodoRepo } from './todo'
+import { WindowStateRepo } from './windowState'
 
 export interface Repos {
   todo: TodoRepo
@@ -11,6 +12,7 @@ export interface Repos {
   timer: TimerRepo
   themeRules: ThemeRuleRepo
   settings: SettingsRepo
+  windowState: WindowStateRepo
 }
 
 export const createRepos = (db: Db): Repos => ({
@@ -19,6 +21,7 @@ export const createRepos = (db: Db): Repos => ({
   timer: new TimerRepo(db),
   themeRules: new ThemeRuleRepo(db),
   settings: new SettingsRepo(db),
+  windowState: new WindowStateRepo(db),
 })
 
 export { NotFoundError } from './rows'

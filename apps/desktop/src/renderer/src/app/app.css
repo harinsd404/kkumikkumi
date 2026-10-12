@@ -1,0 +1,61 @@
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #ffffff;
+}
+body {
+  font-family: 'Pretendard', system-ui, sans-serif;
+  user-select: none;
+}
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+/* 시안: 높이 36, 흰 배경, 아래 1px #F1E2C8. main의 TITLE_BAR_HEIGHT와 같아야 한다. */
+.app-titlebar {
+  flex: none;
+  height: 36px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border-bottom: 1px solid #f1e2c8;
+  -webkit-app-region: drag;
+}
+.app-theme-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: #fdefc9;
+  color: #4a3a36;
+  font:
+    700 12px 'Pretendard',
+    system-ui,
+    sans-serif;
+  -webkit-app-region: no-drag;
+}
+.app-theme-pill:disabled {
+  cursor: default;
+}
+.app-theme-chevron {
+  width: 8.4px;
+  height: 4.9px;
+  margin: 0 3.5px;
+}
+.app-board {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.app-error {
+  margin: 24px;
+  color: #4a3a36;
+}

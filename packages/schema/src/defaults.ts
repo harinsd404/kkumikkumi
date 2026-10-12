@@ -1,91 +1,110 @@
-import { CANVAS, SCHEMA_VERSION, type Theme } from './theme'
+import { CANVAS, SCHEMA_VERSION, type Palette, type Pattern, type Theme } from './theme'
 
 type Style = Theme['blocks'][number]['style']
 
-const defaultStyle = (): Style => ({
+/** 디자인 시안의 흰 카드 (1280px 시안 값 × 1.25 = 논리 캔버스 값) */
+const cardStyle = (border: boolean): Style => ({
   opacity: 1,
-  radius: 16,
-  border: { width: 0, color: '#000000' },
-  shadow: 'soft',
+  radius: 25,
+  border: { width: border ? 2.5 : 0, color: null },
+  shadow: 'none',
   bg: '#ffffff',
   fontId: null,
   textColor: null,
 })
 
-const emptyImage = () =>
-  ({
-    assetHash: null,
-    fit: 'cover',
-    focus: { x: 0.5, y: 0.5, zoom: 1 },
-    shape: 'rect',
-  }) as const
+const bannerStyle = (): Style => ({ ...cardStyle(false), radius: 15, bg: null })
+
+export interface ThemePreset {
+  name: string
+  background: { color: string; pattern: Pattern }
+  palette: Palette
+}
+
+/** 디자인 시안의 두 테마 (Figma 3:1079 푸딩 아침, 6:2384 프리첼). 이미지 에셋은 포함하지 않는다. */
+export const THEME_PRESETS = {
+  pudding: {
+    name: '푸딩 아침',
+    background: { color: '#fffae7', pattern: { id: 'dots', color: '#ded2be' } },
+    palette: {
+      text: '#4a3a36',
+      subText: '#85705f',
+      accent: '#d9b48a',
+      check: '#f6ebb5',
+      surface: '#fff8e4',
+      control: '#fdefc9',
+    },
+  },
+  pretzel: {
+    name: '프리첼',
+    background: { color: '#daecf6', pattern: { id: 'stars', color: '#fffae7' } },
+    palette: {
+      text: '#806e7a',
+      subText: '#806e7a',
+      accent: '#f4c2df',
+      check: '#c4e0f0',
+      surface: '#f2fafc',
+      control: '#f2fafc',
+    },
+  },
+} as const satisfies Record<string, ThemePreset>
+
+export type ThemePresetId = keyof typeof THEME_PRESETS
 
 export interface DefaultThemeIds {
   theme: string
-  /** 블록 5개에 쓸 UUID (calendar, image M, todo, timer, image S 순) */
-  blocks: readonly [string, string, string, string, string]
+  /** 블록 3개에 쓸 UUID (배너 이미지, 캘린더, 투두 순) */
+  blocks: readonly [string, string, string]
 }
 
 /**
- * 첫 실행용 기본 테마(디자인 캔버스 레이아웃). 에셋 없이 동작하도록 이미지는 빈 플레이스홀더, 펫은 내장.
- * ID와 시각은 주입받아 순수 함수로 유지한다.
+ * 기본 테마(디자인 시안 레이아웃): 배너 이미지 W(8x1), 캘린더 L(4x3), 투두 M(2x3).
+ * 에셋 없이 동작하도록 이미지는 빈 플레이스홀더, 펫은 내장. ID와 시각은 주입받아 순수 함수로 유지한다.
  */
-export function createDefaultTheme(ids: DefaultThemeIds, now: number, name = '기본'): Theme {
-  const [cal, imgM, todo, timer, imgS] = ids.blocks
+export function createDefaultTheme(
+  ids: DefaultThemeIds,
+  now: number,
+  name?: string,
+  preset: ThemePresetId = 'pudding',
+): Theme {
+  const p = THEME_PRESETS[preset]
+  const [banner, cal, todo] = ids.blocks
   return {
     schemaVersion: SCHEMA_VERSION,
     id: ids.theme,
-    name,
+    name: name ?? p.name,
     createdAt: now,
     updatedAt: now,
     canvas: { ...CANVAS },
-    defaults: { fontId: 'pretendard', textColor: '#222222' },
-    background: { type: 'color', color: '#f5f5f5' },
+    defaults: { fontId: 'pretendard', palette: { ...p.palette } },
+    background: { type: 'color', color: p.background.color, pattern: { ...p.background.pattern } },
     blocks: [
+      {
+        id: banner,
+        type: 'image',
+        size: 'W',
+        col: 0,
+        row: 0,
+        style: bannerStyle(),
+        props: { assetHash: null, fit: 'cover', focus: { x: 0.5, y: 0.5, zoom: 1 }, shape: 'rect' },
+      },
       {
         id: cal,
         type: 'calendar',
         size: 'L',
         col: 0,
-        row: 0,
-        style: defaultStyle(),
+        row: 1,
+        style: cardStyle(true),
         props: { view: 'month', weekStartsOn: 0 },
-      },
-      {
-        id: imgM,
-        type: 'image',
-        size: 'M',
-        col: 4,
-        row: 0,
-        style: defaultStyle(),
-        props: emptyImage(),
       },
       {
         id: todo,
         type: 'todo',
         size: 'M',
-        col: 6,
-        row: 0,
-        style: defaultStyle(),
-        props: { listId: null, showCompleted: false },
-      },
-      {
-        id: timer,
-        type: 'timer',
-        size: 'S',
         col: 4,
-        row: 2,
-        style: defaultStyle(),
-        props: { presetsMin: [25, 5], display: 'ring' },
-      },
-      {
-        id: imgS,
-        type: 'image',
-        size: 'S',
-        col: 6,
-        row: 2,
-        style: defaultStyle(),
-        props: emptyImage(),
+        row: 1,
+        style: cardStyle(false),
+        props: { listId: null, showCompleted: true },
       },
     ],
     freeItems: [],

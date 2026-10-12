@@ -17,7 +17,9 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
 - 스택: Electron + React + TypeScript(strict), Vite 기반, pnpm 모노레포.
 - 보드는 일반 창이다(바탕화면 레벨 아님). 펫은 별도 창이다.
 - 레이아웃
-  - 그리드 블록: 크기는 S/M/L만, 퍼즐처럼 배치. 타입은 calendar, todo, timer, image.
+  - 그리드 블록: 크기는 S/M/L(+ image 전용 W 배너), 퍼즐처럼 배치. 타입은 calendar, todo, timer, image. 셀 수는 타입별 크기표(packages/schema BLOCK_SIZES, 2026-10-12 시안 기준).
+  - 디자인 시안: Figma 파일 mJL2BsO51Ir9l9z4wK1lDI (3:1079 푸딩 아침, 6:2384 프리첼). 시안 1280x800(+타이틀바 36) = 논리 캔버스 1600x1000의 0.8배. 블록 바깥 여백/간격 25(논리 px)는 렌더러에서만 적용.
+  - 테마 색은 defaults.palette(text, subText, accent, check, surface, control), 배경은 색 + 내장 무늬(stars/dots). 블록 style의 null 값은 팔레트로 대체.
   - 자유 배치 레이어: 스티커와 이미지. 위치/크기/회전/z-order, back/front 레이어.
   - 이미지 블록: 그리드 image 블록과 자유 image 아이템이 같은 ImageContent 구조를 공유.
 - 리사이즈: 고정 논리 캔버스(1600x1000, 8x5 그리드)를 균일 스케일로 그리고 창 비율을 잠근다. 반응형 재배치 없음.
@@ -42,7 +44,8 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
 ## 가정 (미확정, 변경 가능)
 
 - 창 비율 전역 고정(16:10).
-- 크기표와 그리드(디자인 캔버스 기준, 2026-10-12 시드 반영): 8x5 그리드(1칸 200px), S=2x1, M=2x2, L=4x3. 허용 크기: calendar M/L, todo S/M/L, timer S/M, image S/M/L. 단일 출처는 packages/schema의 SIZE_CELLS/ALLOWED_SIZES.
+- 크기표(2026-10-12 시안 반영): 8x5 그리드(1칸 200px). calendar M=2x2/L=4x3, todo S=2x2/M=2x3/L=4x3, timer S=2x1/M=2x2, image S=2x1/M=2x2/L=4x3/W=8x1. 단일 출처는 packages/schema의 BLOCK_SIZES.
+- 창: 앱이 그리는 타이틀바 36px(titleBarStyle hiddenInset) + 보드 16:10. setAspectRatio(16/10, { height: 36 }).
 - 이미지 블록/스티커 업로드는 PNG/JPG/WebP 허용, 펫 이미지는 PNG만.
 - 펫 이동 방식(작은 창 이동 vs 하단 오버레이)은 M0 스파이크 결과로 결정.
 
@@ -120,7 +123,7 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
   - 에셋 파이프라인(main): PNG/JPG/WebP(펫은 PNG만), LIMITS 적용, 디코딩 → 축소 → 재인코딩 → sha256(재인코딩 바이트) → assets/<hash>.<ext>. nativeImage vs sharp 비교 후 선택. PNG 알파 유무 판별 함수(경고용). 손상/확장자 위조/과대 해상도 테스트.
   - 타입 있는 IPC + main 재검증. themes, assets.import, settings, todo/calendar/timer CRUD.
 
-- [ ] **M2 보드 렌더러(읽기 전용)**
+- [x] **M2 보드 렌더러(읽기 전용)**
   - 순수 React. 논리 캔버스를 transform: scale로 균일 스케일. setAspectRatio로 창 비율 잠금(extraSize 고려), 최소 창 크기, 창 크기/위치 저장·복원.
   - 렌더 순서: 배경 → back 자유 아이템 → 그리드 블록 → front 자유 아이템(레이어 내 z 순서).
   - StyleSchema/DecorSchema → CSS 변환 함수(shadow 프리셋 매핑 등). 원시 CSS 문자열 경로 금지.

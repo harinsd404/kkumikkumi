@@ -1,0 +1,209 @@
+/* 보드 렌더러 정적 스타일. 값은 논리 캔버스 px(시안 1280px 값 × 1.25). 테마별 색은 인라인 스타일로 들어온다. */
+
+.kb-host {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.kb-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  overflow: hidden;
+  font-family: 'Pretendard', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.kb-canvas *,
+.kb-canvas *::before,
+.kb-canvas *::after {
+  box-sizing: border-box;
+}
+.kb-bg,
+.kb-layer {
+  position: absolute;
+  inset: 0;
+}
+.kb-layer {
+  pointer-events: none;
+}
+.kb-layer > * {
+  pointer-events: auto;
+}
+.kb-abs {
+  position: absolute;
+}
+.kb-fill {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.kb-missing {
+  outline: 2px dashed rgba(0, 0, 0, 0.25);
+}
+.kb-host img {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.kb-card {
+  overflow: hidden;
+}
+
+/* ── 캘린더 (Figma 6:2597) ── */
+.kc {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 25px;
+  gap: 15px;
+}
+.kc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.kc-title {
+  margin: 0;
+  font-size: 35px;
+  font-weight: 700;
+  line-height: normal;
+}
+.kc-navs {
+  display: flex;
+  gap: 10px;
+}
+.kc-nav {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+}
+.kc-chevron {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 12px;
+  transform: translate(-50%, -50%);
+}
+.kc-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+  margin-bottom: -5px;
+  font-size: 16.25px;
+  font-weight: 400;
+  text-align: center;
+}
+.kc-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+}
+.kc-cell {
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  overflow: hidden;
+}
+.kc--compact .kc-title {
+  font-size: 26px;
+}
+
+/* ── 투두 (Figma 15:2832) ── */
+.kt {
+  height: 100%;
+  padding: 25px;
+  overflow: hidden;
+}
+.kt-section {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+.kt-chip {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  background: #f2f2f2;
+  font-size: 15px;
+  font-weight: 600;
+}
+.kt-plus {
+  width: 25px;
+  height: 25px;
+}
+.kt-empty {
+  margin: 0;
+  font-size: 17.5px;
+}
+.kt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kt-item {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+}
+.kt-check {
+  position: relative;
+  flex: none;
+  width: 25px;
+  height: 25px;
+  border-radius: 5px;
+  background: #dbdddf;
+  border: 1.25px solid #dbdddf;
+}
+.kt-check.is-done {
+  border: 0;
+}
+.kt-check img {
+  position: absolute;
+  inset: 12.5%;
+  width: 75%;
+  height: 75%;
+}
+.kt-title {
+  font-size: 20px;
+  font-weight: 500;
+  color: #000000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── 타이머 ── */
+.ktm {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+.ktm-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.ktm-time {
+  position: relative;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
