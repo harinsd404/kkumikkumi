@@ -479,3 +479,169 @@ body {
   margin: 8px 0 0;
   color: #85705f;
 }
+
+/* ── 일정 입력 창 (앱 레이어, 보드 축소와 무관) ── */
+.dlg-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 0.25);
+}
+.dlg {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(380px, calc(100vw - 40px));
+  padding: 20px;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.2);
+  font-size: 14px;
+  color: #333333;
+}
+.dlg-title {
+  margin: 0;
+  font-size: 17px;
+}
+.dlg-field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+}
+.dlg-field > span {
+  font-size: 12px;
+  color: #777777;
+}
+.dlg-field input,
+.dlg-field textarea {
+  padding: 7px 9px;
+  border: 1px solid #dddddd;
+  border-radius: 8px;
+  font: inherit;
+  resize: vertical;
+}
+.dlg-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.dlg-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dlg-swatches {
+  display: flex;
+  gap: 8px;
+}
+.dlg-swatch {
+  width: 24px;
+  height: 24px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.1);
+  cursor: pointer;
+}
+.dlg-swatch[aria-checked='true'] {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 2px #333333;
+}
+.dlg-error {
+  margin: 0;
+  color: #c0392b;
+}
+.dlg-actions {
+  display: flex;
+  gap: 8px;
+}
+.dlg-spacer {
+  flex: 1;
+}
+.dlg-actions button {
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #f0f0f0;
+  font: inherit;
+  cursor: pointer;
+}
+.dlg-actions .is-primary {
+  background: #333333;
+  color: #ffffff;
+}
+.dlg-actions .is-danger {
+  color: #c0392b;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ── 타이머 완료 안내 (시스템 알림이 꺼져 있어도 항상 보인다) ── */
+.app-banner {
+  position: absolute;
+  z-index: 40;
+  top: 12px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 10px 18px;
+  border-radius: 999px;
+  background: #333333;
+  color: #ffffff;
+  font-size: 14px;
+  transform: translateX(-50%);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.2);
+}
+.app-banner button {
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #333333;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* ── 인스펙터: 투두 목록 / 타이머 프리셋 ── */
+.ki-text {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid #dddddd;
+  border-radius: 6px;
+  font: inherit;
+}
+.ki-small {
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: #f0f0f0;
+  font: inherit;
+  cursor: pointer;
+}
+.ki-row form,
+form.ki-row {
+  gap: 6px;
+}
+.ki-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.ki-presets .ki-num {
+  width: 56px;
+}
+.ki-buttons .is-danger {
+  color: #c0392b;
+}

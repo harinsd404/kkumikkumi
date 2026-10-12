@@ -1,7 +1,6 @@
 import { blockRect, type Asset, type Theme } from '@kkumikkumi/schema'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Board } from '../board/Board'
-import type { BoardData } from '../board/BoardContext'
 import { blockBox } from '../board/layout'
 import { EditorOverlay } from '../editor/EditorOverlay'
 import { Inspector } from '../editor/Inspector'
@@ -10,7 +9,9 @@ import { newFreeItem } from '../editor/state/reducer'
 import { keyToCommand } from '../editor/state/shortcuts'
 import { useEditor, type EditorApi } from '../editor/useEditor'
 import { makeAssetUrl } from './assetUrl'
+import { EventDialog } from './EventDialog'
 import { TitleBar } from './TitleBar'
+import { useUserData } from './useUserData'
 
 const ASSET_ERRORS: Record<string, string> = {
   unsupported_format: 'PNG, JPG, WebP 이미지만 넣을 수 있어요',
@@ -31,8 +32,10 @@ const isTextField = (el: EventTarget | null) =>
   el instanceof HTMLElement &&
   (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))
 
-export function BoardScreen({ initialTheme, data }: { initialTheme: Theme; data: BoardData }) {
+export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
   const ed = useEditor(initialTheme, { save: saveTheme })
+  const user = useUserData(ed.showNotice)
+  const now = useMinuteClock()
   const [editing, setEditing] = useState(false)
   const theme = ed.theme
   const assetUrl = useMemo(() => makeAssetUrl(theme), [theme])
@@ -166,7 +169,9 @@ export function BoardScreen({ initialTheme, data }: { initialTheme: Theme; data:
         <Board
           theme={theme}
           assetUrl={assetUrl}
-          data={data}
+          data={user.data}
+          actions={user.actions}
+          now={now}
           mode={editing ? 'edit' : 'use'}
           overlay={
             editing
@@ -203,7 +208,29 @@ export function BoardScreen({ initialTheme, data }: { initialTheme: Theme; data:
             pickImage={async () => (await importAsset({ dialog: true }))?.asset ?? null}
             onDuplicate={duplicate}
             onDelete={remove}
+            todoLists={user.lists}
           />
+        )}
+        {user.editing && !editing && (
+          <EventDialog
+            target={user.editing}
+            palette={theme.defaults.palette}
+            onCreate={user.events.create}
+            onUpdate={user.events.update}
+            onDelete={user.events.remove}
+            onClose={user.closeEditor}
+          />
+        )}
+        {user.timerDone && (
+          <div className="app-banner" role="alert">
+            <span>
+              {user.timerDone.mode === 'focus' ? '집중 시간이 끝났어요' : '쉬는 시간이 끝났어요'}
+              {user.timerDone.late && ' (앱이 꺼져 있는 동안)'}
+            </span>
+            <button type="button" onClick={user.dismissTimerDone}>
+              확인
+            </button>
+          </div>
         )}
         {ed.notice && (
           <div className="app-notice" role="status">
@@ -248,4 +275,24 @@ function imageBlockAt(t: Theme, at: Point) {
       return b
   }
   return null
+}
+
+/** 날짜 표시용 시계(분 단위). 자정이 지나면 캘린더/투두 섹션이 다음 날로 넘어간다. 카운트다운에는 쓰지 않는다. */
+function useMinuteClock(): Date {
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    let t: number
+    const tick = () => {
+      setNow(new Date())
+      t = window.setTimeout(tick, 60_000 - (Date.now() % 60_000) + 50)
+    }
+    t = window.setTimeout(tick, 60_000 - (Date.now() % 60_000) + 50)
+    const onFocus = () => setNow(new Date()) // 절전 복귀 후 바로 맞춘다
+    window.addEventListener('focus', onFocus)
+    return () => {
+      window.clearTimeout(t)
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [])
+  return now
 }

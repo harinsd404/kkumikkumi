@@ -2,13 +2,10 @@ import type { Theme } from '@kkumikkumi/schema'
 import { useEffect, useState } from 'react'
 import { BoardScreen } from './app/BoardScreen'
 import { TitleBar } from './app/TitleBar'
-import type { BoardData } from './board/BoardContext'
 import './app/app.css'
 
 type Load =
-  | { state: 'loading' }
-  | { state: 'error'; code: string }
-  | { state: 'ready'; theme: Theme; data: BoardData }
+  { state: 'loading' } | { state: 'error'; code: string } | { state: 'ready'; theme: Theme }
 
 export function App() {
   const [load, setLoad] = useState<Load>({ state: 'loading' })
@@ -19,8 +16,7 @@ export function App() {
       if (!settings.ok) return setLoad({ state: 'error', code: settings.error.code })
       const theme = await window.kkumi.invoke('themes.get', { id: settings.value.activeThemeId })
       if (!theme.ok) return setLoad({ state: 'error', code: theme.error.code })
-      const todo = await window.kkumi.invoke('todo.items.list', { listId: null })
-      setLoad({ state: 'ready', theme: theme.value, data: todo.ok ? { todo: todo.value } : {} })
+      setLoad({ state: 'ready', theme: theme.value })
     })()
   }, [])
 
@@ -37,5 +33,5 @@ export function App() {
     )
   }
   // 테마가 바뀌면(M6) 에디터 상태를 새로 만든다
-  return <BoardScreen key={load.theme.id} initialTheme={load.theme} data={load.data} />
+  return <BoardScreen key={load.theme.id} initialTheme={load.theme} />
 }

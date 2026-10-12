@@ -145,6 +145,9 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
   - 타이머: idle → running → paused 상태 머신, endsAt 기반 순수 계산, pausedRemainingMs, 절전 복귀(powerMonitor resume)와 앱 재시작 복원(종료 시각이 지났으면 즉시 완료), 완료 알림(권한 거부 시 앱 내 표시), 프리셋, display(digital/ring), 상태 변경을 main 이벤트 버스로 발행(focus + running = 집중 모드).
   - 블록 UI는 S/M/L마다 레이아웃이 다르다. 사용자 데이터는 테마와 독립. 시간 로직은 fake timers 테스트.
 
+- [ ] **기능별 세부 페이지 (2026-10-12 사용자 지시, 순서/범위 미정)**
+  - TODO, 캘린더, 타이머, 뽀모도로 각각의 세부 페이지. 뽀모도로를 타이머와 별개 기능으로 둘지 포함해 진행 전에 범위를 확인한다. M4 범위에는 포함하지 않는다.
+
 - [ ] **M0 펫 프로토타입(스파이크)** — 코드 품질이 아니라 "되는가"를 검증. 수동 확인이 끝나기 전에는 체크하지 않는다.
   - spikes/pet-proto/ 에 독립 Electron 프로젝트. 키 내용/키 코드는 읽지도 로깅하지도 않는다.
   - 검증: (1) 투명+frameless+항상 위 창에 PNG 표시, 작은 창 setBounds 이동과 FPS/프레임 간격 로그 (2) 클릭 통과 + 펫 위에서만 드래그 (3) 풀스크린/다른 Space/다중 모니터 표시와 Dock 부작용 (4) 타이핑 감지 후보 비교: powerMonitor.getSystemIdleTime(기준선) → CoreGraphics 호출(koffi) → Swift CLI 헬퍼, 전역 훅은 최후 수단 (5) on/off 시 창/폴링/자식 프로세스 완전 종료 (6) app.getAppMetrics()로 idle/걷기 CPU와 메모리 기록 (7) 이동 방식 A(작은 창 이동)와 C(하단 얇은 오버레이)를 스위치로 비교.

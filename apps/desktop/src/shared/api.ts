@@ -9,6 +9,7 @@ import type {
   TodoList,
 } from '@kkumikkumi/schema'
 import type { Channel } from './channels'
+import type { TimerCommand, TimerMode } from './timer'
 
 // renderer ↔ main 계약(타입만). 입력 검증 스키마는 main/ipc/handlers.ts에 있고 main이 항상 재검증한다.
 
@@ -79,8 +80,11 @@ export interface IpcSpec {
   'calendar.create': { in: { event: CalendarInput }; out: CalendarEvent }
   'calendar.update': { in: { event: CalendarInput & Id }; out: CalendarEvent }
   'calendar.delete': { in: Id; out: null }
-  'timer.get': { in: undefined; out: TimerState | null }
-  'timer.save': { in: { state: Omit<TimerState, 'updatedAt'> }; out: TimerState }
+  'timer.get': { in: undefined; out: TimerState }
+  /** 타이머 상태는 main이 소유한다. renderer는 명령만 보낸다. */
+  'timer.command': { in: TimerCommand; out: TimerState }
+  /** 창이 없을 때 끝난 타이머(앱 시작 시 늦은 완료 등). 한 번 꺼내면 비워진다. */
+  'timer.takeMissedDone': { in: undefined; out: TimerDoneInfo | null }
   'themeRules.list': { in: undefined; out: ThemeRule[] }
   'themeRules.create': {
     in: { rule: Omit<ThemeRule, 'id' | 'createdAt' | 'updatedAt'> }
@@ -98,6 +102,12 @@ type _Exhaustive = Channel extends keyof IpcSpec
   : never
 export const _ipcSpecIsExhaustive: _Exhaustive = true
 
+export interface TimerDoneInfo {
+  mode: TimerMode
+  /** 앱이 꺼져 있거나 잠든 사이에 끝남 */
+  late: boolean
+}
+
 export type IpcError = { code: string }
 export type IpcResult<T> = { ok: true; value: T } | { ok: false; error: IpcError }
 
@@ -107,6 +117,10 @@ export interface KkumiApi {
    * 창을 닫기 직전에 호출된다(저장 마무리용). cb가 끝나면(최대 약 1.5초) 창이 닫힌다. 마지막 등록만 유효.
    */
   onBeforeClose(cb: () => Promise<void> | void): void
+  /** main이 타이머 상태를 바꿀 때마다(완료 포함). 마지막 등록만 유효. */
+  onTimerChanged(cb: (s: TimerState) => void): void
+  /** 실행 중이던 타이머가 끝났을 때. 마지막 등록만 유효. */
+  onTimerDone(cb: (info: TimerDoneInfo) => void): void
   invoke<C extends Channel>(
     channel: C,
     ...args: IpcSpec[C]['in'] extends undefined ? [] : [input: IpcSpec[C]['in']]

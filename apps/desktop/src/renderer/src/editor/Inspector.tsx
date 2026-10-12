@@ -4,6 +4,7 @@ import {
   type FreeItem,
   type GridBlock,
   type Palette,
+  type TodoList,
 } from '@kkumikkumi/schema'
 import { useState } from 'react'
 import { FONTS } from '../board/fonts'
@@ -16,6 +17,15 @@ interface Props {
   pickImage(purpose: 'image'): Promise<{ hash: string } | null>
   onDuplicate(): void
   onDelete(): void
+  /** 투두 목록 관리(사용자 데이터). 없으면 목록 선택을 숨긴다. */
+  todoLists?: TodoListsApi | undefined
+}
+
+export interface TodoListsApi {
+  all: readonly TodoList[]
+  create(name: string): Promise<TodoList | null>
+  rename(id: string, name: string): Promise<boolean>
+  remove(id: string): Promise<boolean>
 }
 
 const TYPE_LABEL: Record<GridBlock['type'], string> = {
@@ -41,7 +51,7 @@ const PALETTE_LABEL: Record<keyof Palette, string> = {
 const fontOptions = Object.entries(FONTS).map(([id, f]) => ({ id, label: f.label }))
 const pct = (v: number) => `${Math.round(v * 100)}%`
 
-export function Inspector({ ed, pickImage, onDuplicate, onDelete }: Props) {
+export function Inspector({ ed, pickImage, onDuplicate, onDelete, todoLists }: Props) {
   const [open, setOpen] = useState(true)
   const t = ed.theme
   const palette = t.defaults.palette
@@ -179,7 +189,7 @@ export function Inspector({ ed, pickImage, onDuplicate, onDelete }: Props) {
                   onChange={(size) => ed.dispatch({ type: 'block/resize', id: block.id, size })}
                 />
               </Section>
-              <BlockProps ed={ed} block={block} pickImage={pickImage} />
+              <BlockProps ed={ed} block={block} pickImage={pickImage} todoLists={todoLists} />
               <Section title="스타일">
                 <ColorField
                   label="배경색"
@@ -502,10 +512,12 @@ function BlockProps({
   ed,
   block,
   pickImage,
+  todoLists,
 }: {
   ed: EditorApi
   block: GridBlock
   pickImage: Props['pickImage']
+  todoLists: Props['todoLists']
 }) {
   const set = (patch: Record<string, unknown>, key?: string) =>
     ed.dispatch(
@@ -525,11 +537,29 @@ function BlockProps({
             ]}
             onChange={(weekStartsOn) => set({ weekStartsOn })}
           />
+          {block.size === 'L' && (
+            <Segmented
+              label="보기"
+              value={block.props.view}
+              options={[
+                { value: 'month', label: '월' },
+                { value: 'week', label: '주' },
+              ]}
+              onChange={(view) => set({ view })}
+            />
+          )}
         </Section>
       )
     case 'todo':
       return (
         <Section title="투두">
+          {todoLists && (
+            <TodoListFields
+              lists={todoLists}
+              listId={block.props.listId}
+              onSelect={(listId) => set({ listId })}
+            />
+          )}
           <Row label="완료한 일 보기">
             <input
               type="checkbox"
@@ -550,6 +580,10 @@ function BlockProps({
               { value: 'ring', label: '링' },
             ]}
             onChange={(display) => set({ display })}
+          />
+          <PresetFields
+            presets={block.props.presetsMin}
+            onChange={(presetsMin) => set({ presetsMin })}
           />
         </Section>
       )
@@ -587,6 +621,157 @@ function Actions({ onDuplicate, onDelete }: { onDuplicate(): void; onDelete(): v
       <button type="button" className="is-danger" onClick={onDelete}>
         삭제 <kbd>⌫</kbd>
       </button>
+    </div>
+  )
+}
+
+/** 투두 블록이 보여 줄 목록 고르기 + 목록 추가/이름 변경/삭제 */
+function TodoListFields({
+  lists,
+  listId,
+  onSelect,
+}: {
+  lists: TodoListsApi
+  listId: string | null
+  onSelect(listId: string | null): void
+}) {
+  const current = lists.all.find((l) => l.id === listId) ?? null
+  const [newName, setNewName] = useState('')
+  const [rename, setRename] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const shown = current ?? lists.all[0] ?? null
+
+  return (
+    <>
+      <Row label="목록">
+        <select
+          className="ki-select"
+          value={current?.id ?? ''}
+          onChange={(e) => {
+            setConfirmDelete(false)
+            setRename(null)
+            onSelect(e.target.value || null)
+          }}
+        >
+          <option value="">기본 목록{lists.all[0] ? ` (${lists.all[0].name})` : ''}</option>
+          {lists.all.map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.name}
+            </option>
+          ))}
+        </select>
+      </Row>
+      {shown && (
+        <Row label="이름">
+          <input
+            className="ki-text"
+            value={rename ?? shown.name}
+            maxLength={40}
+            onChange={(e) => setRename(e.target.value)}
+            onBlur={() => {
+              const name = rename?.trim()
+              if (name && name !== shown.name) void lists.rename(shown.id, name)
+              setRename(null)
+            }}
+            onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+          />
+        </Row>
+      )}
+      <form
+        className="ki-row"
+        onSubmit={async (e) => {
+          e.preventDefault()
+          const name = newName.trim()
+          if (!name) return
+          const l = await lists.create(name)
+          if (l) {
+            setNewName('')
+            onSelect(l.id)
+          }
+        }}
+      >
+        <input
+          className="ki-text"
+          placeholder="새 목록 이름"
+          aria-label="새 목록 이름"
+          value={newName}
+          maxLength={40}
+          onChange={(e) => setNewName(e.target.value)}
+        />
+        <button type="submit" className="ki-small">
+          추가
+        </button>
+      </form>
+      {current && lists.all.length > 1 && (
+        <div className="ki-buttons">
+          <button
+            type="button"
+            className="is-danger"
+            onClick={async () => {
+              if (!confirmDelete) return setConfirmDelete(true)
+              setConfirmDelete(false)
+              if (await lists.remove(current.id)) onSelect(null)
+            }}
+          >
+            {confirmDelete ? '한 번 더 누르면 목록과 할 일이 지워져요' : '이 목록 삭제'}
+          </button>
+        </div>
+      )}
+    </>
+  )
+}
+
+/** 타이머 프리셋(분): 1~180, 최대 6개, 최소 1개 */
+function PresetFields({
+  presets,
+  onChange,
+}: {
+  presets: readonly number[]
+  onChange(v: number[]): void
+}) {
+  const [draft, setDraft] = useState('')
+  const add = () => {
+    const n = Math.round(Number(draft))
+    if (!Number.isFinite(n) || n < 1 || n > 180 || presets.includes(n)) return
+    onChange([...presets, n].sort((a, b) => a - b))
+    setDraft('')
+  }
+  return (
+    <div className="ki-row ki-presets">
+      <span className="ki-label">프리셋</span>
+      <span className="ki-chips">
+        {presets.map((m) => (
+          <button
+            key={m}
+            type="button"
+            className="ki-chip"
+            disabled={presets.length <= 1}
+            aria-label={`${m}분 프리셋 지우기`}
+            onClick={() => onChange(presets.filter((x) => x !== m))}
+          >
+            {m}분 ×
+          </button>
+        ))}
+        {presets.length < 6 && (
+          <input
+            className="ki-num"
+            type="number"
+            min={1}
+            max={180}
+            placeholder="분"
+            aria-label="프리셋 추가(분)"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                add()
+              }
+            }}
+            onBlur={add}
+          />
+        )}
+      </span>
     </div>
   )
 }

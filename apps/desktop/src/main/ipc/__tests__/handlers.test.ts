@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ZodError } from 'zod'
 import { makeEnv, type TestEnv } from '../../__tests__/helpers'
 import { toErrorCode } from '../errors'
+import { TimerService } from '../../timer/timerService'
 import { createHandlers, type Handlers } from '../handlers'
 
 let env: TestEnv
@@ -19,6 +20,15 @@ beforeEach(async () => {
     now: () => env.clock.now,
     newId: env.newId,
     pickImageFile: async () => picked,
+    timer: new TimerService({
+      load: () => env.core.repos.timer.get(),
+      save: (s) => env.core.repos.timer.save(s),
+      now: () => env.clock.now,
+      setTimer: () => null,
+      clearTimer: () => {},
+      onChange: () => {},
+      onComplete: () => {},
+    }),
   })
 })
 afterEach(async () => {
@@ -224,14 +234,19 @@ describe('calendar', () => {
 })
 
 describe('timer', () => {
-  it('save는 updatedAt을 채우고 상태 제약을 검사한다', async () => {
-    const base = { mode: 'focus', durationMs: 60000, pausedRemainingMs: null }
-    const s = await h['timer.save']({
-      state: { ...base, status: 'running', endsAt: env.clock.now + 60000 },
-    })
-    expect(s.updatedAt).toBe(env.clock.now)
+  it('명령으로만 상태를 바꾸고 저장한다', async () => {
+    expect((await h['timer.get'](undefined)).status).toBe('idle')
+    const s = await h['timer.command']({ cmd: 'start', durationMs: 60000, mode: 'focus' })
+    expect(s).toMatchObject({ status: 'running', endsAt: env.clock.now + 60000 })
+    expect(env.core.repos.timer.get()?.status).toBe('running')
+  })
+  it('잘못된 명령은 invalid_input', async () => {
+    expect(await codeOf(h['timer.command']({ cmd: 'start', durationMs: 10, mode: 'focus' }))).toBe(
+      'invalid_input',
+    )
+    expect(await codeOf(h['timer.command']({ cmd: 'explode' }))).toBe('invalid_input')
     expect(
-      await codeOf(h['timer.save']({ state: { ...base, status: 'running', endsAt: null } })),
+      await codeOf(h['timer.command']({ cmd: 'pause', endsAt: 0 })), // 미지의 키
     ).toBe('invalid_input')
   })
 })

@@ -14,12 +14,13 @@ import {
   type TodoList,
 } from '@kkumikkumi/schema'
 import { z } from 'zod'
-import type { IpcSpec } from '../../shared/api'
+import type { IpcSpec, TimerDoneInfo } from '../../shared/api'
 import type { Channel } from '../../shared/channels'
 import { DEFAULT_PIPELINE_OPTIONS, processImage, type PipelineOptions } from '../assets/pipeline'
 import { transaction, type Db } from '../db/connection'
 import { NotFoundError, type Repos } from '../db/repos'
 import type { ThemeStore } from '../themes/themeStore'
+import type { TimerService } from '../timer/timerService'
 
 export interface HandlerDeps {
   db: Db
@@ -33,6 +34,10 @@ export interface HandlerDeps {
   /** 고아 에셋 유예 시간 */
   pruneGraceMs?: number
   defaultListName?: string
+  timer: Pick<TimerService, 'get' | 'command'>
+  takeMissedTimerDone?(): TimerDoneInfo | null
+  /** 투두 완료 이벤트 발행(이벤트 버스) */
+  onTodoCompleted?(): void
 }
 
 export type Handlers = { [C in Channel]: (input: unknown) => Promise<IpcSpec[C]['out']> }
@@ -40,6 +45,16 @@ export type Handlers = { [C in Channel]: (input: unknown) => Promise<IpcSpec[C][
 const Purpose = z.enum(['image', 'pet'])
 const IdIn = z.strictObject({ id: Uuid })
 const NoInput = z.undefined()
+const TimerCommandSchema = z.discriminatedUnion('cmd', [
+  z.strictObject({
+    cmd: z.literal('start'),
+    durationMs: TimerStateSchema.shape.durationMs,
+    mode: TimerStateSchema.shape.mode,
+  }),
+  z.strictObject({ cmd: z.literal('pause') }),
+  z.strictObject({ cmd: z.literal('resume') }),
+  z.strictObject({ cmd: z.literal('reset') }),
+])
 
 /** 모든 핸들러는 입력을 zod로 재검증한다. renderer 타입은 신뢰하지 않는다. */
 export function createHandlers(d: HandlerDeps): Handlers {
@@ -247,6 +262,7 @@ export function createHandlers(d: HandlerDeps): Handlers {
       const now = d.now()
       const done = patch.done ?? cur.done
       const movedList = patch.listId !== undefined && patch.listId !== cur.listId
+      if (done && !cur.done) d.onTodoCompleted?.()
       return repos.todo.updateItem({
         ...cur,
         title: patch.title ?? cur.title,
@@ -320,11 +336,12 @@ export function createHandlers(d: HandlerDeps): Handlers {
     /* ── 타이머 ── */
     'timer.get': async (i) => {
       NoInput.parse(i)
-      return repos.timer.get()
+      return d.timer.get()
     },
-    'timer.save': async (i) => {
-      const { state } = z.strictObject({ state: z.record(z.string(), z.unknown()) }).parse(i)
-      return repos.timer.save(TimerStateSchema.parse({ ...state, updatedAt: d.now() }))
+    'timer.command': async (i) => d.timer.command(TimerCommandSchema.parse(i)),
+    'timer.takeMissedDone': async (i) => {
+      NoInput.parse(i)
+      return d.takeMissedTimerDone?.() ?? null
     },
 
     /* ── 테마 자동 전환 규칙 ── */

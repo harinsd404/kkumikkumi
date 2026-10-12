@@ -1,43 +1,151 @@
-import type { GridBlock } from '@kkumikkumi/schema'
+import type { GridBlock, TimerState } from '@kkumikkumi/schema'
+import { useEffect, useState } from 'react'
+import { DEFAULT_TIMER, formatClock, remainingMs, type TimerMode } from '../../../../shared/timer'
 import { useBoard } from '../BoardContext'
 import type { Box } from '../layout'
 
 type TimerBlockT = Extract<GridBlock, { type: 'timer' }>
 
-/** 타이머 플레이스홀더: 첫 프리셋 시간만 표시. 동작(endsAt 기반)은 M4. */
-export function TimerBlock({ block, box }: { block: TimerBlockT; box: Box }) {
-  const { theme } = useBoard()
+const MIN = 60_000
+const RING_C = 2 * Math.PI * 44
+
+/** 표시용 현재 시각. 실행 중일 때만 초가 바뀌는 순간에 다시 그린다(카운트다운은 endsAt 계산). */
+function useSecondClock(running: boolean): number {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (!running) return
+    let raf = 0
+    let last = -1 // 첫 프레임에서 바로 맞춘다(멈춰 있던 동안의 오래된 값 방지)
+    const loop = () => {
+      const s = Math.floor(Date.now() / 1000)
+      if (s !== last) {
+        last = s
+        setNow(Date.now())
+      }
+      raf = requestAnimationFrame(loop)
+    }
+    raf = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(raf)
+  }, [running])
+  return now // 실행 중이 아니면 남은 시간 계산에 쓰이지 않는다
+}
+
+/**
+ * 타이머 블록. 상태는 main이 가진 하나의 타이머(여러 블록이 같은 타이머를 보여 준다).
+ * S(2x1): 시간 + 시작/일시정지 + 초기화. M(2x2): 시간(숫자/링) + 집중/휴식 + 프리셋 + 버튼.
+ */
+export function TimerBlock({ block }: { block: TimerBlockT; box: Box }) {
+  const { theme, data, actions: all, mode: boardMode } = useBoard()
+  const actions = boardMode === 'use' ? all : undefined
   const p = theme.defaults.palette
-  const minutes = block.props.presetsMin[0] ?? 25
-  const label = `${String(minutes).padStart(2, '0')}:00`
-  const ring = block.props.display === 'ring' && block.size === 'M'
-  const r = Math.min(box.width, box.height) / 2 - 30
+  const presets = block.props.presetsMin
+  const t: TimerState = data.timer ?? { ...DEFAULT_TIMER, updatedAt: 0 }
+  const running = t.status === 'running'
+  const now = useSecondClock(running)
+
+  // 대기 중일 때 고른 프리셋/모드(블록마다 따로). 기본: 지난번 길이가 프리셋에 있으면 그것, 아니면 첫 프리셋.
+  const [pick, setPick] = useState<number | null>(null)
+  const [pickMode, setPickMode] = useState<TimerMode | null>(null)
+  const lastMin = Math.round(t.durationMs / MIN)
+  const selMin = pick ?? (presets.includes(lastMin) ? lastMin : (presets[0] ?? 25))
+  const selMode = pickMode ?? t.mode
+
+  const idle = t.status === 'idle'
+  const total = idle ? selMin * MIN : t.durationMs
+  const left = idle ? total : remainingMs(t, now)
+  const progress = total > 0 ? left / total : 0
+  const big = block.size !== 'S'
+  const ring = big && block.props.display === 'ring'
+  const cmd = actions?.timer.command
+
+  const primary = idle
+    ? { label: '시작', run: () => cmd?.({ cmd: 'start', durationMs: selMin * MIN, mode: selMode }) }
+    : running
+      ? { label: '일시정지', run: () => cmd?.({ cmd: 'pause' }) }
+      : { label: '계속', run: () => cmd?.({ cmd: 'resume' }) }
+
+  const btnStyle = { background: p.control, color: p.text }
 
   return (
-    <div className="ktm">
-      {ring && (
-        <svg className="ktm-ring" viewBox={`0 0 ${box.width} ${box.height}`} aria-hidden>
-          <circle
-            cx={box.width / 2}
-            cy={box.height / 2}
-            r={r}
-            fill="none"
-            stroke={p.surface}
-            strokeWidth={12}
-          />
-          <circle
-            cx={box.width / 2}
-            cy={box.height / 2}
-            r={r}
-            fill="none"
-            stroke={p.accent}
-            strokeWidth={12}
-          />
-        </svg>
+    <div className={`ktm ktm--${block.size} ${ring ? 'ktm--ring' : ''}`}>
+      {big && (
+        <div className="ktm-modes" role="radiogroup" aria-label="모드">
+          {(['focus', 'break'] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="radio"
+              aria-checked={(idle ? selMode : t.mode) === m}
+              disabled={!actions || !idle}
+              className={(idle ? selMode : t.mode) === m ? 'is-on' : ''}
+              style={(idle ? selMode : t.mode) === m ? btnStyle : { color: p.subText }}
+              onClick={() => setPickMode(m)}
+            >
+              {m === 'focus' ? '집중' : '휴식'}
+            </button>
+          ))}
+        </div>
       )}
-      <span className="ktm-time" style={{ color: p.text, fontSize: block.size === 'S' ? 56 : 64 }}>
-        {label}
-      </span>
+      <div className="ktm-face">
+        {ring && (
+          <svg className="ktm-ring" viewBox="0 0 100 100" aria-hidden>
+            <circle cx={50} cy={50} r={44} fill="none" stroke={p.surface} strokeWidth={5} />
+            <circle
+              cx={50}
+              cy={50}
+              r={44}
+              fill="none"
+              stroke={p.accent}
+              strokeWidth={5}
+              strokeLinecap="round"
+              strokeDasharray={RING_C}
+              strokeDashoffset={RING_C * (1 - progress)}
+              transform="rotate(-90 50 50)"
+            />
+          </svg>
+        )}
+        <span
+          className="ktm-time"
+          role="timer"
+          aria-label={`남은 시간 ${formatClock(left)}`}
+          style={{ color: p.text, fontSize: block.size === 'S' ? 56 : ring ? 44 : 64 }}
+        >
+          {formatClock(left)}
+        </span>
+      </div>
+      {big && idle && presets.length > 1 && (
+        <div className="ktm-presets" role="radiogroup" aria-label="시간">
+          {presets.map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="radio"
+              aria-checked={m === selMin}
+              disabled={!actions}
+              style={m === selMin ? btnStyle : { color: p.subText }}
+              onClick={() => setPick(m)}
+            >
+              {m}분
+            </button>
+          ))}
+        </div>
+      )}
+      {actions && (
+        <div className="ktm-buttons">
+          <button type="button" className="ktm-primary" style={btnStyle} onClick={primary.run}>
+            {primary.label}
+          </button>
+          {!idle && (
+            <button
+              type="button"
+              style={{ color: p.subText }}
+              onClick={() => cmd?.({ cmd: 'reset' })}
+            >
+              초기화
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }

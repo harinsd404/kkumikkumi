@@ -158,14 +158,24 @@
 
 /* ── 투두 (Figma 15:2832) ── */
 .kt {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
   height: 100%;
   padding: 25px;
-  overflow: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.kt--L {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
 }
 .kt-section {
   display: flex;
   flex-direction: column;
   gap: 25px;
+  min-width: 0;
 }
 .kt-chip {
   align-self: flex-start;
@@ -202,6 +212,8 @@
 .kt-check {
   position: relative;
   flex: none;
+  padding: 0;
+  cursor: pointer;
   width: 25px;
   height: 25px;
   border-radius: 5px;
@@ -218,6 +230,8 @@
   height: 75%;
 }
 .kt-title {
+  flex: 0 1 auto;
+  min-width: 0;
   font-size: 20px;
   font-weight: 500;
   color: #000000;
@@ -234,14 +248,259 @@
   justify-content: center;
   height: 100%;
 }
+.ktm-time {
+  position: relative;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 투두 상호작용(M4) */
+.kt-plus-btn {
+  display: flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.kt-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1.5px solid #dbdddf;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 18px;
+  outline: none;
+}
+.kt-input:focus {
+  border-color: currentColor;
+}
+.kt-input--inline {
+  flex: 1;
+  padding: 0 6px;
+  font-size: 20px;
+}
+.kt-item {
+  position: relative;
+  min-height: 25px;
+  touch-action: none;
+}
+.kt-item.is-dragging {
+  opacity: 0.4;
+}
+.kt-item.is-done .kt-title {
+  opacity: 0.55;
+}
+.kt-check:disabled {
+  cursor: default;
+}
+.kt-check:focus-visible,
+.kt-tools button:focus-visible,
+.kt-plus-btn:focus-visible {
+  outline: 2px solid #4f86c6;
+  outline-offset: 2px;
+}
+.kt-due {
+  flex: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+.kt-due.is-overdue {
+  color: #d9534f !important;
+}
+.kt-tools {
+  display: none;
+  margin-left: auto;
+  gap: 4px;
+}
+.kt-item:hover .kt-tools,
+.kt-item:focus-within .kt-tools {
+  display: flex;
+}
+.kt-tools button {
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: #f2f2f2;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.kt-menu {
+  position: absolute;
+  z-index: 5;
+  right: 0;
+  top: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.15);
+}
+.kt-menu button,
+.kt-menu input {
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: #f5f5f5;
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+.kt-drop {
+  height: 3px;
+  margin: -9px 0 -6px;
+  border-radius: 2px;
+  list-style: none;
+}
+
+/* 캘린더 일정(M4) */
+.kc-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+  padding: 7px 8px;
+}
+.kc-cell-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.kc-cell.is-outside {
+  opacity: 0.6;
+}
+.is-clickable {
+  cursor: pointer;
+}
+.is-clickable:focus-visible {
+  outline: 2px solid #4f86c6;
+  outline-offset: 1px;
+}
+.kc-date {
+  line-height: 1;
+}
+.is-today .kc-date,
+.kc-mini-day.is-today span {
+  font-weight: 800;
+}
+.kc-items {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 0;
+  overflow: hidden;
+}
+.kc-chip {
+  display: block;
+  flex: none;
+  width: 100%;
+  padding: 1px 0 1px 5px;
+  border: 0;
+  border-left: 3px solid;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+button.kc-chip {
+  cursor: pointer;
+}
+.kc-chip--todo {
+  border-left-color: transparent;
+  opacity: 0.8;
+}
+.kc-chip--todo.is-done {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+.kc-more {
+  font-size: 12px;
+  font-weight: 600;
+}
+.kc--week .kc-cell {
+  padding: 10px 8px;
+}
+.kc--week .kc-items {
+  gap: 5px;
+}
+.kc-dot {
+  visibility: hidden;
+}
+.kc-dot.is-on {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* 타이머(M4) */
+.ktm {
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+}
+.ktm--S {
+  flex-direction: row;
+  gap: 20px;
+}
+.ktm-face {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ktm--M .ktm-face {
+  flex: 1;
+  min-height: 0;
+  align-self: stretch;
+}
 .ktm-ring {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
 }
-.ktm-time {
-  position: relative;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
+.ktm-modes,
+.ktm-presets,
+.ktm-buttons {
+  display: flex;
+  gap: 8px;
+}
+.ktm--S .ktm-buttons {
+  flex-direction: column;
+}
+.ktm-modes button,
+.ktm-presets button,
+.ktm-buttons button {
+  padding: 5px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ktm-buttons .ktm-primary {
+  padding: 7px 24px;
+  font-size: 18px;
+}
+.ktm button:disabled {
+  cursor: default;
+}
+.ktm button:focus-visible {
+  outline: 2px solid #4f86c6;
+  outline-offset: 2px;
+}
+.kc--week .kc-chip {
+  display: -webkit-box;
+  white-space: normal;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
