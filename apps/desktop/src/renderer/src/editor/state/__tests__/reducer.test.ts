@@ -62,8 +62,30 @@ describe('그리드 블록', () => {
     expect(err(t, { type: 'block/move', id: TODO, col: 3, row: 1 })).toBe('collision')
     expect(err(t, { type: 'block/move', id: TODO, col: 7, row: 1 })).toBe('collision') // 범위 밖
   })
-  it('크기 변경: 겹치면 거부', () => {
-    expect(err(base(), { type: 'block/resize', id: BANNER, size: 'L' })).toBe('collision') // 4x3이 캘린더를 덮음
+  it('크기 변경: 겹치는 블록은 가장 가까운 빈자리로 밀린다', () => {
+    const t = run(
+      base(),
+      { type: 'block/add', block: { type: 'timer', size: 'S' }, id: U(9) }, // (6,1)
+      { type: 'block/resize', id: TODO, size: 'L' }, // 4x3 (4,1)이 타이머를 덮음
+    )
+    expect(t.blocks.find((b) => b.id === TODO)).toMatchObject({ size: 'L', col: 4, row: 1 })
+    expect(t.blocks.find((b) => b.id === U(9))).toMatchObject({ col: 6, row: 4 })
+    expect(valid(t)).toBe(true)
+  })
+  it('크기 변경: 오른쪽 끝에서 커지면 안쪽으로 당긴다', () => {
+    const t = run(
+      base(),
+      { type: 'block/resize', id: TODO, size: 'S' },
+      { type: 'block/move', id: TODO, col: 6, row: 1 },
+      { type: 'block/resize', id: TODO, size: 'L' },
+    )
+    expect(t.blocks.find((b) => b.id === TODO)).toMatchObject({ size: 'L', col: 4, row: 1 })
+    expect(valid(t)).toBe(true)
+  })
+  it('크기 변경: 밀 곳이 없으면 거부하고 원본은 그대로', () => {
+    const t = base()
+    expect(err(t, { type: 'block/resize', id: BANNER, size: 'L' })).toBe('no_room') // 캘린더 4x3을 둘 곳 없음
+    expect(t.blocks.find((b) => b.id === BANNER)?.size).toBe('W')
     expect(
       run(base(), { type: 'block/resize', id: TODO, size: 'L' }).blocks.find((b) => b.id === TODO)
         ?.size,

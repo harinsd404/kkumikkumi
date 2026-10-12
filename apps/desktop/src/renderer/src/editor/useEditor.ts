@@ -20,6 +20,7 @@ const ERROR_TEXT: Record<ReduceError, string> = {
   not_found: '대상을 찾을 수 없어요',
   no_space: '빈 자리가 없어요',
   collision: '다른 블록과 겹치거나 보드 밖이에요',
+  no_room: '다른 블록을 옮길 빈 자리가 없어요',
   size_not_allowed: '이 블록은 그 크기를 쓸 수 없어요',
   locked: '잠긴 꾸미기예요. 잠금을 풀어 주세요',
   too_many: '꾸미기는 100개까지 넣을 수 있어요',

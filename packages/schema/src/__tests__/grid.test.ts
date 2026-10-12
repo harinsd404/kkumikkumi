@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canPlace, findFreeSlot, rectsOverlap, type GridItem } from '../grid'
+import { canPlace, findFreeSlot, placeWithPush, rectsOverlap, type GridItem } from '../grid'
 
 const grid = { cols: 8, rows: 5 }
 
@@ -84,5 +84,36 @@ describe('findFreeSlot', () => {
     ]
     expect(findFreeSlot(grid, items, { w: 1, h: 1 })).toEqual({ col: 7, row: 4 })
     expect(findFreeSlot(grid, items, { w: 2, h: 1 })).toBeNull()
+  })
+})
+
+describe('placeWithPush', () => {
+  const G = { cols: 8, rows: 5 }
+  const a = { id: 'a', col: 0, row: 0, w: 2, h: 2 }
+  const b = { id: 'b', col: 2, row: 0, w: 2, h: 2 }
+
+  it('겹침이 없으면 이동 없음', () => {
+    expect(placeWithPush(G, [a, b], 'a', { col: 0, row: 0, w: 2, h: 1 })?.size).toBe(0)
+  })
+  it('겹친 아이템을 가장 가까운 빈자리로 민다', () => {
+    const m = placeWithPush(G, [a, b], 'a', { col: 0, row: 0, w: 4, h: 2 })
+    expect(m?.get('b')).toEqual({ col: 4, row: 0 })
+    expect(m?.has('a')).toBe(false)
+  })
+  it('그리드 밖으로 나가면 안쪽으로 당기고 그 위치를 돌려준다', () => {
+    const m = placeWithPush(G, [{ id: 'a', col: 6, row: 3, w: 2, h: 2 }], 'a', {
+      col: 6,
+      row: 3,
+      w: 4,
+      h: 3,
+    })
+    expect(m?.get('a')).toEqual({ col: 4, row: 2 })
+  })
+  it('밀 곳이 없으면 null', () => {
+    const full = { id: 'f', col: 0, row: 2, w: 8, h: 3 }
+    expect(placeWithPush(G, [a, b, full], 'a', { col: 0, row: 0, w: 8, h: 2 })).toBeNull()
+  })
+  it('그리드보다 크면 null', () => {
+    expect(placeWithPush(G, [a], 'a', { col: 0, row: 0, w: 9, h: 1 })).toBeNull()
   })
 })

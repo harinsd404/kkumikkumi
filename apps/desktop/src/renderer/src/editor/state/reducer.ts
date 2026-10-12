@@ -4,6 +4,7 @@ import {
   CANVAS,
   canPlace,
   findFreeSlot,
+  placeWithPush,
   newBlock,
   newDecor,
   type Asset,
@@ -51,6 +52,7 @@ export type ReduceError =
   | 'not_found'
   | 'no_space'
   | 'collision'
+  | 'no_room'
   | 'size_not_allowed'
   | 'locked'
   | 'too_many'
@@ -114,8 +116,17 @@ export function reduce(t: Theme, a: EditorAction): ReduceResult {
       if (!(ALLOWED_SIZES[b.type] as readonly string[]).includes(a.size))
         return fail('size_not_allowed')
       const r = blockRect({ ...b, size: a.size })
-      if (!r || !canPlace(CANVAS, gridItems(t.blocks), r, a.id)) return fail('collision')
-      return ok(mapBlock(t, a.id, (x) => ({ ...x, size: a.size }) as GridBlock))
+      // 겹치는 블록은 가장 가까운 빈자리로 민다. 밀 곳이 없으면 거부.
+      const moves = r && placeWithPush(CANVAS, gridItems(t.blocks), a.id, r)
+      if (!moves) return fail('no_room')
+      return ok({
+        ...t,
+        blocks: t.blocks.map((x) => {
+          const m = moves.get(x.id)
+          const next = m ? { ...x, ...m } : x
+          return (x.id === a.id ? { ...next, size: a.size } : next) as GridBlock
+        }),
+      })
     }
     case 'block/delete':
       if (!t.blocks.some((b) => b.id === a.id)) return fail('not_found')

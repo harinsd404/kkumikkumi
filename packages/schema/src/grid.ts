@@ -67,3 +67,49 @@ export function findFreeSlot(
   }
   return null
 }
+
+/**
+ * target 자리에 id 아이템을 놓고, 겹치는 다른 아이템은 원래 위치에서 가장 가까운 빈자리로 민다.
+ * target이 그리드 밖으로 나가면 먼저 안쪽으로 당긴다(오른쪽/아래 끝에서 커질 때).
+ * 밀린 아이템은 큰 것부터 배치하고, 거리(|Δcol|+|Δrow|)가 같으면 위→아래, 왼→오른쪽 순.
+ * 둘 곳이 없는 아이템이 하나라도 있으면 null. 반환: 위치가 바뀐 아이템만 id → 새 위치.
+ */
+export function placeWithPush(
+  grid: GridDims,
+  items: readonly GridItem[],
+  id: string,
+  target: GridRect,
+): Map<string, { col: number; row: number }> | null {
+  if (!isPosInt(target.w) || !isPosInt(target.h)) return null
+  if (target.w > grid.cols || target.h > grid.rows) return null
+  const placed: GridRect = {
+    col: Math.max(0, Math.min(target.col, grid.cols - target.w)),
+    row: Math.max(0, Math.min(target.row, grid.rows - target.h)),
+    w: target.w,
+    h: target.h,
+  }
+  const others = items.filter((it) => it.id !== id)
+  const displaced = others
+    .filter((it) => rectsOverlap(it, placed))
+    .sort((a, b) => b.w * b.h - a.w * a.h)
+  const fixed: GridItem[] = [...others.filter((it) => !rectsOverlap(it, placed)), { id, ...placed }]
+  const moves = new Map<string, { col: number; row: number }>()
+  const original = items.find((it) => it.id === id)
+  if (original && (original.col !== placed.col || original.row !== placed.row)) {
+    moves.set(id, { col: placed.col, row: placed.row })
+  }
+  for (const it of displaced) {
+    let best: { col: number; row: number; d: number } | null = null
+    for (let row = 0; row + it.h <= grid.rows; row++) {
+      for (let col = 0; col + it.w <= grid.cols; col++) {
+        if (!canPlace(grid, fixed, { col, row, w: it.w, h: it.h })) continue
+        const d = Math.abs(col - it.col) + Math.abs(row - it.row)
+        if (!best || d < best.d) best = { col, row, d }
+      }
+    }
+    if (!best) return null
+    fixed.push({ id: it.id, col: best.col, row: best.row, w: it.w, h: it.h })
+    moves.set(it.id, { col: best.col, row: best.row })
+  }
+  return moves
+}
