@@ -1,0 +1,18 @@
+{
+  "name": "pet-proto",
+  "private": true,
+  "description": "M0 펫 스파이크(되는가 검증용). 본 앱 워크스페이스 밖의 독립 프로젝트.",
+  "main": "main.js",
+  "scripts": {
+    "assets": "node scripts/make-pngs.mjs",
+    "build:helper": "swiftc -O helper/keyidle.swift -o helper/keyidle",
+    "start": "electron .",
+    "autotest": "PET_AUTOTEST=1 electron ."
+  },
+  "devDependencies": {
+    "electron": "44.7.0"
+  },
+  "dependencies": {
+    "koffi": "3.3.3"
+  }
+}

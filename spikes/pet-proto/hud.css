@@ -1,0 +1,31 @@
+body {
+  margin: 16px;
+  font:
+    13px -apple-system,
+    system-ui,
+    sans-serif;
+}
+h1 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+.note {
+  margin: 0 0 12px;
+  color: #777;
+}
+table {
+  border-collapse: collapse;
+  margin-bottom: 12px;
+}
+td {
+  padding: 3px 10px 3px 0;
+}
+td.v {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+pre {
+  font-size: 11px;
+  color: #555;
+  white-space: pre-wrap;
+}
