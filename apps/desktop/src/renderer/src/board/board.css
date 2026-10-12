@@ -114,8 +114,46 @@
   font-weight: 500;
   overflow: hidden;
 }
-.kc--compact .kc-title {
-  font-size: 26px;
+/* 미니(M, Figma 3:2013). 시안 px × 1.25 = 논리 px */
+.kc--mini {
+  padding: 25px;
+  gap: 20px;
+}
+.kc--mini .kc-title {
+  font-size: 20px;
+}
+.kc--mini .kc-navs {
+  gap: 10px;
+}
+.kc--mini .kc-nav {
+  width: 30px;
+  height: 30px;
+}
+.kc-mini-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 13.75px;
+  align-items: start;
+}
+.kc-mini-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: normal;
+}
+.kc-mini-day.is-outside {
+  opacity: 0.7;
+}
+/* 일정 표시 자리(M4). 시안의 #d9d9d9 점을 테마 보조 글자색 30%로 맞춘다. */
+.kc-dot {
+  width: 2.5px;
+  height: 2.5px;
+  border-radius: 50%;
+  opacity: 0.3;
 }
 
 /* ── 투두 (Figma 15:2832) ── */
