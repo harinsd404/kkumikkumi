@@ -10,7 +10,9 @@ import { keyToCommand } from '../editor/state/shortcuts'
 import { useEditor, type EditorApi } from '../editor/useEditor'
 import { makeAssetUrl } from './assetUrl'
 import { EventDialog } from './EventDialog'
+import { PHASE_LABEL } from '../../../shared/pomodoro'
 import { CalendarPage } from '../pages/CalendarPage'
+import { TimerPage } from '../pages/TimerPage'
 import { TodoPage } from '../pages/TodoPage'
 import { themeVars } from './themeVars'
 import { TitleBar, type AppPage, type PageNav } from './TitleBar'
@@ -21,6 +23,7 @@ const PAGES: PageNav['pages'] = [
   { id: 'board', label: '보드' },
   { id: 'todo', label: '할 일' },
   { id: 'calendar', label: '캘린더' },
+  { id: 'timer', label: '타이머' },
 ]
 
 const ASSET_ERRORS: Record<string, string> = {
@@ -53,7 +56,11 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
   const boardActions = useMemo(
     () => ({
       ...user.actions,
-      pages: { todo: () => setPage('todo'), calendar: () => setPage('calendar') },
+      pages: {
+        todo: () => setPage('todo'),
+        calendar: () => setPage('calendar'),
+        timer: () => setPage('timer'),
+      },
     }),
     [user.actions],
   )
@@ -202,6 +209,19 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
             />
           </div>
         )}
+        {page === 'timer' && (
+          <div className="app-page" style={themeVars(theme)}>
+            <TimerPage
+              timer={user.data.timer}
+              pomodoro={user.data.pomodoro}
+              command={user.actions.timer.command}
+              sessions={user.timer.sessions}
+              updatePomodoro={user.timer.updatePomodoro}
+              now={now}
+              weekStartsOn={weekStartsOf(theme)}
+            />
+          </div>
+        )}
         {page === 'board' && (
           <Board
             theme={theme}
@@ -264,6 +284,10 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
             <span>
               {user.timerDone.mode === 'focus' ? '집중 시간이 끝났어요' : '쉬는 시간이 끝났어요'}
               {user.timerDone.late && ' (앱이 꺼져 있는 동안)'}
+              {user.timerDone.next &&
+                (user.timerDone.next.started
+                  ? ` · ${PHASE_LABEL[user.timerDone.next.phase]} 시작`
+                  : ` · 다음은 ${PHASE_LABEL[user.timerDone.next.phase]}`)}
             </span>
             <button type="button" onClick={user.dismissTimerDone}>
               확인

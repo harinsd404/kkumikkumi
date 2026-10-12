@@ -599,3 +599,206 @@
   opacity: 0.55;
   text-decoration: line-through;
 }
+
+/* ── 타이머 페이지 ── */
+.pg-timer {
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+.tp-main {
+  align-items: center;
+  overflow-y: auto;
+}
+.tp-main > .pg-tabs {
+  align-self: flex-start;
+}
+.pg-pill:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.tp-face {
+  position: relative;
+  flex: none;
+  width: min(300px, 60vh);
+  aspect-ratio: 1;
+}
+.tp-ring {
+  width: 100%;
+  height: 100%;
+}
+.tp-ring-bg,
+.tp-ring-fg {
+  fill: none;
+  stroke-width: 12;
+}
+.tp-ring-bg {
+  stroke: var(--t-surface);
+}
+.tp-ring-fg {
+  stroke: var(--t-accent);
+  stroke-linecap: round;
+}
+.tp-face-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.tp-label {
+  color: var(--t-sub);
+  font-size: 15px;
+  font-weight: 700;
+}
+.tp-time {
+  font-size: clamp(40px, 9vh, 64px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.tp-options {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.tp-options .pg-tabs {
+  justify-content: center;
+}
+.tp-custom {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--t-sub);
+  font-size: 14px;
+}
+.tp-custom .pg-input {
+  width: 56px;
+  text-align: center;
+}
+.tp-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.tp-primary {
+  min-width: 110px;
+  background: var(--t-accent);
+  font-size: 16px;
+}
+.tp-settings {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 110px));
+  gap: 14px 18px;
+  justify-content: center;
+  width: 100%;
+  margin-top: 6px;
+  padding-top: 16px;
+  border-top: 1px solid var(--t-control);
+}
+.tp-field-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--t-sub);
+}
+.tp-field-row .pg-input {
+  width: 56px;
+}
+.tp-toggle {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.tp-toggle input {
+  accent-color: var(--t-accent);
+}
+.tp-stats {
+  overflow-y: auto;
+}
+.tp-sum {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0;
+}
+.tp-sum div {
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--t-surface);
+}
+.tp-sum dt {
+  color: var(--t-sub);
+  font-size: 12px;
+  font-weight: 600;
+}
+.tp-sum dd {
+  margin: 2px 0 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+.tp-bars {
+  display: grid;
+  flex: none;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  height: 120px;
+}
+.tp-bar {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  min-height: 0;
+}
+.tp-bar-fill {
+  width: 100%;
+  min-height: 3px;
+  border-radius: 6px 6px 2px 2px;
+  background: var(--t-accent);
+}
+.tp-bar-label {
+  color: var(--t-sub);
+  font-size: 12px;
+}
+.tp-bar-label.is-today {
+  color: inherit;
+  font-weight: 700;
+}
+.tp-log {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+.tp-log li {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 8px;
+  align-items: center;
+}
+.tp-log-time {
+  color: var(--t-sub);
+}
+.tp-log-kind {
+  font-weight: 700;
+}
+.tp-log-state {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--t-check);
+  font-size: 12px;
+}
+.tp-log-state.is-stopped {
+  background: var(--t-surface);
+  color: var(--t-sub);
+}

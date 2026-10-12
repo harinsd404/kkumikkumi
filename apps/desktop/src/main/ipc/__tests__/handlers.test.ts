@@ -28,6 +28,8 @@ beforeEach(async () => {
       clearTimer: () => {},
       onChange: () => {},
       onComplete: () => {},
+      pomodoro: () => env.core.repos.settings.pomodoro(),
+      onSession: (s) => env.core.repos.timerSessions.insert({ ...s, id: env.newId() }),
     }),
   })
 })
@@ -248,6 +250,27 @@ describe('timer', () => {
     expect(
       await codeOf(h['timer.command']({ cmd: 'pause', endsAt: 0 })), // 미지의 키
     ).toBe('invalid_input')
+  })
+  it('뽀모도로 설정: 부분 업데이트, 범위 밖/미지의 키 거부, 대기 중 단계 길이 반영', async () => {
+    await h['timer.command']({ cmd: 'pomodoro.start' })
+    await h['timer.command']({ cmd: 'reset' })
+    const s = await h['timer.pomodoro.update']({ patch: { focusMin: 40 } })
+    expect(s).toMatchObject({ focusMin: 40, shortBreakMin: 5 })
+    expect((await h['timer.get'](undefined)).durationMs).toBe(40 * 60000)
+    expect(await codeOf(h['timer.pomodoro.update']({ patch: { focusMin: 0 } }))).toBe(
+      'invalid_input',
+    )
+    expect(await codeOf(h['timer.pomodoro.update']({ patch: { label: 'x' } }))).toBe(
+      'invalid_input',
+    )
+  })
+  it('기록 조회: 1분 넘게 돌다 멈춘 타이머가 남는다', async () => {
+    await h['timer.command']({ cmd: 'start', durationMs: 10 * 60000, mode: 'focus' })
+    env.clock.now += 3 * 60000
+    await h['timer.command']({ cmd: 'reset' })
+    const list = await h['timer.sessions']({ fromMs: 0, toMs: env.clock.now + 1 })
+    expect(list).toEqual([expect.objectContaining({ actualMs: 3 * 60000, completed: false })])
+    expect(await codeOf(h['timer.sessions']({ fromMs: -1, toMs: 0 }))).toBe('invalid_input')
   })
 })
 

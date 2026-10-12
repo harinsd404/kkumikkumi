@@ -1,34 +1,15 @@
-import type { GridBlock, TimerState } from '@kkumikkumi/schema'
-import { useEffect, useState } from 'react'
+import { DEFAULT_POMODORO, type GridBlock, type TimerState } from '@kkumikkumi/schema'
+import { useState } from 'react'
+import { phaseText } from '../../../../shared/pomodoro'
 import { DEFAULT_TIMER, formatClock, remainingMs, type TimerMode } from '../../../../shared/timer'
 import { useBoard } from '../BoardContext'
 import type { Box } from '../layout'
+import { useSecondClock } from '../useSecondClock'
 
 type TimerBlockT = Extract<GridBlock, { type: 'timer' }>
 
 const MIN = 60_000
 const RING_C = 2 * Math.PI * 44
-
-/** 표시용 현재 시각. 실행 중일 때만 초가 바뀌는 순간에 다시 그린다(카운트다운은 endsAt 계산). */
-function useSecondClock(running: boolean): number {
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    if (!running) return
-    let raf = 0
-    let last = -1 // 첫 프레임에서 바로 맞춘다(멈춰 있던 동안의 오래된 값 방지)
-    const loop = () => {
-      const s = Math.floor(Date.now() / 1000)
-      if (s !== last) {
-        last = s
-        setNow(Date.now())
-      }
-      raf = requestAnimationFrame(loop)
-    }
-    raf = requestAnimationFrame(loop)
-    return () => cancelAnimationFrame(raf)
-  }, [running])
-  return now // 실행 중이 아니면 남은 시간 계산에 쓰이지 않는다
-}
 
 /**
  * 타이머 블록. 상태는 main이 가진 하나의 타이머(여러 블록이 같은 타이머를 보여 준다).
@@ -51,7 +32,9 @@ export function TimerBlock({ block }: { block: TimerBlockT; box: Box }) {
   const selMode = pickMode ?? t.mode
 
   const idle = t.status === 'idle'
-  const total = idle ? selMin * MIN : t.durationMs
+  // 뽀모도로 사이클 중이면 준비된 단계 길이를 쓰고, 시작은 사이클을 이어 간다
+  const pomo = t.pomodoro
+  const total = idle && !pomo ? selMin * MIN : t.durationMs
   const left = idle ? total : remainingMs(t, now)
   const progress = total > 0 ? left / total : 0
   const big = block.size !== 'S'
@@ -59,7 +42,12 @@ export function TimerBlock({ block }: { block: TimerBlockT; box: Box }) {
   const cmd = actions?.timer.command
 
   const primary = idle
-    ? { label: '시작', run: () => cmd?.({ cmd: 'start', durationMs: selMin * MIN, mode: selMode }) }
+    ? pomo
+      ? { label: '시작', run: () => cmd?.({ cmd: 'pomodoro.start' }) }
+      : {
+          label: '시작',
+          run: () => cmd?.({ cmd: 'start', durationMs: selMin * MIN, mode: selMode }),
+        }
     : running
       ? { label: '일시정지', run: () => cmd?.({ cmd: 'pause' }) }
       : { label: '계속', run: () => cmd?.({ cmd: 'resume' }) }
@@ -68,7 +56,14 @@ export function TimerBlock({ block }: { block: TimerBlockT; box: Box }) {
 
   return (
     <div className={`ktm ktm--${block.size} ${ring ? 'ktm--ring' : ''}`}>
-      {big && (
+      {big && pomo && (
+        <div className="ktm-modes">
+          <span className="ktm-phase" style={btnStyle}>
+            {phaseText(pomo, data.pomodoro ?? DEFAULT_POMODORO)}
+          </span>
+        </div>
+      )}
+      {big && !pomo && (
         <div className="ktm-modes" role="radiogroup" aria-label="모드">
           {(['focus', 'break'] as const).map((m) => (
             <button
@@ -113,7 +108,7 @@ export function TimerBlock({ block }: { block: TimerBlockT; box: Box }) {
           {formatClock(left)}
         </span>
       </div>
-      {big && idle && presets.length > 1 && (
+      {big && idle && !pomo && presets.length > 1 && (
         <div className="ktm-presets" role="radiogroup" aria-label="시간">
           {presets.map((m) => (
             <button

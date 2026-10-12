@@ -486,6 +486,12 @@ button.kc-chip {
 .ktm--S .ktm-buttons {
   flex-direction: column;
 }
+.ktm-phase {
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 700;
+}
 .ktm-modes button,
 .ktm-presets button,
 .ktm-buttons button {

@@ -3,6 +3,7 @@ import {
   DateStr,
   EpochMs,
   Name,
+  PomodoroSettingsSchema,
   SettingsSchema,
   ThemeRuleSchema,
   ThemeSchema,
@@ -34,7 +35,7 @@ export interface HandlerDeps {
   /** 고아 에셋 유예 시간 */
   pruneGraceMs?: number
   defaultListName?: string
-  timer: Pick<TimerService, 'get' | 'command'>
+  timer: Pick<TimerService, 'get' | 'command' | 'applySettings'>
   takeMissedTimerDone?(): TimerDoneInfo | null
   /** 투두 완료 이벤트 발행(이벤트 버스) */
   onTodoCompleted?(): void
@@ -54,6 +55,9 @@ const TimerCommandSchema = z.discriminatedUnion('cmd', [
   z.strictObject({ cmd: z.literal('pause') }),
   z.strictObject({ cmd: z.literal('resume') }),
   z.strictObject({ cmd: z.literal('reset') }),
+  z.strictObject({ cmd: z.literal('pomodoro.start') }),
+  z.strictObject({ cmd: z.literal('pomodoro.skip') }),
+  z.strictObject({ cmd: z.literal('pomodoro.stop') }),
 ])
 
 /** 모든 핸들러는 입력을 zod로 재검증한다. renderer 타입은 신뢰하지 않는다. */
@@ -345,6 +349,23 @@ export function createHandlers(d: HandlerDeps): Handlers {
     'timer.takeMissedDone': async (i) => {
       NoInput.parse(i)
       return d.takeMissedTimerDone?.() ?? null
+    },
+    'timer.sessions': async (i) => {
+      const { fromMs, toMs } = z.strictObject({ fromMs: EpochMs, toMs: EpochMs }).parse(i)
+      return repos.timerSessions.endedBetween(fromMs, toMs)
+    },
+    'timer.pomodoro.get': async (i) => {
+      NoInput.parse(i)
+      return repos.settings.pomodoro()
+    },
+    'timer.pomodoro.update': async (i) => {
+      const { patch } = z.strictObject({ patch: PomodoroSettingsSchema.partial() }).parse(i)
+      // 빠진 키는 zod가 결과에 넣지 않으므로 현재 값이 남는다
+      const saved = repos.settings.savePomodoro(
+        PomodoroSettingsSchema.parse({ ...repos.settings.pomodoro(), ...patch }),
+      )
+      d.timer.applySettings()
+      return saved
     },
 
     /* ── 테마 자동 전환 규칙 ── */

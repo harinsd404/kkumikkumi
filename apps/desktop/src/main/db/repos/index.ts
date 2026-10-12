@@ -3,6 +3,7 @@ import { CalendarRepo } from './calendar'
 import { SettingsRepo } from './settings'
 import { ThemeRuleRepo } from './themeRules'
 import { TimerRepo } from './timer'
+import { TimerSessionRepo } from './timerSessions'
 import { TodoRepo } from './todo'
 import { WindowStateRepo } from './windowState'
 
@@ -10,6 +11,7 @@ export interface Repos {
   todo: TodoRepo
   calendar: CalendarRepo
   timer: TimerRepo
+  timerSessions: TimerSessionRepo
   themeRules: ThemeRuleRepo
   settings: SettingsRepo
   windowState: WindowStateRepo
@@ -19,6 +21,7 @@ export const createRepos = (db: Db): Repos => ({
   todo: new TodoRepo(db),
   calendar: new CalendarRepo(db),
   timer: new TimerRepo(db),
+  timerSessions: new TimerSessionRepo(db),
   themeRules: new ThemeRuleRepo(db),
   settings: new SettingsRepo(db),
   windowState: new WindowStateRepo(db),

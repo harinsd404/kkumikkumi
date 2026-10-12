@@ -15,6 +15,7 @@ export class TimerRepo {
       durationMs: r['duration_ms'],
       endsAt: r['ends_at'],
       pausedRemainingMs: r['paused_remaining_ms'],
+      pomodoro: r['pomodoro'] == null ? null : JSON.parse(String(r['pomodoro'])),
       updatedAt: r['updated_at'],
     })
   }
@@ -23,13 +24,22 @@ export class TimerRepo {
     const s = TimerStateSchema.parse(state)
     this.db
       .prepare(
-        `INSERT INTO timer_state (id, status, mode, duration_ms, ends_at, paused_remaining_ms, updated_at)
-         VALUES (1, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO timer_state (id, status, mode, duration_ms, ends_at, paused_remaining_ms, pomodoro, updated_at)
+         VALUES (1, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET status = excluded.status, mode = excluded.mode,
            duration_ms = excluded.duration_ms, ends_at = excluded.ends_at,
-           paused_remaining_ms = excluded.paused_remaining_ms, updated_at = excluded.updated_at`,
+           paused_remaining_ms = excluded.paused_remaining_ms, pomodoro = excluded.pomodoro,
+           updated_at = excluded.updated_at`,
       )
-      .run(s.status, s.mode, s.durationMs, s.endsAt, s.pausedRemainingMs, s.updatedAt)
+      .run(
+        s.status,
+        s.mode,
+        s.durationMs,
+        s.endsAt,
+        s.pausedRemainingMs,
+        s.pomodoro ? JSON.stringify(s.pomodoro) : null,
+        s.updatedAt,
+      )
     return s
   }
 }

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { CalendarEventSchema, ThemeRuleSchema, TimerStateSchema } from '../userdata'
+import {
+  CalendarEventSchema,
+  DEFAULT_POMODORO,
+  PomodoroSettingsSchema,
+  ThemeRuleSchema,
+  TimerSessionSchema,
+  TimerStateSchema,
+} from '../userdata'
 import { U } from './fixtures'
 
 describe('TimerStateSchema', () => {
@@ -9,6 +16,7 @@ describe('TimerStateSchema', () => {
     durationMs: 60000,
     endsAt: null,
     pausedRemainingMs: null,
+    pomodoro: null,
     updatedAt: 0,
     ...o,
   })
@@ -17,6 +25,41 @@ describe('TimerStateSchema', () => {
     expect(TimerStateSchema.safeParse(T({ status: 'running' })).success).toBe(false))
   it('paused인데 잔여 시간 없으면 거부', () =>
     expect(TimerStateSchema.safeParse(T({ status: 'paused' })).success).toBe(false))
+  it('뽀모도로 단계와 mode가 맞아야 한다', () => {
+    const ok = T({ pomodoro: { phase: 'shortBreak', round: 1 }, mode: 'break' })
+    expect(TimerStateSchema.safeParse(ok).success).toBe(true)
+    const bad = T({ pomodoro: { phase: 'focus', round: 1 }, mode: 'break' })
+    expect(TimerStateSchema.safeParse(bad).success).toBe(false)
+    expect(TimerStateSchema.safeParse(T({ pomodoro: { phase: 'focus', round: 0 } })).success).toBe(
+      false,
+    )
+  })
+})
+
+describe('PomodoroSettingsSchema / TimerSessionSchema', () => {
+  it('기본값 유효, 범위 밖 거부', () => {
+    expect(PomodoroSettingsSchema.safeParse(DEFAULT_POMODORO).success).toBe(true)
+    expect(PomodoroSettingsSchema.safeParse({ ...DEFAULT_POMODORO, focusMin: 0 }).success).toBe(
+      false,
+    )
+    expect(PomodoroSettingsSchema.safeParse({ ...DEFAULT_POMODORO, longEvery: 1 }).success).toBe(
+      false,
+    )
+  })
+  it('세션: 미지의 키(제목 등) 거부', () => {
+    const s = {
+      id: U(1),
+      kind: 'focus',
+      pomodoro: true,
+      startedAt: 0,
+      endedAt: 1500000,
+      plannedMs: 1500000,
+      actualMs: 1500000,
+      completed: true,
+    }
+    expect(TimerSessionSchema.safeParse(s).success).toBe(true)
+    expect(TimerSessionSchema.safeParse({ ...s, title: '보고서' }).success).toBe(false)
+  })
 })
 
 describe('CalendarEventSchema', () => {

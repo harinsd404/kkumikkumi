@@ -1,9 +1,12 @@
 import type {
   Asset,
   CalendarEvent,
+  PomodoroPhase,
+  PomodoroSettings,
   Settings,
   Theme,
   ThemeRule,
+  TimerSession,
   TimerState,
   TodoItem,
   TodoList,
@@ -91,6 +94,10 @@ export interface IpcSpec {
   'timer.command': { in: TimerCommand; out: TimerState }
   /** 창이 없을 때 끝난 타이머(앱 시작 시 늦은 완료 등). 한 번 꺼내면 비워진다. */
   'timer.takeMissedDone': { in: undefined; out: TimerDoneInfo | null }
+  /** 끝난 시각이 [fromMs, toMs) 안인 기록, 최근 순(최대 1000개) */
+  'timer.sessions': { in: { fromMs: number; toMs: number }; out: TimerSession[] }
+  'timer.pomodoro.get': { in: undefined; out: PomodoroSettings }
+  'timer.pomodoro.update': { in: { patch: Partial<PomodoroSettings> }; out: PomodoroSettings }
   'themeRules.list': { in: undefined; out: ThemeRule[] }
   'themeRules.create': {
     in: { rule: Omit<ThemeRule, 'id' | 'createdAt' | 'updatedAt'> }
@@ -112,6 +119,8 @@ export interface TimerDoneInfo {
   mode: TimerMode
   /** 앱이 꺼져 있거나 잠든 사이에 끝남 */
   late: boolean
+  /** 뽀모도로면 이어지는 단계와 자동 시작 여부 */
+  next: { phase: PomodoroPhase; started: boolean } | null
 }
 
 export type IpcError = { code: string }

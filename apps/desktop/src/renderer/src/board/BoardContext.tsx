@@ -1,5 +1,12 @@
 import { createContext, useContext } from 'react'
-import type { CalendarEvent, Theme, TimerState, TodoItem, TodoList } from '@kkumikkumi/schema'
+import type {
+  CalendarEvent,
+  PomodoroSettings,
+  Theme,
+  TimerState,
+  TodoItem,
+  TodoList,
+} from '@kkumikkumi/schema'
 import type { TimerCommand } from '../../../shared/timer'
 import type { CalendarRangeQuery } from './calendar'
 
@@ -17,6 +24,8 @@ export interface TodoData {
 export interface BoardData {
   todos?: TodoData
   timer?: TimerState
+  /** 뽀모도로 설정(단계 표시 "집중 2/4"에 필요) */
+  pomodoro?: PomodoroSettings
   /** 사용자 데이터가 바뀔 때마다 증가(캘린더 블록이 다시 조회하는 신호) */
   version?: number
 }

@@ -1,8 +1,15 @@
-import { SettingsSchema, type Settings } from '@kkumikkumi/schema'
+import {
+  DEFAULT_POMODORO,
+  PomodoroSettingsSchema,
+  SettingsSchema,
+  type PomodoroSettings,
+  type Settings,
+} from '@kkumikkumi/schema'
 import type { Db } from '../connection'
 import type { Row } from './rows'
 
 const KEY = 'app'
+const POMODORO_KEY = 'pomodoro'
 
 /** 설정은 JSON 한 행으로 저장하고 읽을 때 SettingsSchema로 검증한다. */
 export class SettingsRepo {
@@ -22,5 +29,32 @@ export class SettingsRepo {
       )
       .run(KEY, JSON.stringify(s))
     return s
+  }
+
+  /** 뽀모도로 설정(없거나 손상됐으면 기본값). 앱 설정과 따로 저장해 서로의 스키마 변경에 묶이지 않게 한다. */
+  pomodoro(): PomodoroSettings {
+    const r = this.db.prepare('SELECT value FROM settings WHERE key = ?').get(POMODORO_KEY) as
+      Row | undefined
+    if (!r) return DEFAULT_POMODORO
+    const p = PomodoroSettingsSchema.safeParse(safeJson(String(r['value'])))
+    return p.success ? p.data : DEFAULT_POMODORO
+  }
+
+  savePomodoro(settings: PomodoroSettings): PomodoroSettings {
+    const s = PomodoroSettingsSchema.parse(settings)
+    this.db
+      .prepare(
+        'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+      )
+      .run(POMODORO_KEY, JSON.stringify(s))
+    return s
+  }
+}
+
+const safeJson = (s: string): unknown => {
+  try {
+    return JSON.parse(s)
+  } catch {
+    return null
   }
 }

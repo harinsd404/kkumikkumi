@@ -76,6 +76,48 @@ export const CalendarEventSchema = z.union([TimedEvent, AllDayEvent])
 
 /* ───────── 타이머 ───────── */
 
+export const PomodoroPhaseSchema = z.enum(['focus', 'shortBreak', 'longBreak'])
+
+/** 뽀모도로 설정(사용자 설정: 테마와 무관). 분 단위. */
+export const PomodoroSettingsSchema = z.strictObject({
+  focusMin: z.number().int().min(1).max(180),
+  shortBreakMin: z.number().int().min(1).max(60),
+  longBreakMin: z.number().int().min(1).max(120),
+  /** 집중 몇 번마다 긴 휴식 */
+  longEvery: z.number().int().min(2).max(12),
+  /** 단계가 끝나면 다음 단계를 바로 시작(앱이 꺼져 있던 동안 끝난 경우는 제외) */
+  autoStart: z.boolean(),
+})
+
+export const DEFAULT_POMODORO: z.infer<typeof PomodoroSettingsSchema> = {
+  focusMin: 25,
+  shortBreakMin: 5,
+  longBreakMin: 15,
+  longEvery: 4,
+  autoStart: false,
+}
+
+/** 끝났거나 중간에 멈춘 타이머 한 번의 기록(통계용). 사용자 문자열은 담지 않는다. */
+export const TimerSessionSchema = z.strictObject({
+  id: Uuid,
+  kind: z.enum(['focus', 'break']),
+  pomodoro: z.boolean(),
+  /** 끝난 시각 - 실제 진행 시간(일시정지한 시간은 빠진 근사값) */
+  startedAt: EpochMs,
+  endedAt: EpochMs,
+  plannedMs: z
+    .number()
+    .int()
+    .min(1000)
+    .max(24 * 3600 * 1000),
+  actualMs: z
+    .number()
+    .int()
+    .nonnegative()
+    .max(24 * 3600 * 1000),
+  completed: z.boolean(),
+})
+
 /** 카운트다운은 setInterval이 아니라 endsAt 타임스탬프로 남은 시간을 계산 */
 export const TimerStateSchema = z
   .strictObject({
@@ -88,9 +130,16 @@ export const TimerStateSchema = z
       .max(24 * 3600 * 1000),
     endsAt: EpochMs.nullable(),
     pausedRemainingMs: z.number().int().nonnegative().nullable(),
+    /** 뽀모도로 사이클 중이면 지금 단계와 회차(집중 몇 번째), 일반 타이머면 null */
+    pomodoro: z
+      .strictObject({ phase: PomodoroPhaseSchema, round: z.number().int().min(1).max(99) })
+      .nullable(),
     updatedAt: EpochMs,
   })
   .superRefine((s, ctx) => {
+    if (s.pomodoro && (s.pomodoro.phase === 'focus') !== (s.mode === 'focus')) {
+      ctx.addIssue({ code: 'custom', path: ['mode'], message: '뽀모도로 단계와 mode가 다름' })
+    }
     if (s.status === 'running' && s.endsAt === null) {
       ctx.addIssue({ code: 'custom', path: ['endsAt'], message: 'running 상태는 endsAt 필요' })
     }
@@ -153,5 +202,8 @@ export type TodoList = z.infer<typeof TodoListSchema>
 export type TodoItem = z.infer<typeof TodoItemSchema>
 export type CalendarEvent = z.infer<typeof CalendarEventSchema>
 export type TimerState = z.infer<typeof TimerStateSchema>
+export type PomodoroSettings = z.infer<typeof PomodoroSettingsSchema>
+export type PomodoroPhase = z.infer<typeof PomodoroPhaseSchema>
+export type TimerSession = z.infer<typeof TimerSessionSchema>
 export type ThemeRule = z.infer<typeof ThemeRuleSchema>
 export type Settings = z.infer<typeof SettingsSchema>

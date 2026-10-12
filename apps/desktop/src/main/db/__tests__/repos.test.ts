@@ -1,10 +1,11 @@
-import type {
-  CalendarEvent,
-  Settings,
-  ThemeRule,
-  TimerState,
-  TodoItem,
-  TodoList,
+import {
+  DEFAULT_POMODORO,
+  type CalendarEvent,
+  type Settings,
+  type ThemeRule,
+  type TimerState,
+  type TodoItem,
+  type TodoList,
 } from '@kkumikkumi/schema'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { openDb, type Db } from '../connection'
@@ -179,6 +180,7 @@ describe('TimerRepo', () => {
     durationMs: 60000,
     endsAt: 1000,
     pausedRemainingMs: null,
+    pomodoro: null,
     updatedAt: 1,
   }
   it('없으면 null, 저장 후 덮어쓰기', () => {
@@ -190,6 +192,39 @@ describe('TimerRepo', () => {
   })
   it('running인데 endsAt 없으면 거부', () => {
     expect(() => repos.timer.save({ ...s, endsAt: null })).toThrow()
+  })
+  it('뽀모도로 단계 왕복', () => {
+    repos.timer.save({ ...s, mode: 'break', pomodoro: { phase: 'longBreak', round: 4 } })
+    expect(repos.timer.get()?.pomodoro).toEqual({ phase: 'longBreak', round: 4 })
+  })
+})
+
+describe('TimerSessionRepo / 뽀모도로 설정', () => {
+  const sess = (n: number, endedAt: number) => ({
+    id: U(300 + n),
+    kind: 'focus' as const,
+    pomodoro: n % 2 === 0,
+    startedAt: endedAt - 60000,
+    endedAt,
+    plannedMs: 60000,
+    actualMs: 60000,
+    completed: true,
+  })
+  it('끝난 시각 구간 [from, to), 최근 순', () => {
+    const K = 1_000_000
+    repos.timerSessions.insert(sess(1, K))
+    repos.timerSessions.insert(sess(2, 2 * K))
+    repos.timerSessions.insert(sess(3, 3 * K))
+    expect(repos.timerSessions.endedBetween(K, 3 * K).map((x) => x.endedAt)).toEqual([2 * K, K])
+    expect(repos.timerSessions.endedBetween(0, 10 * K)[0]).toEqual(sess(3, 3 * K))
+  })
+  it('설정: 없으면 기본값, 손상돼도 기본값, 저장 후 읽기', () => {
+    expect(repos.settings.pomodoro()).toEqual(DEFAULT_POMODORO)
+    db.prepare("INSERT INTO settings (key, value) VALUES ('pomodoro', '{oops')").run()
+    expect(repos.settings.pomodoro()).toEqual(DEFAULT_POMODORO)
+    repos.settings.savePomodoro({ ...DEFAULT_POMODORO, focusMin: 50 })
+    expect(repos.settings.pomodoro().focusMin).toBe(50)
+    expect(() => repos.settings.savePomodoro({ ...DEFAULT_POMODORO, focusMin: 0 })).toThrow()
   })
 })
 

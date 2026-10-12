@@ -22,7 +22,9 @@ import { createHandlers } from './ipc/handlers'
 import { registerIpc } from './ipc/register'
 import { devServerUrl, isAppUrl, rendererIndexPath } from './security'
 import { TimerService } from './timer/timerService'
+import { PHASE_LABEL } from '../shared/pomodoro'
 import { isFocusing } from '../shared/timer'
+import { DEFAULT_POMODORO } from '@kkumikkumi/schema'
 import {
   BOARD_RATIO,
   fitWindowBounds,
@@ -227,6 +229,16 @@ const TIMER_DONE_TEXT = {
   break: { title: '쉬는 시간이 끝났어요', body: '다시 시작해 볼까요?' },
 } as const
 
+function timerDoneText(info: TimerDoneInfo): { title: string; body: string } {
+  const base = TIMER_DONE_TEXT[info.mode]
+  if (!info.next) return base
+  const next = PHASE_LABEL[info.next.phase]
+  return {
+    title: base.title,
+    body: info.next.started ? `${next} 시간이 시작됐어요.` : `다음은 ${next} 차례예요.`,
+  }
+}
+
 /** 타이머는 main이 소유한다. 완료 알림은 시스템 알림 + 앱 안 표시(timer:done)를 항상 함께 보낸다. */
 function startTimerService(c: AppCore): TimerService {
   let focusing: boolean | null = null
@@ -253,7 +265,22 @@ function startTimerService(c: AppCore): TimerService {
       if (BrowserWindow.getAllWindows().length > 0) sendToWindows('timer:done', info)
       else missedTimerDone = info
       // 권한 상태를 조회할 API가 없어 거부 여부는 알 수 없다(docs/verified-facts.md). 앱 안 표시를 병행한다.
-      if (Notification.isSupported()) new Notification(TIMER_DONE_TEXT[info.mode]).show()
+      if (Notification.isSupported()) new Notification(timerDoneText(info)).show()
+    },
+    pomodoro: () => {
+      try {
+        return c.repos.settings.pomodoro()
+      } catch {
+        return DEFAULT_POMODORO
+      }
+    },
+    onSession: (s) => {
+      try {
+        c.repos.timerSessions.insert({ ...s, id: randomUUID() })
+      } catch {
+        // 기록 실패가 타이머를 멈추게 하지 않는다(로그에 사용자 데이터 없음)
+        console.error('[timer] 기록 저장 실패')
+      }
     },
   })
   svc.init()

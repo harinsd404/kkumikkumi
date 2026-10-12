@@ -1,4 +1,10 @@
-import type { TimerState, TodoItem, TodoList } from '@kkumikkumi/schema'
+import type {
+  PomodoroSettings,
+  TimerSession,
+  TimerState,
+  TodoItem,
+  TodoList,
+} from '@kkumikkumi/schema'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { IpcResult, TimerDoneInfo } from '../../../shared/api'
 import type { BoardActions, BoardData, EditorTarget, TodoData } from '../board/BoardContext'
@@ -44,6 +50,11 @@ export interface UserData {
   /** 일정 입력 창 대상(null이면 닫힘) */
   editing: EditorTarget | null
   closeEditor(): void
+  timer: {
+    /** 끝난 시각이 [fromMs, toMs) 안인 기록 */
+    sessions(fromMs: number, toMs: number): Promise<TimerSession[]>
+    updatePomodoro(patch: Partial<PomodoroSettings>): Promise<boolean>
+  }
   /** 앱 안 타이머 완료 표시 */
   timerDone: TimerDoneInfo | null
   dismissTimerDone(): void
@@ -53,6 +64,7 @@ export interface UserData {
 export function useUserData(onError: (text: string) => void): UserData {
   const [todos, setTodos] = useState<TodoData | undefined>()
   const [timer, setTimer] = useState<TimerState | undefined>()
+  const [pomodoro, setPomodoro] = useState<PomodoroSettings | undefined>()
   const [version, setVersion] = useState(0)
   const [editing, setEditing] = useState<UserData['editing']>(null)
   const [timerDone, setTimerDone] = useState<TimerDoneInfo | null>(null)
@@ -84,6 +96,8 @@ export function useUserData(onError: (text: string) => void): UserData {
       await refreshTodos()
       const t = await window.kkumi.invoke('timer.get')
       if (t.ok) setTimer(t.value)
+      const p = await window.kkumi.invoke('timer.pomodoro.get')
+      if (p.ok) setPomodoro(p.value)
       const missed = await window.kkumi.invoke('timer.takeMissedDone')
       if (missed.ok && missed.value) setTimerDone(missed.value)
     })()
@@ -155,9 +169,23 @@ export function useUserData(onError: (text: string) => void): UserData {
     () => ({
       ...(todos ? { todos } : {}),
       ...(timer ? { timer } : {}),
+      ...(pomodoro ? { pomodoro } : {}),
       version,
     }),
-    [todos, timer, version],
+    [todos, timer, pomodoro, version],
+  )
+
+  const timerApi = useMemo<UserData['timer']>(
+    () => ({
+      sessions: async (fromMs, toMs) =>
+        (await run(window.kkumi.invoke('timer.sessions', { fromMs, toMs }), false)) ?? [],
+      updatePomodoro: async (patch) => {
+        const r = await run(window.kkumi.invoke('timer.pomodoro.update', { patch }), false)
+        if (r) setPomodoro(r)
+        return r !== null
+      },
+    }),
+    [run],
   )
 
   return {
@@ -167,6 +195,7 @@ export function useUserData(onError: (text: string) => void): UserData {
     events,
     editing,
     closeEditor: () => setEditing(null),
+    timer: timerApi,
     timerDone,
     dismissTimerDone: () => setTimerDone(null),
   }

@@ -19,6 +19,7 @@ describe('migrate', () => {
       'calendar_events',
       'settings',
       'theme_rules',
+      'timer_sessions',
       'timer_state',
       'todo_items',
       'todo_lists',
