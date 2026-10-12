@@ -1,14 +1,13 @@
 import type { CalendarEvent, GridBlock, Palette, TodoItem } from '@kkumikkumi/schema'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import chevronLeftUrl from '../icons/chevron-left.svg'
 import chevronRightUrl from '../icons/chevron-right.svg'
 import { useBoard, type BoardActions } from '../BoardContext'
+import { useDayData } from '../calendarData'
 import {
   addDays,
-  eventsByDay,
   localDate,
   monthGrid,
-  rangeForDays,
   shiftMonth,
   timeLabel,
   weekdayLabels,
@@ -19,39 +18,6 @@ import type { Box } from '../layout'
 import { maskCss } from '../style'
 
 type CalendarBlockT = Extract<GridBlock, { type: 'calendar' }>
-
-interface DayData {
-  events: Map<string, CalendarEvent[]>
-  todos: Map<string, TodoItem[]>
-}
-
-/** 보이는 날짜 구간의 일정과 마감 투두. data.version이 바뀌면(일정/투두 변경) 다시 읽는다. */
-function useDayData(days: readonly string[], actions: BoardActions | undefined, version: number) {
-  const first = days[0]
-  const last = days[days.length - 1]
-  const [state, setState] = useState<{ key: string; events: CalendarEvent[]; todos: TodoItem[] }>()
-  useEffect(() => {
-    if (!actions || !first || !last) return
-    let alive = true
-    const key = `${first}~${last}`
-    void Promise.all([
-      actions.calendar.range(rangeForDays(first, last)),
-      actions.calendar.dueTodos(first, last),
-    ]).then(([events, todos]) => {
-      if (alive) setState({ key, events, todos })
-    })
-    return () => {
-      alive = false
-    }
-  }, [actions, first, last, version])
-  return dayMaps(days, state?.events ?? [], state?.todos ?? [])
-}
-
-function dayMaps(days: readonly string[], events: CalendarEvent[], todos: TodoItem[]): DayData {
-  const todoMap = new Map<string, TodoItem[]>(days.map((d) => [d, []]))
-  for (const t of todos) if (t.dueDate) todoMap.get(t.dueDate)?.push(t)
-  return { events: eventsByDay(events, days), todos: todoMap }
-}
 
 /**
  * 월 캘린더. L은 Figma 6:2597(월: 요일 + 칸에 일정 칩, 주: 7열 목록), M은 Figma 3:2013(미니: 숫자 + 일정 있는 날 점).

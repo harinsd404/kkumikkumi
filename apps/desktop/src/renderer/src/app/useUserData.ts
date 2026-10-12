@@ -1,7 +1,7 @@
-import type { CalendarEvent, TimerState, TodoItem, TodoList } from '@kkumikkumi/schema'
+import type { TimerState, TodoItem, TodoList } from '@kkumikkumi/schema'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { IpcResult, TimerDoneInfo } from '../../../shared/api'
-import type { BoardActions, BoardData, TodoData } from '../board/BoardContext'
+import type { BoardActions, BoardData, EditorTarget, TodoData } from '../board/BoardContext'
 import type { EventInput } from '../board/calendar'
 
 // 사용자 데이터(투두/일정/타이머)를 IPC로 읽고 쓰는 훅. 테마(에디터 상태)와는 독립.
@@ -42,7 +42,7 @@ export interface UserData {
     remove(id: string): Promise<boolean>
   }
   /** 일정 입력 창 대상(null이면 닫힘) */
-  editing: { date: string } | { event: CalendarEvent } | null
+  editing: EditorTarget | null
   closeEditor(): void
   /** 앱 안 타이머 완료 표시 */
   timerDone: TimerDoneInfo | null

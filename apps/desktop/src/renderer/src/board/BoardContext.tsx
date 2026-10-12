@@ -29,6 +29,9 @@ export type TodoPatch = {
   listId?: string
 }
 
+/** 일정 입력 창 대상: 새 일정(날짜, 시간 칸에서 열면 시각도) 또는 기존 일정 */
+export type EditorTarget = { date: string; time?: string } | { event: CalendarEvent }
+
 /** 세부 페이지가 있는 블록 타입 */
 export type PageType = 'todo' | 'calendar' | 'timer'
 
@@ -47,7 +50,7 @@ export interface BoardActions {
     range(q: CalendarRangeQuery): Promise<CalendarEvent[]>
     dueTodos(fromDate: string, toDate: string): Promise<TodoItem[]>
     /** 일정 입력 창 열기(보드 밖 앱 레이어) */
-    openEditor(target: { date: string } | { event: CalendarEvent }): void
+    openEditor(target: EditorTarget): void
   }
   timer: {
     command(c: TimerCommand): void

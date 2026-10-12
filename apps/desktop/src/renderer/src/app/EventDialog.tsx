@@ -1,4 +1,4 @@
-import type { CalendarEvent, Theme } from '@kkumikkumi/schema'
+import type { Theme } from '@kkumikkumi/schema'
 import { useEffect, useId, useRef, useState } from 'react'
 import checkUrl from '../board/icons/check.svg'
 import {
@@ -8,10 +8,12 @@ import {
   type EventForm,
   type EventInput,
 } from '../board/calendar'
+import type { EditorTarget } from '../board/BoardContext'
+import { addMinutesToTime } from '../pages/calendarView'
 import { themeVars } from './themeVars'
 
 interface Props {
-  target: { date: string } | { event: CalendarEvent }
+  target: EditorTarget
   /** 팔레트/폰트를 보드와 맞춘다 */
   theme: Theme
   onCreate(e: EventInput): Promise<boolean>
@@ -32,20 +34,23 @@ export function EventDialog({ target, theme, onCreate, onUpdate, onDelete, onClo
     '#e76f51',
     '#4f86c6',
   ]
-  const [form, setForm] = useState<EventForm>(() =>
-    existing
-      ? eventToForm(existing)
-      : {
-          title: '',
-          allDay: true,
-          startDate: 'date' in target ? target.date : '',
-          endDate: 'date' in target ? target.date : '',
-          startTime: '09:00',
-          endTime: '10:00',
-          color: palette.accent,
-          note: '',
-        },
-  )
+  const [form, setForm] = useState<EventForm>(() => {
+    if (existing) return eventToForm(existing)
+    const date = 'date' in target ? target.date : ''
+    const time = 'date' in target ? target.time : undefined
+    // 시간 칸에서 열었으면 그 시각부터 1시간짜리 시각 일정
+    const end = addMinutesToTime(date, time ?? '09:00', 60)
+    return {
+      title: '',
+      allDay: time === undefined,
+      startDate: date,
+      endDate: time === undefined ? date : end.date,
+      startTime: time ?? '09:00',
+      endTime: end.time,
+      color: palette.accent,
+      note: '',
+    }
+  })
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)

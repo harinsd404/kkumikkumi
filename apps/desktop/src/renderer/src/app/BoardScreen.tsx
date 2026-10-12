@@ -10,6 +10,7 @@ import { keyToCommand } from '../editor/state/shortcuts'
 import { useEditor, type EditorApi } from '../editor/useEditor'
 import { makeAssetUrl } from './assetUrl'
 import { EventDialog } from './EventDialog'
+import { CalendarPage } from '../pages/CalendarPage'
 import { TodoPage } from '../pages/TodoPage'
 import { themeVars } from './themeVars'
 import { TitleBar, type AppPage, type PageNav } from './TitleBar'
@@ -19,6 +20,7 @@ import { useUserData } from './useUserData'
 const PAGES: PageNav['pages'] = [
   { id: 'board', label: '보드' },
   { id: 'todo', label: '할 일' },
+  { id: 'calendar', label: '캘린더' },
 ]
 
 const ASSET_ERRORS: Record<string, string> = {
@@ -49,7 +51,10 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
   const theme = ed.theme
   // 블록의 "크게 보기" 버튼이 세부 페이지로 보낸다
   const boardActions = useMemo(
-    () => ({ ...user.actions, pages: { todo: () => setPage('todo') } }),
+    () => ({
+      ...user.actions,
+      pages: { todo: () => setPage('todo'), calendar: () => setPage('calendar') },
+    }),
     [user.actions],
   )
   const assetUrl = useMemo(() => makeAssetUrl(theme), [theme])
@@ -186,6 +191,17 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
             <TodoPage todos={user.data.todos} actions={user.actions} lists={user.lists} now={now} />
           </div>
         )}
+        {page === 'calendar' && (
+          <div className="app-page" style={themeVars(theme)}>
+            <CalendarPage
+              actions={user.actions}
+              version={user.data.version ?? 0}
+              now={now}
+              weekStartsOn={weekStartsOf(theme)}
+              updateEvent={user.events.update}
+            />
+          </div>
+        )}
         {page === 'board' && (
           <Board
             theme={theme}
@@ -317,4 +333,10 @@ function useMinuteClock(): Date {
     }
   }, [])
   return now
+}
+
+/** 페이지의 주 시작 요일: 보드의 첫 캘린더 블록 설정을 따른다(없으면 일요일) */
+function weekStartsOf(t: Theme): 0 | 1 {
+  for (const b of t.blocks) if (b.type === 'calendar') return b.props.weekStartsOn
+  return 0
 }
