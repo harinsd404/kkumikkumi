@@ -22,7 +22,7 @@ interface Props {
 
 const BLOCK_MENU = [
   { type: 'calendar', size: 'L', label: '캘린더 · 월간 (4×3)' },
-  { type: 'calendar', size: 'M', label: '캘린더 · 주간 (2×2)' },
+  { type: 'calendar', size: 'M', label: '캘린더 · 미니 (2×2)' },
   { type: 'todo', size: 'S', label: '투두 · 작게 (2×2)' },
   { type: 'todo', size: 'M', label: '투두 · 길게 (2×3)' },
   { type: 'todo', size: 'L', label: '투두 · 크게 (4×3)' },

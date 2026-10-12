@@ -1,7 +1,8 @@
-import type { Asset, Theme } from '@kkumikkumi/schema'
+import { blockRect, type Asset, type Theme } from '@kkumikkumi/schema'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Board } from '../board/Board'
 import type { BoardData } from '../board/BoardContext'
+import { blockBox } from '../board/layout'
 import { EditorOverlay } from '../editor/EditorOverlay'
 import { Inspector } from '../editor/Inspector'
 import type { Point } from '../editor/state/geometry'
@@ -176,8 +177,20 @@ export function BoardScreen({ initialTheme, data }: { initialTheme: Theme; data:
                     onDropFile={async (file, at) => {
                       const bytes = new Uint8Array(await file.arrayBuffer())
                       const r = await importAsset({ bytes })
+                      if (!r) return
+                      // 이미지 블록 위에 놓으면 그 블록의 이미지로(블록마다 따로)
+                      const target = imageBlockAt(ed.theme, at)
+                      if (target) {
+                        ed.dispatch({
+                          type: 'block/props',
+                          id: target.id,
+                          patch: { assetHash: r.asset.hash },
+                        })
+                        ed.select({ kind: 'block', id: target.id })
+                        return
+                      }
                       // 투명 영역이 있으면 스티커(잘리지 않게), 아니면 이미지
-                      if (r) addDecor(r.hasTransparency ? 'sticker' : 'image', r.asset, at)
+                      addDecor(r.hasTransparency ? 'sticker' : 'image', r.asset, at)
                     }}
                   />
                 )
@@ -218,4 +231,21 @@ function nudge(ed: EditorApi, c: { dx: number; dy: number; big: boolean }) {
     const b = ed.theme.blocks.find((x) => x.id === s.id)
     if (b) ed.dispatch({ type: 'block/move', id: b.id, col: b.col + c.dx, row: b.row + c.dy })
   }
+}
+
+/** 캔버스 좌표 아래의 이미지 블록(없으면 null) */
+function imageBlockAt(t: Theme, at: Point) {
+  for (const b of t.blocks) {
+    const r = b.type === 'image' ? blockRect(b) : null
+    if (!r) continue
+    const box = blockBox(r)
+    if (
+      at.x >= box.left &&
+      at.x <= box.left + box.width &&
+      at.y >= box.top &&
+      at.y <= box.top + box.height
+    )
+      return b
+  }
+  return null
 }
