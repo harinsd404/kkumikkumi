@@ -1,6 +1,7 @@
 import { blockRect, type Asset, type Theme } from '@kkumikkumi/schema'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Board } from '../board/Board'
+import { fontStack } from '../board/fonts'
 import { blockBox } from '../board/layout'
 import { EditorOverlay } from '../editor/EditorOverlay'
 import { Inspector } from '../editor/Inspector'
@@ -215,6 +216,7 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
           <EventDialog
             target={user.editing}
             palette={theme.defaults.palette}
+            fontFamily={fontStack(theme.defaults.fontId)}
             onCreate={user.events.create}
             onUpdate={user.events.update}
             onDelete={user.events.remove}

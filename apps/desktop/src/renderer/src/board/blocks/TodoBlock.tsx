@@ -1,5 +1,5 @@
 import type { GridBlock, Palette, TodoItem } from '@kkumikkumi/schema'
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import checkUrl from '../icons/check.svg'
 import plusUrl from '../icons/plus.svg'
 import { useBoard, type BoardActions } from '../BoardContext'
@@ -15,6 +15,10 @@ import {
 } from '../todo'
 
 type TodoBlockT = Extract<GridBlock, { type: 'todo' }>
+
+/** 입력칸 밑줄 색: 평소 subText, 포커스 시 accent */
+const inputLine = (p: Palette) =>
+  ({ '--kt-line': p.subText, '--kt-line-focus': p.accent }) as CSSProperties
 
 /**
  * 시안(Figma 15:2832 / 15:2781)의 투두 카드. 섹션: 오늘의 할 일 / 내일 해야할 일 / 보관함.
@@ -140,6 +144,7 @@ function Section({
       {adding && (
         <input
           className="kt-input"
+          style={inputLine(p)}
           autoFocus
           placeholder="할 일을 입력하고 Enter"
           aria-label="새 할 일"
@@ -235,6 +240,7 @@ function Item({
         {editing ? (
           <input
             className="kt-input kt-input--inline"
+            style={inputLine(p)}
             autoFocus
             defaultValue={i.title}
             maxLength={200}

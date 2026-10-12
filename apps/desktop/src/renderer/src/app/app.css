@@ -493,88 +493,139 @@ body {
 .dlg {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  width: min(380px, calc(100vw - 40px));
-  padding: 20px;
-  border-radius: 16px;
+  gap: 18px;
+  width: min(400px, calc(100vw - 40px));
+  padding: 25px;
+  border-radius: 25px;
   background: #ffffff;
-  box-shadow: 0 12px 40px rgb(0 0 0 / 0.2);
-  font-size: 14px;
-  color: #333333;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.18);
+  font-size: 15px;
+  font-weight: 500;
 }
 .dlg-title {
+  align-self: flex-start;
   margin: 0;
-  font-size: 17px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: var(--d-control);
+  font-size: 15px;
+  font-weight: 700;
 }
 .dlg-field {
   display: flex;
   flex: 1;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 .dlg-field > span {
-  font-size: 12px;
-  color: #777777;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--d-sub);
 }
 .dlg-field input,
 .dlg-field textarea {
-  padding: 7px 9px;
-  border: 1px solid #dddddd;
-  border-radius: 8px;
+  padding: 4px 2px;
+  border: 0;
+  border-bottom: 1.5px solid var(--d-sub);
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
   font: inherit;
-  resize: vertical;
+  outline: none;
+  resize: none;
+  color-scheme: light;
+}
+.dlg-field input:focus,
+.dlg-field textarea:focus {
+  border-bottom-color: var(--d-accent);
 }
 .dlg-row {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
+  gap: 12px;
 }
 .dlg-check {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  align-self: flex-start;
+  cursor: pointer;
+}
+.dlg-box {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: #dbdddf;
+}
+.dlg-check input:checked + .dlg-box {
+  background: var(--d-check);
+}
+.dlg-check input:focus-visible + .dlg-box {
+  outline: 2px solid var(--d-accent);
+  outline-offset: 2px;
+}
+.dlg-box img {
+  position: absolute;
+  inset: 12.5%;
+  width: 75%;
+  height: 75%;
 }
 .dlg-swatches {
   display: flex;
-  gap: 8px;
+  gap: 10px;
+  padding-top: 4px;
 }
 .dlg-swatch {
   width: 24px;
   height: 24px;
-  border: 2px solid transparent;
+  padding: 0;
+  border: 2px solid #ffffff;
   border-radius: 50%;
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.1);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08);
   cursor: pointer;
 }
 .dlg-swatch[aria-checked='true'] {
-  border-color: #ffffff;
-  box-shadow: 0 0 0 2px #333333;
+  box-shadow: 0 0 0 2px var(--d-text);
 }
 .dlg-error {
   margin: 0;
   color: #c0392b;
+  font-size: 13px;
 }
 .dlg-actions {
   display: flex;
   gap: 8px;
+  padding-top: 4px;
 }
 .dlg-spacer {
   flex: 1;
 }
 .dlg-actions button {
-  padding: 7px 14px;
+  padding: 8px 18px;
   border: 0;
-  border-radius: 8px;
-  background: #f0f0f0;
+  border-radius: 999px;
+  background: var(--d-control);
+  color: inherit;
   font: inherit;
+  font-weight: 600;
   cursor: pointer;
 }
 .dlg-actions .is-primary {
-  background: #333333;
-  color: #ffffff;
+  background: var(--d-accent);
 }
 .dlg-actions .is-danger {
+  background: transparent;
   color: #c0392b;
+}
+.dlg-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.dlg button:focus-visible {
+  outline: 2px solid var(--d-accent);
+  outline-offset: 2px;
 }
 .sr-only {
   position: absolute;
