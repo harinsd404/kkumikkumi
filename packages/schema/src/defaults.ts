@@ -139,3 +139,44 @@ export function referencedAssetHashes(t: Theme): Set<string> {
   }
   return out
 }
+
+/* ───────── 에디터에서 새로 만드는 요소의 기본값 ───────── */
+
+type Block = Theme['blocks'][number]
+type Decor = Theme['freeItems'][number]['decor']
+
+const defaultProps = {
+  calendar: { view: 'month', weekStartsOn: 0 },
+  todo: { listId: null, showCompleted: true },
+  timer: { presetsMin: [25, 5], display: 'ring' },
+  image: { assetHash: null, fit: 'cover', focus: { x: 0.5, y: 0.5, zoom: 1 }, shape: 'rect' },
+} as const
+
+/** 새 그리드 블록(시안의 흰 카드 스타일). 위치/크기 유효성은 호출 측(에디터 리듀서)이 확인한다. */
+export function newBlock(
+  type: Block['type'],
+  size: Block['size'],
+  id: string,
+  col: number,
+  row: number,
+): Block {
+  const style = type === 'image' ? bannerStyle() : cardStyle(type === 'calendar')
+  return structuredCloneJson({
+    id,
+    type,
+    size,
+    col,
+    row,
+    style,
+    props: defaultProps[type],
+  }) as Block
+}
+
+export const newDecor = (): Decor => ({
+  opacity: 1,
+  radius: 0,
+  border: { width: 0, color: null },
+  shadow: 'none',
+})
+
+const structuredCloneJson = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T

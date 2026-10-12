@@ -73,6 +73,10 @@ describe('findFreeSlot', () => {
   it('잘못된 크기는 null', () => {
     expect(findFreeSlot(grid, [], { w: 0, h: 1 })).toBeNull()
   })
+  it('size에 col/row가 함께 들어와도 탐색 위치를 덮어쓰지 않는다', () => {
+    const rectLike = { col: 0, row: 0, w: 1, h: 1 }
+    expect(findFreeSlot(grid, sketch, rectLike)).toEqual({ col: 2, row: 0 })
+  })
   it('남은 한 칸을 찾는다', () => {
     const items: GridItem[] = [
       { id: 'a', col: 0, row: 0, w: 8, h: 4 },

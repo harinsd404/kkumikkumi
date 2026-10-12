@@ -61,7 +61,8 @@ export function findFreeSlot(
   if (!isPosInt(size.w) || !isPosInt(size.h)) return null
   for (let row = 0; row + size.h <= grid.rows; row++) {
     for (let col = 0; col + size.w <= grid.cols; col++) {
-      if (canPlace(grid, items, { col, row, ...size })) return { col, row }
+      // size에 col/row가 섞여 들어와도 덮어쓰지 않도록 w/h만 꺼낸다
+      if (canPlace(grid, items, { col, row, w: size.w, h: size.h })) return { col, row }
     }
   }
   return null

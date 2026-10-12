@@ -1,8 +1,7 @@
 import type { Theme } from '@kkumikkumi/schema'
-import { useEffect, useMemo, useState } from 'react'
-import { makeAssetUrl } from './app/assetUrl'
+import { useEffect, useState } from 'react'
+import { BoardScreen } from './app/BoardScreen'
 import { TitleBar } from './app/TitleBar'
-import { Board } from './board/Board'
 import type { BoardData } from './board/BoardContext'
 import './app/app.css'
 
@@ -25,22 +24,18 @@ export function App() {
     })()
   }, [])
 
-  const assetUrl = useMemo(
-    () => (load.state === 'ready' ? makeAssetUrl(load.theme) : () => null),
-    [load],
-  )
-
-  return (
-    <div className="app">
-      <TitleBar themeName={load.state === 'ready' ? load.theme.name : null} />
-      <main className="app-board">
-        {load.state === 'ready' && (
-          <Board theme={load.theme} assetUrl={assetUrl} data={load.data} />
-        )}
-        {load.state === 'error' && (
-          <p className="app-error">보드를 불러오지 못했어요 ({load.code})</p>
-        )}
-      </main>
-    </div>
-  )
+  if (load.state !== 'ready') {
+    return (
+      <div className="app">
+        <TitleBar themeName={null} editing={false} onToggleEdit={() => {}} />
+        <main className="app-board">
+          {load.state === 'error' && (
+            <p className="app-error">보드를 불러오지 못했어요 ({load.code})</p>
+          )}
+        </main>
+      </div>
+    )
+  }
+  // 테마가 바뀌면(M6) 에디터 상태를 새로 만든다
+  return <BoardScreen key={load.theme.id} initialTheme={load.theme} data={load.data} />
 }

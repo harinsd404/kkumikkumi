@@ -1,5 +1,12 @@
 import { CANVAS, blockRect, type FreeItem, type Theme } from '@kkumikkumi/schema'
-import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react'
 import { Background } from './Background'
 import {
   BoardProvider,
@@ -18,6 +25,8 @@ export interface BoardProps {
   data?: BoardData
   mode?: BoardMode
   now?: Date
+  /** 캔버스 맨 위에 겹쳐 그릴 레이어(에디터). 캔버스 좌표계 안에서 그려지고 현재 스케일을 받는다. */
+  overlay?: ((scale: number) => ReactNode) | undefined
 }
 
 const byZ = (a: FreeItem, b: FreeItem) => a.z - b.z
@@ -26,7 +35,7 @@ const byZ = (a: FreeItem, b: FreeItem) => a.z - b.z
  * 보드 렌더러(순수 React, electron 의존 없음).
  * 1600x1000 논리 캔버스를 부모 크기에 맞춰 균일 스케일. 렌더 순서: 배경 → back 자유 아이템 → 그리드 블록 → front 자유 아이템.
  */
-export function Board({ theme, assetUrl, data = {}, mode = 'use', now }: BoardProps) {
+export function Board({ theme, assetUrl, data = {}, mode = 'use', now, overlay }: BoardProps) {
   const hostRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 0, h: 0 })
 
@@ -75,6 +84,7 @@ export function Board({ theme, assetUrl, data = {}, mode = 'use', now }: BoardPr
               <FreeItemView key={f.id} item={f} />
             ))}
           </div>
+          {overlay?.(scale)}
         </div>
       </div>
     </BoardProvider>

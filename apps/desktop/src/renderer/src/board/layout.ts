@@ -7,8 +7,8 @@ import { CANVAS, CELL, type GridRect } from '@kkumikkumi/schema'
 export const BOARD_PADDING = 25
 export const BOARD_GAP = 25
 
-const pitchX = (CANVAS.width - 2 * BOARD_PADDING + BOARD_GAP) / CANVAS.cols
-const pitchY = (CANVAS.height - 2 * BOARD_PADDING + BOARD_GAP) / CANVAS.rows
+export const pitchX = (CANVAS.width - 2 * BOARD_PADDING + BOARD_GAP) / CANVAS.cols
+export const pitchY = (CANVAS.height - 2 * BOARD_PADDING + BOARD_GAP) / CANVAS.rows
 
 export interface Box {
   left: number

@@ -10,6 +10,15 @@ const api: KkumiApi = {
       return Promise.resolve({ ok: false, error: { code: 'unknown_channel' } })
     return ipcRenderer.invoke(channel, input)
   }) as KkumiApi['invoke'],
+  onBeforeClose: (cb) => {
+    ipcRenderer.removeAllListeners('app:before-close')
+    ipcRenderer.on('app:before-close', () => {
+      void Promise.resolve()
+        .then(cb)
+        .catch(() => {})
+        .finally(() => ipcRenderer.send('app:close-ready'))
+    })
+  },
 }
 
 contextBridge.exposeInMainWorld('kkumi', api)

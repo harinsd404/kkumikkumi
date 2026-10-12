@@ -59,3 +59,423 @@ body {
   margin: 24px;
   color: #4a3a36;
 }
+
+/* ── 타이틀바 도구 ── */
+.app-titlebar {
+  position: relative;
+  padding: 0 12px 0 84px; /* 왼쪽: 신호등 버튼 자리 */
+}
+.app-theme-pill {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.tb-left,
+.tb-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  -webkit-app-region: no-drag;
+}
+.tb-left {
+  margin-right: auto;
+}
+.tb-right {
+  margin-left: auto;
+}
+.tb-btn {
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid #f1e2c8;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #4a3a36;
+  font:
+    600 12px 'Pretendard',
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+}
+.tb-btn:hover:not(:disabled) {
+  background: #fff8e4;
+}
+.tb-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.tb-btn:focus-visible,
+.ki button:focus-visible,
+.ki input:focus-visible,
+.ki select:focus-visible {
+  outline: 2px solid #d9b48a;
+  outline-offset: 1px;
+}
+.tb-icon {
+  width: 28px;
+  padding: 0;
+  font-size: 14px;
+}
+.tb-primary {
+  border-color: transparent;
+  background: #fdefc9;
+  font-weight: 700;
+}
+.tb-status {
+  font-size: 11px;
+  color: #85705f;
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tb-status.is-invalid,
+.tb-status.is-error {
+  color: #c0392b;
+}
+.tb-menu {
+  position: relative;
+}
+.tb-menu-list {
+  position: absolute;
+  top: 30px;
+  left: 0;
+  z-index: 20;
+  min-width: 200px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid #f1e2c8;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(74, 58, 54, 0.15);
+}
+.tb-menu-list button {
+  text-align: left;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: #4a3a36;
+  font:
+    500 12px 'Pretendard',
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+}
+.tb-menu-list button:hover,
+.tb-menu-list button:focus-visible {
+  background: #fff8e4;
+}
+
+/* ── 안내 토스트 ── */
+.app-notice {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 30;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(74, 58, 54, 0.92);
+  color: #ffffff;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+/* ── 편집 오버레이 (캔버스 좌표계, 선 두께는 인라인으로 화면 px 고정) ── */
+.ke-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+}
+.ke-cell {
+  position: absolute;
+  border: 0 dashed rgba(74, 58, 54, 0.18);
+  border-style: dashed;
+  border-radius: 12px;
+  pointer-events: none;
+}
+.ke-hit {
+  position: absolute;
+  outline: 0 solid rgba(74, 58, 54, 0.25);
+  outline-style: solid;
+  cursor: grab;
+  touch-action: none;
+}
+.ke-hit:hover {
+  outline-color: rgba(74, 58, 54, 0.5);
+}
+.ke-hit.is-selected {
+  outline-color: #e08a4a;
+}
+.ke-hit.is-locked {
+  cursor: default;
+  outline-style: dotted;
+}
+.ke-block {
+  border-radius: 25px;
+}
+.ke-handle,
+.ke-rotate {
+  position: absolute;
+  box-sizing: border-box;
+  border: 0 solid #e08a4a;
+  border-style: solid;
+  background: #ffffff;
+  touch-action: none;
+}
+.ke-handle {
+  border-radius: 3px;
+}
+.ke-handle--nw {
+  left: 0;
+  top: 0;
+  cursor: nwse-resize;
+}
+.ke-handle--se {
+  left: 100%;
+  top: 100%;
+  cursor: nwse-resize;
+}
+.ke-handle--ne {
+  left: 100%;
+  top: 0;
+  cursor: nesw-resize;
+}
+.ke-handle--sw {
+  left: 0;
+  top: 100%;
+  cursor: nesw-resize;
+}
+.ke-rotate {
+  left: 50%;
+  border-radius: 50%;
+  cursor: grab;
+}
+.ke-ghost {
+  position: absolute;
+  border: 0 dashed;
+  border-style: dashed;
+  border-radius: 25px;
+  pointer-events: none;
+}
+.ke-ghost.is-valid {
+  border-color: #3a9b5c;
+  background: rgba(58, 155, 92, 0.12);
+}
+.ke-ghost.is-invalid {
+  border-color: #c0392b;
+  background: rgba(192, 57, 43, 0.12);
+}
+.ke-dragging {
+  position: absolute;
+  border-radius: 25px;
+  outline: 0 solid rgba(74, 58, 54, 0.6);
+  outline-style: solid;
+  background: rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+}
+
+/* ── 인스펙터 (화면 px, 보드 위에 떠 있음) ── */
+.ki {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 20;
+  width: 272px;
+  max-height: calc(100% - 24px);
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid #f1e2c8;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(74, 58, 54, 0.16);
+  color: #4a3a36;
+  font:
+    400 12px 'Pretendard',
+    system-ui,
+    sans-serif;
+  user-select: none;
+}
+.ki.is-closed {
+  width: auto;
+}
+.ki-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f6ead3;
+  font-size: 13px;
+}
+.ki.is-closed .ki-head {
+  border-bottom: 0;
+}
+.ki-toggle {
+  border: 0;
+  background: none;
+  color: #85705f;
+  font: inherit;
+  cursor: pointer;
+}
+.ki-body {
+  overflow-y: auto;
+  padding: 4px 12px 12px;
+}
+.ki-section {
+  padding: 8px 0;
+  border-bottom: 1px solid #f6ead3;
+}
+.ki-section:last-of-type {
+  border-bottom: 0;
+}
+.ki-section h3 {
+  margin: 4px 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #85705f;
+}
+.ki-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+}
+.ki-label,
+.ki-row-label {
+  flex: none;
+  color: #4a3a36;
+}
+.ki-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.ki-control input[type='range'] {
+  width: 110px;
+}
+.ki-out {
+  width: 38px;
+  text-align: right;
+  color: #85705f;
+  font-variant-numeric: tabular-nums;
+}
+.ki-num {
+  width: 64px;
+}
+.ki select,
+.ki-num,
+.ki-hex {
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid #ead9bb;
+  border-radius: 6px;
+  background: #ffffff;
+  color: inherit;
+  font: inherit;
+}
+.ki-grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+}
+.ki-color {
+  padding: 4px 0;
+}
+.ki-color-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.ki-color input[type='color'] {
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #ead9bb;
+  border-radius: 6px;
+  background: none;
+}
+.ki-hex {
+  width: 84px;
+  font-family: ui-monospace, monospace;
+}
+.ki-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.ki-swatch {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.ki-seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: #fff8e4;
+}
+.ki-seg button,
+.ki-chip,
+.ki-buttons button {
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.ki-seg button.is-on,
+.ki-chip.is-on {
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(74, 58, 54, 0.18);
+  font-weight: 600;
+}
+.ki-seg button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.ki-chip {
+  border: 1px solid #ead9bb;
+}
+.ki-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0;
+}
+.ki-buttons button {
+  border: 1px solid #ead9bb;
+  background: #ffffff;
+}
+.ki-buttons button:hover {
+  background: #fff8e4;
+}
+.ki-actions {
+  margin-top: 12px;
+}
+.ki-actions .is-danger {
+  color: #c0392b;
+}
+.ki kbd {
+  margin-left: 4px;
+  color: #a99886;
+  font: inherit;
+}
+.ki-note {
+  margin: 8px 0 0;
+  color: #85705f;
+}

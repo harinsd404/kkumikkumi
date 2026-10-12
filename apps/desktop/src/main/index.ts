@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { readFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
-import { app, BrowserWindow, dialog, screen, type WebContents } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, screen, type WebContents } from 'electron'
 import { APP_DISPLAY_NAME, APP_INTERNAL_NAME } from '../shared/identity'
 import { AssetError, DEFAULT_PIPELINE_OPTIONS } from './assets/pipeline'
 import { handleAssetProtocol, registerAssetScheme } from './assets/protocol'
@@ -24,6 +24,16 @@ app.setPath('userData', join(app.getPath('appData'), APP_INTERNAL_NAME))
 applyDevUserData()
 
 let core: AppCore | null = null
+let quitting = false
+/** webContents id → 닫기 진행 함수 */
+const closeWaiters = new Map<number, () => void>()
+app.on('before-quit', () => {
+  quitting = true
+})
+ipcMain.on('app:close-ready', (e) => {
+  if (!isAppUrl(e.senderFrame?.url ?? '')) return
+  closeWaiters.get(e.sender.id)?.()
+})
 
 registerAssetScheme()
 
@@ -96,9 +106,24 @@ function createBoardWindow(): BrowserWindow {
   }
   win.on('resize', scheduleSave)
   win.on('move', scheduleSave)
-  win.on('close', () => {
+  // 닫기 전에 renderer에 저장 마무리 기회를 준다(편집 중 자동 저장 디바운스 대기분).
+  let closeReady = false
+  win.on('close', (e) => {
     clearTimeout(saveTimer)
     saveBounds()
+    if (closeReady || win.webContents.isCrashed()) return
+    e.preventDefault()
+    const finish = () => {
+      if (closeReady) return
+      closeReady = true
+      closeWaiters.delete(win.webContents.id)
+      clearTimeout(fallback)
+      win.close()
+      if (quitting) app.quit()
+    }
+    const fallback = setTimeout(finish, 1500)
+    closeWaiters.set(win.webContents.id, finish)
+    win.webContents.send('app:before-close')
   })
 
   if (devServerUrl) {

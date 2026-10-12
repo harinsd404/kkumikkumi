@@ -103,6 +103,10 @@ export type IpcResult<T> = { ok: true; value: T } | { ok: false; error: IpcError
 
 export interface KkumiApi {
   readonly platform: string
+  /**
+   * 창을 닫기 직전에 호출된다(저장 마무리용). cb가 끝나면(최대 약 1.5초) 창이 닫힌다. 마지막 등록만 유효.
+   */
+  onBeforeClose(cb: () => Promise<void> | void): void
   invoke<C extends Channel>(
     channel: C,
     ...args: IpcSpec[C]['in'] extends undefined ? [] : [input: IpcSpec[C]['in']]
