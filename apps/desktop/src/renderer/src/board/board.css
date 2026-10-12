@@ -50,39 +50,13 @@
 .kb-card {
   overflow: hidden;
 }
-/* 세부 페이지 열기(사용 모드, 마우스를 올렸을 때만). 칸 내용과 덜 겹치는 오른쪽 아래. */
-.kb-open {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  opacity: 0;
+/* 사용 모드: 블록의 빈 곳을 누르면 세부 페이지 */
+.kb-card.is-link {
   cursor: pointer;
-  transition: opacity 120ms;
 }
-.kb-open span {
-  width: 18px;
-  height: 18px;
-}
-.kb-card:hover .kb-open,
-.kb-open:focus-visible {
-  opacity: 1;
-}
-.kb-open:focus-visible {
-  outline: 2px solid #4f86c6;
-  outline-offset: 2px;
-}
-@media (prefers-reduced-motion: reduce) {
-  .kb-open {
-    transition: none;
-  }
+.kb-card.is-link:focus-visible {
+  outline: 3px solid #4f86c6;
+  outline-offset: 3px;
 }
 
 /* ── 캘린더 (Figma 6:2597) ── */

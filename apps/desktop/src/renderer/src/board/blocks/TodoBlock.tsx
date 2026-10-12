@@ -223,6 +223,7 @@ function Item({
       {dropBefore && <li className="kt-drop" style={{ background: p.accent }} aria-hidden />}
       <li
         className={`kt-item ${dragging ? 'is-dragging' : ''} ${i.done ? 'is-done' : ''}`}
+        data-no-open
         onPointerDown={onPointerDown}
       >
         <button
