@@ -11,6 +11,8 @@ import {
   TodoItemSchema,
   TodoListSchema,
   Uuid,
+  MiniTimerPrefsSchema,
+  type MiniTimerPrefs,
   type Settings,
   type TodoList,
 } from '@kkumikkumi/schema'
@@ -39,6 +41,8 @@ export interface HandlerDeps {
   takeMissedTimerDone?(): TimerDoneInfo | null
   /** 투두 완료 이벤트 발행(이벤트 버스) */
   onTodoCompleted?(): void
+  /** 미니 타이머 창 제어(electron 의존이라 주입) */
+  miniTimer?: { open(): void; close(): void; apply(prefs: MiniTimerPrefs): void }
 }
 
 export type Handlers = { [C in Channel]: (input: unknown) => Promise<IpcSpec[C]['out']> }
@@ -365,6 +369,30 @@ export function createHandlers(d: HandlerDeps): Handlers {
         PomodoroSettingsSchema.parse({ ...repos.settings.pomodoro(), ...patch }),
       )
       d.timer.applySettings()
+      return saved
+    },
+
+    /* ── 미니 타이머 창 ── */
+    'miniTimer.open': async (i) => {
+      NoInput.parse(i)
+      d.miniTimer?.open()
+      return null
+    },
+    'miniTimer.close': async (i) => {
+      NoInput.parse(i)
+      d.miniTimer?.close()
+      return null
+    },
+    'miniTimer.prefs': async (i) => {
+      NoInput.parse(i)
+      return repos.settings.miniTimer()
+    },
+    'miniTimer.update': async (i) => {
+      const { patch } = z.strictObject({ patch: MiniTimerPrefsSchema.partial() }).parse(i)
+      const saved = repos.settings.saveMiniTimer(
+        MiniTimerPrefsSchema.parse({ ...repos.settings.miniTimer(), ...patch }),
+      )
+      d.miniTimer?.apply(saved)
       return saved
     },
 

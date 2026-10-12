@@ -1,7 +1,10 @@
 import {
+  DEFAULT_MINI_TIMER,
   DEFAULT_POMODORO,
+  MiniTimerPrefsSchema,
   PomodoroSettingsSchema,
   SettingsSchema,
+  type MiniTimerPrefs,
   type PomodoroSettings,
   type Settings,
 } from '@kkumikkumi/schema'
@@ -10,6 +13,7 @@ import type { Row } from './rows'
 
 const KEY = 'app'
 const POMODORO_KEY = 'pomodoro'
+const MINI_KEY = 'miniTimer'
 
 /** 설정은 JSON 한 행으로 저장하고 읽을 때 SettingsSchema로 검증한다. */
 export class SettingsRepo {
@@ -47,6 +51,25 @@ export class SettingsRepo {
         'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
       )
       .run(POMODORO_KEY, JSON.stringify(s))
+    return s
+  }
+
+  /** 미니 타이머 창 설정(없거나 손상됐으면 기본값) */
+  miniTimer(): MiniTimerPrefs {
+    const r = this.db.prepare('SELECT value FROM settings WHERE key = ?').get(MINI_KEY) as
+      Row | undefined
+    if (!r) return DEFAULT_MINI_TIMER
+    const p = MiniTimerPrefsSchema.safeParse(safeJson(String(r['value'])))
+    return p.success ? p.data : DEFAULT_MINI_TIMER
+  }
+
+  saveMiniTimer(prefs: MiniTimerPrefs): MiniTimerPrefs {
+    const s = MiniTimerPrefsSchema.parse(prefs)
+    this.db
+      .prepare(
+        'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+      )
+      .run(MINI_KEY, JSON.stringify(s))
     return s
   }
 }

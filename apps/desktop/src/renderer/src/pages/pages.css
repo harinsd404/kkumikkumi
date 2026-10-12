@@ -609,7 +609,7 @@
   overflow-y: auto;
 }
 .tp-main > .pg-tabs {
-  align-self: flex-start;
+  align-self: stretch;
 }
 .pg-pill:disabled {
   opacity: 0.4;

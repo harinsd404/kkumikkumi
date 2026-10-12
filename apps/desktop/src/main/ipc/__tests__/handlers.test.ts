@@ -11,10 +11,12 @@ import { createHandlers, type Handlers } from '../handlers'
 let env: TestEnv
 let h: Handlers
 let picked: Uint8Array | null
+let miniCalls: string[]
 
 beforeEach(async () => {
   env = await makeEnv()
   picked = null
+  miniCalls = []
   h = createHandlers({
     ...env.core,
     now: () => env.clock.now,
@@ -31,6 +33,11 @@ beforeEach(async () => {
       pomodoro: () => env.core.repos.settings.pomodoro(),
       onSession: (s) => env.core.repos.timerSessions.insert({ ...s, id: env.newId() }),
     }),
+    miniTimer: {
+      open: () => miniCalls.push('open'),
+      close: () => miniCalls.push('close'),
+      apply: (p) => miniCalls.push(`apply:${p.alwaysOnTop}`),
+    },
   })
 })
 afterEach(async () => {
@@ -271,6 +278,23 @@ describe('timer', () => {
     const list = await h['timer.sessions']({ fromMs: 0, toMs: env.clock.now + 1 })
     expect(list).toEqual([expect.objectContaining({ actualMs: 3 * 60000, completed: false })])
     expect(await codeOf(h['timer.sessions']({ fromMs: -1, toMs: 0 }))).toBe('invalid_input')
+  })
+})
+
+describe('miniTimer', () => {
+  it('열기/닫기, 설정은 저장 후 창에 반영, 잘못된 입력 거부', async () => {
+    await h['miniTimer.open'](undefined)
+    expect((await h['miniTimer.prefs'](undefined)).alwaysOnTop).toBe(true) // 기본값
+    expect(await h['miniTimer.update']({ patch: { alwaysOnTop: false } })).toEqual({
+      alwaysOnTop: false,
+    })
+    expect((await h['miniTimer.prefs'](undefined)).alwaysOnTop).toBe(false)
+    await h['miniTimer.close'](undefined)
+    expect(miniCalls).toEqual(['open', 'apply:false', 'close'])
+    expect(await codeOf(h['miniTimer.update']({ patch: { alwaysOnTop: 'yes' } }))).toBe(
+      'invalid_input',
+    )
+    expect(await codeOf(h['miniTimer.open']({ url: 'https://x' }))).toBe('invalid_input')
   })
 })
 

@@ -15,6 +15,7 @@ export interface Repos {
   themeRules: ThemeRuleRepo
   settings: SettingsRepo
   windowState: WindowStateRepo
+  miniWindowState: WindowStateRepo
 }
 
 export const createRepos = (db: Db): Repos => ({
@@ -25,6 +26,7 @@ export const createRepos = (db: Db): Repos => ({
   themeRules: new ThemeRuleRepo(db),
   settings: new SettingsRepo(db),
   windowState: new WindowStateRepo(db),
+  miniWindowState: new WindowStateRepo(db, 'miniWindow'),
 })
 
 export { NotFoundError } from './rows'

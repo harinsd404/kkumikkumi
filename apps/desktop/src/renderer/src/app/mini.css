@@ -1,0 +1,88 @@
+/* 미니 타이머 창 (frameless, 280x140). 창 전체가 끌기 영역이고 버튼만 누를 수 있다. */
+/* 같은 CSS 번들이 보드 창에도 실리므로 문서 수준 규칙은 미니 창(html.is-mini)에만 건다 */
+html.is-mini,
+html.is-mini body,
+html.is-mini #root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+.mini {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  padding: 10px 12px 12px;
+  background: var(--t-bg, #ffffff);
+  color: var(--t-text, #333333);
+  font-family: 'Pretendard', system-ui, sans-serif;
+  user-select: none;
+  -webkit-app-region: drag;
+}
+.mini-top {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  align-self: stretch;
+}
+.mini-label {
+  flex: 1;
+  padding-left: 4px;
+  color: var(--t-sub, #777777);
+  font-size: 13px;
+  font-weight: 700;
+}
+.mini button {
+  -webkit-app-region: no-drag;
+}
+.mini-icon {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1;
+  opacity: 0.45;
+  cursor: pointer;
+}
+.mini-icon:hover,
+.mini-icon.is-on {
+  opacity: 1;
+}
+.mini-icon.is-on {
+  background: var(--t-control, #f0f0f0);
+}
+.mini-time {
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.mini-buttons {
+  display: flex;
+  gap: 6px;
+}
+.mini-btn {
+  padding: 5px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--t-control, #f0f0f0);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mini-btn.is-primary {
+  background: var(--t-accent, #d9b48a);
+}
+.mini button:focus-visible {
+  outline: 2px solid var(--t-accent, #4f86c6);
+  outline-offset: 1px;
+}

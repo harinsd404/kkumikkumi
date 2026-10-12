@@ -219,6 +219,7 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
               updatePomodoro={user.timer.updatePomodoro}
               now={now}
               weekStartsOn={weekStartsOf(theme)}
+              openMini={() => void window.kkumi.invoke('miniTimer.open')}
             />
           </div>
         )}

@@ -54,3 +54,35 @@ export function fitWindowBounds(
     ...size,
   }
 }
+
+/** 미니 타이머 창 크기(고정) */
+export const MINI_SIZE = { width: 280, height: 140 } as const
+const MINI_MARGIN = 16
+
+/**
+ * 미니 타이머 창 위치. 저장된 위치가 어떤 화면 안에 완전히 들어가면 그대로,
+ * 아니면(모니터를 뺐거나 처음) 주 화면 오른쪽 위에 둔다.
+ */
+export function placeMiniWindow(
+  saved: { x: number; y: number } | null,
+  workAreas: readonly Rect[],
+  primary: Rect,
+): Rect {
+  const { width, height } = MINI_SIZE
+  if (saved) {
+    const fits = workAreas.some(
+      (a) =>
+        saved.x >= a.x &&
+        saved.y >= a.y &&
+        saved.x + width <= a.x + a.width &&
+        saved.y + height <= a.y + a.height,
+    )
+    if (fits) return { x: saved.x, y: saved.y, width, height }
+  }
+  return {
+    x: primary.x + primary.width - width - MINI_MARGIN,
+    y: primary.y + MINI_MARGIN,
+    width,
+    height,
+  }
+}

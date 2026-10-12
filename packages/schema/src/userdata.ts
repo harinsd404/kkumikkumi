@@ -190,6 +190,10 @@ export const SettingsSchema = z.strictObject({
 
 /* ───────── 창 상태 (앱 상태: 테마/내보내기와 무관) ───────── */
 
+/** 미니 타이머 창 설정 */
+export const MiniTimerPrefsSchema = z.strictObject({ alwaysOnTop: z.boolean() })
+export const DEFAULT_MINI_TIMER: z.infer<typeof MiniTimerPrefsSchema> = { alwaysOnTop: true }
+
 export const WindowStateSchema = z.strictObject({
   x: z.number().int(),
   y: z.number().int(),
@@ -198,6 +202,7 @@ export const WindowStateSchema = z.strictObject({
 })
 
 export type WindowState = z.infer<typeof WindowStateSchema>
+export type MiniTimerPrefs = z.infer<typeof MiniTimerPrefsSchema>
 export type TodoList = z.infer<typeof TodoListSchema>
 export type TodoItem = z.infer<typeof TodoItemSchema>
 export type CalendarEvent = z.infer<typeof CalendarEventSchema>

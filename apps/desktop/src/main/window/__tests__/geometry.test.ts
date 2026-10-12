@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { fitWindowBounds, MIN_BOARD_WIDTH, TITLE_BAR_HEIGHT, windowSizeForBoard } from '../geometry'
+import {
+  fitWindowBounds,
+  MIN_BOARD_WIDTH,
+  placeMiniWindow,
+  TITLE_BAR_HEIGHT,
+  windowSizeForBoard,
+} from '../geometry'
 
 const primary = { x: 0, y: 25, width: 1728, height: 1092 }
 const second = { x: 1728, y: 0, width: 1920, height: 1080 }
@@ -34,5 +40,28 @@ describe('fitWindowBounds', () => {
     const tiny = fitWindowBounds({ x: 0, y: 25, width: 100, height: 100 }, [primary], primary)
     expect(tiny.width).toBe(MIN_BOARD_WIDTH)
     expect(windowSizeForBoard(MIN_BOARD_WIDTH)).toEqual({ width: 800, height: 536 })
+  })
+})
+
+describe('placeMiniWindow', () => {
+  const main = { x: 0, y: 25, width: 1440, height: 875 }
+  const side = { x: 1440, y: 0, width: 1920, height: 1080 }
+  it('처음이면 주 화면 오른쪽 위', () => {
+    expect(placeMiniWindow(null, [main], main)).toEqual({
+      x: 1440 - 280 - 16,
+      y: 25 + 16,
+      width: 280,
+      height: 140,
+    })
+  })
+  it('저장된 위치가 화면 안이면 그대로(보조 모니터 포함)', () => {
+    expect(placeMiniWindow({ x: 2000, y: 100 }, [main, side], main)).toMatchObject({
+      x: 2000,
+      y: 100,
+    })
+  })
+  it('모니터를 빼서 화면 밖이거나 걸쳐 있으면 기본 위치', () => {
+    expect(placeMiniWindow({ x: 2000, y: 100 }, [main], main).x).toBe(1144)
+    expect(placeMiniWindow({ x: 1300, y: 100 }, [main], main).x).toBe(1144)
   })
 })

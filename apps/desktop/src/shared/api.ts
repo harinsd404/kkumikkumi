@@ -1,6 +1,7 @@
 import type {
   Asset,
   CalendarEvent,
+  MiniTimerPrefs,
   PomodoroPhase,
   PomodoroSettings,
   Settings,
@@ -98,6 +99,11 @@ export interface IpcSpec {
   'timer.sessions': { in: { fromMs: number; toMs: number }; out: TimerSession[] }
   'timer.pomodoro.get': { in: undefined; out: PomodoroSettings }
   'timer.pomodoro.update': { in: { patch: Partial<PomodoroSettings> }; out: PomodoroSettings }
+  /** 미니 타이머 창 열기(이미 있으면 앞으로) / 닫기 */
+  'miniTimer.open': { in: undefined; out: null }
+  'miniTimer.close': { in: undefined; out: null }
+  'miniTimer.prefs': { in: undefined; out: MiniTimerPrefs }
+  'miniTimer.update': { in: { patch: Partial<MiniTimerPrefs> }; out: MiniTimerPrefs }
   'themeRules.list': { in: undefined; out: ThemeRule[] }
   'themeRules.create': {
     in: { rule: Omit<ThemeRule, 'id' | 'createdAt' | 'updatedAt'> }

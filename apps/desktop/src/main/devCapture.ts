@@ -7,6 +7,7 @@ import { app, type BrowserWindow } from 'electron'
  * - KKUMI_DEV_CAPTURE: 첫 로드 후 페이지를 PNG로 저장하고 종료한다
  * - KKUMI_DEV_CAPTURE_JS: 캡처 전에 페이지에서 실행할 스크립트(편집 모드 화면 확인 등)
  * - KKUMI_DEV_CLOSE_AFTER_JS=1: 스크립트 직후 캡처 대신 win.close()(빨간 버튼과 같은 경로, 닫기 전 저장 확인용)
+ * - KKUMI_DEV_CAPTURE_MINI: 미니 타이머 창이 열리면 잠시 뒤 PNG로 저장(앱은 종료하지 않음)
  */
 export function applyDevUserData(): void {
   const dir = process.env['KKUMI_DEV_USER_DATA']
@@ -34,5 +35,20 @@ export function maybeCaptureAndQuit(win: BrowserWindow): void {
         .catch(() => {})
         .finally(() => app.quit())
     }, 2500)
+  })
+}
+
+/** 개발용: 미니 타이머 창 화면을 파일로 남긴다(화면 기록 권한 없이 확인하기 위해) */
+export function maybeCaptureMini(win: BrowserWindow): void {
+  const out = process.env['KKUMI_DEV_CAPTURE_MINI']
+  if (app.isPackaged || !out) return
+  win.webContents.once('did-finish-load', () => {
+    setTimeout(() => {
+      if (win.isDestroyed()) return
+      void win.webContents
+        .capturePage()
+        .then((img) => writeFile(out, img.toPNG()))
+        .catch(() => {})
+    }, 4000)
   })
 }

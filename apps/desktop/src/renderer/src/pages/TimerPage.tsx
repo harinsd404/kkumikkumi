@@ -27,6 +27,8 @@ interface Props {
   /** 날짜 계산용(분 단위 시계) */
   now: Date
   weekStartsOn: 0 | 1
+  /** 미니 타이머 창 열기 */
+  openMini(): void
 }
 
 type Tab = 'timer' | 'pomodoro'
@@ -63,6 +65,10 @@ export function TimerPage(p: Props) {
               {k === 'timer' ? '타이머' : '뽀모도로'}
             </button>
           ))}
+          <span className="pg-spacer" />
+          <button type="button" className="pg-pill is-filled" onClick={p.openMini}>
+            미니 창으로 띄우기
+          </button>
         </div>
         {tab === 'timer' ? (
           <PlainTimer t={t} command={p.command} />

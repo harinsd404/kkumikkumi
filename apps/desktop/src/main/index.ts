@@ -16,7 +16,7 @@ import { APP_DISPLAY_NAME, APP_INTERNAL_NAME } from '../shared/identity'
 import { AssetError, DEFAULT_PIPELINE_OPTIONS } from './assets/pipeline'
 import { handleAssetProtocol, registerAssetScheme } from './assets/protocol'
 import { bootstrap, type AppCore } from './bootstrap'
-import { applyDevUserData, maybeCaptureAndQuit } from './devCapture'
+import { applyDevUserData, maybeCaptureAndQuit, maybeCaptureMini } from './devCapture'
 import { bus } from './events'
 import { createHandlers } from './ipc/handlers'
 import { registerIpc } from './ipc/register'
@@ -24,11 +24,12 @@ import { devServerUrl, isAppUrl, rendererIndexPath } from './security'
 import { TimerService } from './timer/timerService'
 import { PHASE_LABEL } from '../shared/pomodoro'
 import { isFocusing } from '../shared/timer'
-import { DEFAULT_POMODORO } from '@kkumikkumi/schema'
+import { DEFAULT_POMODORO, type MiniTimerPrefs } from '@kkumikkumi/schema'
 import {
   BOARD_RATIO,
   fitWindowBounds,
   MIN_BOARD_WIDTH,
+  placeMiniWindow,
   TITLE_BAR_HEIGHT,
   windowSizeForBoard,
 } from './window/geometry'
@@ -40,6 +41,8 @@ applyDevUserData()
 
 let core: AppCore | null = null
 let timer: TimerService | null = null
+let boardWin: BrowserWindow | null = null
+let miniWin: BrowserWindow | null = null
 /** 창이 없을 때 끝난 타이머. renderer가 timer.takeMissedDone으로 한 번 꺼내 간다. */
 let missedTimerDone: TimerDoneInfo | null = null
 let quitting = false
@@ -59,7 +62,7 @@ registerAssetScheme()
 const isPrimary = app.requestSingleInstanceLock()
 if (!isPrimary) app.quit()
 app.on('second-instance', () => {
-  const win = BrowserWindow.getAllWindows()[0] ?? (core ? createBoardWindow() : null)
+  const win = boardWin ?? (core ? createBoardWindow() : null)
   if (win?.isMinimized()) win.restore()
   win?.focus()
 })
@@ -98,14 +101,11 @@ function createBoardWindow(): BrowserWindow {
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 14, y: 12 },
     backgroundColor: '#ffffff',
-    webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-      webSecurity: true,
-      webviewTag: false,
-    },
+    webPreferences: secureWebPreferences(),
+  })
+  boardWin = win
+  win.on('closed', () => {
+    if (boardWin === win) boardWin = null
   })
   // extraSize: 콘텐츠 안쪽의 타이틀바 높이. 창-콘텐츠 크기 차이는 API가 이미 반영한다(electron.d.ts).
   win.setAspectRatio(BOARD_RATIO, { width: 0, height: TITLE_BAR_HEIGHT })
@@ -144,12 +144,82 @@ function createBoardWindow(): BrowserWindow {
     win.webContents.send('app:before-close')
   })
 
-  if (devServerUrl) {
-    void win.loadURL(devServerUrl)
-  } else {
-    void win.loadFile(rendererIndexPath)
-  }
+  loadApp(win)
   return win
+}
+
+/** 모든 창에 같은 보안 설정(CLAUDE.md 보안 규칙) */
+function secureWebPreferences(): Electron.WebPreferences {
+  return {
+    preload: join(__dirname, '../preload/index.js'),
+    contextIsolation: true,
+    nodeIntegration: false,
+    sandbox: true,
+    webSecurity: true,
+    webviewTag: false,
+  }
+}
+
+/** 같은 renderer를 싣고, 해시로 화면을 고른다(#mini = 미니 타이머) */
+function loadApp(win: BrowserWindow, hash?: string): void {
+  if (devServerUrl) void win.loadURL(hash ? `${devServerUrl}#${hash}` : devServerUrl)
+  else void win.loadFile(rendererIndexPath, hash ? { hash } : {})
+}
+
+/** 미니 타이머 창: 작은 frameless 창. 타이머 상태는 main 하나라 모든 창이 같은 값을 받는다. */
+function openMiniTimer(): void {
+  if (miniWin && !miniWin.isDestroyed()) {
+    miniWin.show()
+    miniWin.focus()
+    return
+  }
+  const prefs = core?.repos.settings.miniTimer() ?? { alwaysOnTop: true }
+  const bounds = placeMiniWindow(
+    core?.repos.miniWindowState.get() ?? null,
+    screen.getAllDisplays().map((d) => d.workArea),
+    screen.getPrimaryDisplay().workArea,
+  )
+  const win = new BrowserWindow({
+    ...bounds,
+    useContentSize: true,
+    show: false,
+    frame: false,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    title: `${APP_DISPLAY_NAME} 타이머`,
+    backgroundColor: '#ffffff',
+    webPreferences: secureWebPreferences(),
+  })
+  miniWin = win
+  applyMiniPrefs(prefs)
+  win.once('ready-to-show', () => win.show())
+  let saveTimer: NodeJS.Timeout | undefined
+  const savePos = () => {
+    if (win.isDestroyed()) return
+    const b = win.getContentBounds()
+    core?.repos.miniWindowState.save({ x: b.x, y: b.y, width: b.width, height: b.height })
+  }
+  win.on('move', () => {
+    clearTimeout(saveTimer)
+    saveTimer = setTimeout(savePos, 500)
+  })
+  win.on('close', () => {
+    clearTimeout(saveTimer)
+    savePos()
+  })
+  win.on('closed', () => {
+    if (miniWin === win) miniWin = null
+  })
+  maybeCaptureMini(win)
+  loadApp(win, 'mini')
+}
+
+function applyMiniPrefs(p: MiniTimerPrefs): void {
+  if (!miniWin || miniWin.isDestroyed()) return
+  // floating: 일반 창 위, 시스템 메뉴/알림 아래. 풀스크린/다른 Space 위 표시(U2)는 범위 밖.
+  miniWin.setAlwaysOnTop(p.alwaysOnTop, 'floating')
 }
 
 /** 파일 선택 → 바이트. 경로는 main 안에서만 다루고 renderer로 보내지 않는다. */
@@ -209,12 +279,18 @@ void app.whenReady().then(async () => {
         return v
       },
       onTodoCompleted: () => bus.emit('todo:completed'),
+      miniTimer: {
+        open: openMiniTimer,
+        close: () => miniWin?.close(),
+        apply: applyMiniPrefs,
+      },
     }),
   )
 
   createBoardWindow()
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createBoardWindow()
+    // 미니 창만 남아 있어도 Dock을 누르면 보드 창을 다시 연다
+    if (!boardWin) createBoardWindow()
   })
 })
 
