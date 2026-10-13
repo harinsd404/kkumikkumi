@@ -27,6 +27,15 @@ describe('투두 섹션', () => {
   it('완료 숨기기', () => {
     expect(groupTodos(items, T, false).today.map((i) => i.id)).toEqual(['today', 'late'])
   })
+  it('날짜가 바뀌면 지난 날의 완료 항목은 빠지고, 못 한 항목만 오늘로 넘어온다', () => {
+    const items = [
+      item('doneYesterday', '2026-10-11', 0, true),
+      item('lateUndone', '2026-10-11', 1),
+    ]
+    const g = groupTodos(items, T, true)
+    expect(g.today.map((i) => i.id)).toEqual(['lateUndone'])
+    expect([...g.tomorrow, ...g.inbox]).toEqual([])
+  })
   it('월말 내일 계산', () => {
     expect(groupTodos([item('a', '2026-11-01', 0)], '2026-10-31', true).tomorrow).toHaveLength(1)
     expect(dueForSection('tomorrow', '2026-12-31')).toBe('2027-01-01')

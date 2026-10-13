@@ -19,6 +19,7 @@ interface ItemLike {
 /**
  * 오늘: 마감이 오늘이거나 지난 것(overdue 포함) / 내일: 마감이 내일 / 보관함: 마감 없음 또는 모레 이후.
  * 섹션 안은 order 순. showCompleted가 false면 완료 항목을 숨긴다.
+ * 마감이 지난 날의 완료 항목은 날짜가 바뀌면 보드에서 빠진다(할 일 페이지 "완료"에서 볼 수 있음).
  */
 export function groupTodos<T extends ItemLike>(
   items: readonly T[],
@@ -29,6 +30,7 @@ export function groupTodos<T extends ItemLike>(
   const out: Record<TodoSection, T[]> = { today: [], tomorrow: [], inbox: [] }
   for (const i of [...items].sort((a, b) => a.order - b.order)) {
     if (!showCompleted && i.done) continue
+    if (i.done && i.dueDate !== null && i.dueDate < today) continue
     const s: TodoSection =
       i.dueDate !== null && i.dueDate <= today
         ? 'today'
