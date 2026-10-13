@@ -12,10 +12,12 @@ import { makeAssetUrl } from './assetUrl'
 import { EventDialog } from './EventDialog'
 import { PHASE_LABEL } from '../../../shared/pomodoro'
 import { CalendarPage } from '../pages/CalendarPage'
+import { MemoPage } from '../pages/MemoPage'
 import { TimerPage } from '../pages/TimerPage'
 import { TodoPage } from '../pages/TodoPage'
 import { themeVars } from './themeVars'
 import { TitleBar, type AppPage, type PageNav } from './TitleBar'
+import { useMemos } from './useMemos'
 import { useUserData } from './useUserData'
 
 /** 구현된 화면(세부 페이지는 단계별로 추가) */
@@ -24,6 +26,7 @@ const PAGES: PageNav['pages'] = [
   { id: 'todo', label: '할 일' },
   { id: 'calendar', label: '캘린더' },
   { id: 'timer', label: '타이머' },
+  { id: 'memo', label: '메모' },
 ]
 
 const ASSET_ERRORS: Record<string, string> = {
@@ -48,6 +51,7 @@ const isTextField = (el: EventTarget | null) =>
 export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
   const ed = useEditor(initialTheme, { save: saveTheme })
   const user = useUserData(ed.showNotice)
+  const memos = useMemos(ed.showNotice)
   const now = useMinuteClock()
   const [editing, setEditing] = useState(false)
   const [page, setPage] = useState<AppPage>('board')
@@ -67,9 +71,12 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
   const assetUrl = useMemo(() => makeAssetUrl(theme), [theme])
 
   // 창을 닫을 때 남은 변경 저장
+  const flushMemos = memos.flush
   useEffect(() => {
-    window.kkumi.onBeforeClose(() => ed.flush())
-  }, [ed])
+    window.kkumi.onBeforeClose(async () => {
+      await Promise.all([ed.flush(), flushMemos()])
+    })
+  }, [ed, flushMemos])
 
   const importAsset = useCallback(
     async (
@@ -221,6 +228,11 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
               weekStartsOn={weekStartsOf(theme)}
               openMini={() => void window.kkumi.invoke('miniTimer.open')}
             />
+          </div>
+        )}
+        {page === 'memo' && (
+          <div className="app-page" style={themeVars(theme)}>
+            <MemoPage store={memos} now={now} />
           </div>
         )}
         {page === 'board' && (

@@ -298,6 +298,42 @@ describe('miniTimer', () => {
   })
 })
 
+describe('memos', () => {
+  it('만들기/고치기/고정/삭제, 고정만 바꾸면 수정 시각 유지', async () => {
+    const a = await h['memos.create']({})
+    expect(a.body).toBe('')
+    env.clock.now += 1000
+    const b = await h['memos.create']({ body: '# 장보기\n- [ ] 우유' })
+    expect((await h['memos.list'](undefined)).map((m) => m.id)).toEqual([b.id, a.id])
+
+    env.clock.now += 1000
+    const pinned = await h['memos.update']({ id: a.id, patch: { pinned: true } })
+    expect(pinned.updatedAt).toBe(a.updatedAt)
+    expect((await h['memos.list'](undefined)).map((m) => m.id)).toEqual([a.id, b.id])
+
+    const edited = await h['memos.update']({ id: b.id, patch: { body: '- [x] 우유' } })
+    expect(edited.updatedAt).toBe(env.clock.now)
+    expect(edited.pinned).toBe(false)
+
+    await h['memos.delete']({ id: a.id })
+    expect(await codeOf(h['memos.delete']({ id: a.id }))).toBe('not_found')
+    expect(await codeOf(h['memos.update']({ id: a.id, patch: { body: 'x' } }))).toBe('not_found')
+  })
+
+  it('잘못된 입력 거부', async () => {
+    expect(await codeOf(h['memos.create']({ body: 'a'.repeat(20001) }))).toBe('invalid_input')
+    expect(await codeOf(h['memos.create']({ html: '<b>x</b>' }))).toBe('invalid_input')
+    const m = await h['memos.create']({})
+    expect(await codeOf(h['memos.update']({ id: m.id, patch: { createdAt: 1 } }))).toBe(
+      'invalid_input',
+    )
+    expect(await codeOf(h['memos.update']({ id: m.id, patch: { pinned: 'yes' } }))).toBe(
+      'invalid_input',
+    )
+    expect(await codeOf(h['memos.list']({}))).toBe('invalid_input')
+  })
+})
+
 describe('themeRules', () => {
   it('없는 테마를 가리키는 규칙은 거부', async () => {
     expect(await codeOf(h['themeRules.create']({ rule: anyRule(env.newId()) }))).toBe('not_found')

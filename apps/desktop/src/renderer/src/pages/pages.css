@@ -802,3 +802,131 @@
   background: var(--t-surface);
   color: var(--t-sub);
 }
+
+/* ── 메모 ── */
+.pg-memo {
+  grid-template-columns: 280px minmax(0, 1fr);
+  --mm-accent: var(--t-accent);
+  --mm-check: var(--t-check);
+  --mm-sub: var(--t-sub);
+}
+.mp-side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.mp-list {
+  flex: 1;
+  min-height: 0;
+}
+.mp-item {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+.mp-item-top,
+.mp-item-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.mp-item-sub {
+  color: var(--t-sub);
+  font-size: 12px;
+  font-weight: 500;
+}
+.mp-item-date {
+  flex: none;
+}
+.mp-item-preview {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.mp-pin {
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--t-accent);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.mp-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.mp-tools {
+  display: flex;
+  gap: 2px;
+  margin-left: 8px;
+  padding-left: 12px;
+  border-left: 1.5px solid var(--t-control);
+}
+.mp-tool {
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.mp-tool:hover {
+  background: var(--t-control);
+}
+.mp-tool:focus-visible {
+  outline: 2px solid var(--t-accent);
+}
+.mp-date {
+  color: var(--t-sub);
+  font-size: 13px;
+}
+.mp-text,
+.mp-view {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.mp-text {
+  padding: 4px 2px;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.mp-text::placeholder {
+  color: var(--t-sub);
+  opacity: 0.7;
+}
+.mp-view {
+  font-size: 16px;
+}
+.mp-view-empty {
+  border: 0;
+  background: none;
+  color: var(--t-sub);
+  font: inherit;
+  text-align: left;
+  cursor: text;
+}
+.mp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex: 1;
+}

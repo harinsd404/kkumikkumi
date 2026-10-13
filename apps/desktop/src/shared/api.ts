@@ -1,6 +1,7 @@
 import type {
   Asset,
   CalendarEvent,
+  Memo,
   MiniTimerPrefs,
   PomodoroPhase,
   PomodoroSettings,
@@ -104,6 +105,12 @@ export interface IpcSpec {
   'miniTimer.close': { in: undefined; out: null }
   'miniTimer.prefs': { in: undefined; out: MiniTimerPrefs }
   'miniTimer.update': { in: { patch: Partial<MiniTimerPrefs> }; out: MiniTimerPrefs }
+  /** 고정 먼저, 그다음 최근 수정 순 */
+  'memos.list': { in: undefined; out: Memo[] }
+  'memos.create': { in: { body?: string }; out: Memo }
+  /** 고정만 바꾸면 updatedAt은 그대로(수정 순서가 흔들리지 않게) */
+  'memos.update': { in: { id: string; patch: { body?: string; pinned?: boolean } }; out: Memo }
+  'memos.delete': { in: Id; out: null }
   'themeRules.list': { in: undefined; out: ThemeRule[] }
   'themeRules.create': {
     in: { rule: Omit<ThemeRule, 'id' | 'createdAt' | 'updatedAt'> }

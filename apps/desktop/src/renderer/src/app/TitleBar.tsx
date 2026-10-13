@@ -14,7 +14,7 @@ export interface EditTools {
 }
 
 /** 보드 창 안에서 보여 줄 화면 */
-export type AppPage = 'board' | 'todo' | 'calendar' | 'timer'
+export type AppPage = 'board' | 'todo' | 'calendar' | 'timer' | 'memo'
 
 export interface PageNav {
   current: AppPage

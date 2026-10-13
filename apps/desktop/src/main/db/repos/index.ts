@@ -1,5 +1,6 @@
 import type { Db } from '../connection'
 import { CalendarRepo } from './calendar'
+import { MemoRepo } from './memos'
 import { SettingsRepo } from './settings'
 import { ThemeRuleRepo } from './themeRules'
 import { TimerRepo } from './timer'
@@ -12,6 +13,7 @@ export interface Repos {
   calendar: CalendarRepo
   timer: TimerRepo
   timerSessions: TimerSessionRepo
+  memos: MemoRepo
   themeRules: ThemeRuleRepo
   settings: SettingsRepo
   windowState: WindowStateRepo
@@ -23,6 +25,7 @@ export const createRepos = (db: Db): Repos => ({
   calendar: new CalendarRepo(db),
   timer: new TimerRepo(db),
   timerSessions: new TimerSessionRepo(db),
+  memos: new MemoRepo(db),
   themeRules: new ThemeRuleRepo(db),
   settings: new SettingsRepo(db),
   windowState: new WindowStateRepo(db),

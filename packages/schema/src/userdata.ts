@@ -41,6 +41,19 @@ export const TodoItemSchema = z.strictObject({
   updatedAt: EpochMs,
 })
 
+/* ───────── 메모 ───────── */
+
+export const MEMO_MAX_CHARS = 20000
+
+/** 메모 한 장. 본문은 원문(간단한 서식 규칙의 텍스트)만 저장하고 HTML은 만들지 않는다. 제목은 첫 줄. */
+export const MemoSchema = z.strictObject({
+  id: Uuid,
+  body: z.string().max(MEMO_MAX_CHARS),
+  pinned: z.boolean(),
+  createdAt: EpochMs,
+  updatedAt: EpochMs,
+})
+
 /* ───────── 캘린더 (내부 일정) ───────── */
 
 const eventBase = {
@@ -205,6 +218,7 @@ export type WindowState = z.infer<typeof WindowStateSchema>
 export type MiniTimerPrefs = z.infer<typeof MiniTimerPrefsSchema>
 export type TodoList = z.infer<typeof TodoListSchema>
 export type TodoItem = z.infer<typeof TodoItemSchema>
+export type Memo = z.infer<typeof MemoSchema>
 export type CalendarEvent = z.infer<typeof CalendarEventSchema>
 export type TimerState = z.infer<typeof TimerStateSchema>
 export type PomodoroSettings = z.infer<typeof PomodoroSettingsSchema>

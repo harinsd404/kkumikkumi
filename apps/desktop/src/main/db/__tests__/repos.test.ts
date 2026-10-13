@@ -1,6 +1,7 @@
 import {
   DEFAULT_POMODORO,
   type CalendarEvent,
+  type Memo,
   type Settings,
   type ThemeRule,
   type TimerState,
@@ -225,6 +226,39 @@ describe('TimerSessionRepo / 뽀모도로 설정', () => {
     repos.settings.savePomodoro({ ...DEFAULT_POMODORO, focusMin: 50 })
     expect(repos.settings.pomodoro().focusMin).toBe(50)
     expect(() => repos.settings.savePomodoro({ ...DEFAULT_POMODORO, focusMin: 0 })).toThrow()
+  })
+})
+
+describe('MemoRepo', () => {
+  const memo = (n: number, o: Partial<Memo> = {}): Memo => ({
+    id: U(300 + n),
+    body: `메모 ${n}`,
+    pinned: false,
+    createdAt: n,
+    updatedAt: n,
+    ...o,
+  })
+
+  it('고정 먼저, 그다음 최근 수정 순으로 돌려준다', () => {
+    repos.memos.insert(memo(1))
+    repos.memos.insert(memo(2, { updatedAt: 50 }))
+    repos.memos.insert(memo(3, { pinned: true }))
+    expect(repos.memos.list().map((m) => m.body)).toEqual(['메모 3', '메모 2', '메모 1'])
+  })
+
+  it('수정/삭제, 없는 메모는 NotFoundError', () => {
+    repos.memos.insert(memo(1))
+    const next = repos.memos.update({ ...memo(1), body: '# 제목\n- [ ] 할 것', updatedAt: 9 })
+    expect(repos.memos.get(U(301))).toEqual(next)
+    repos.memos.delete(U(301))
+    expect(repos.memos.get(U(301))).toBeNull()
+    expect(() => repos.memos.update(memo(2))).toThrow(NotFoundError)
+    expect(() => repos.memos.delete(U(302))).toThrow(NotFoundError)
+  })
+
+  it('너무 긴 본문은 저장하지 않는다', () => {
+    expect(() => repos.memos.insert(memo(1, { body: 'a'.repeat(20001) }))).toThrow()
+    expect(repos.memos.list()).toEqual([])
   })
 })
 
