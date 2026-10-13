@@ -1,6 +1,7 @@
 import { blockRect, type Asset, type Theme } from '@kkumikkumi/schema'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Board } from '../board/Board'
+import type { BoardActions } from '../board/BoardContext'
 import { blockBox } from '../board/layout'
 import { EditorOverlay } from '../editor/EditorOverlay'
 import { Inspector } from '../editor/Inspector'
@@ -55,19 +56,35 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
   const now = useMinuteClock()
   const [editing, setEditing] = useState(false)
   const [page, setPage] = useState<AppPage>('board')
+  /** 메모 블록에서 들어오면 그 메모를 연다 */
+  const [memoOpen, setMemoOpen] = useState<string | null>(null)
   const theme = ed.theme
   // 블록의 "크게 보기" 버튼이 세부 페이지로 보낸다
-  const boardActions = useMemo(
+  const memoToggle = memos.toggle
+  const boardActions = useMemo<BoardActions>(
     () => ({
       ...user.actions,
+      memo: { toggle: memoToggle },
       pages: {
         todo: () => setPage('todo'),
         calendar: () => setPage('calendar'),
         timer: () => setPage('timer'),
+        memo: (b) => {
+          setMemoOpen(b.type === 'memo' ? b.props.memoId : null)
+          setPage('memo')
+        },
       },
     }),
-    [user.actions],
+    [user.actions, memoToggle],
   )
+  const boardData = useMemo(
+    () => (memos.memos ? { ...user.data, memos: memos.memos } : user.data),
+    [user.data, memos.memos],
+  )
+  const navigate = useCallback((p: AppPage) => {
+    setMemoOpen(null)
+    setPage(p)
+  }, [])
   const assetUrl = useMemo(() => makeAssetUrl(theme), [theme])
 
   // 창을 닫을 때 남은 변경 저장
@@ -181,7 +198,7 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
         themeName={theme.name}
         editing={editing}
         onToggleEdit={() => (editing ? void exitEdit() : setEditing(true))}
-        nav={{ current: page, pages: PAGES, onNavigate: setPage }}
+        nav={{ current: page, pages: PAGES, onNavigate: navigate }}
         tools={{
           onAddBlock: (type, size) => {
             const id = crypto.randomUUID()
@@ -232,14 +249,14 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
         )}
         {page === 'memo' && (
           <div className="app-page" style={themeVars(theme)}>
-            <MemoPage store={memos} now={now} />
+            <MemoPage store={memos} initialId={memoOpen} now={now} />
           </div>
         )}
         {page === 'board' && (
           <Board
             theme={theme}
             assetUrl={assetUrl}
-            data={user.data}
+            data={boardData}
             actions={boardActions}
             now={now}
             mode={editing ? 'edit' : 'use'}
@@ -280,6 +297,7 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
             onDuplicate={duplicate}
             onDelete={remove}
             todoLists={user.lists}
+            memos={memos}
           />
         )}
         {user.editing && !editing && (

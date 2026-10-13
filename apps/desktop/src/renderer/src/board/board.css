@@ -521,3 +521,17 @@ button.kc-chip {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
+
+/* ── 메모 (서식 스타일은 memo.css) ── */
+.kmm {
+  height: 100%;
+  padding: 25px;
+  overflow-y: auto;
+  scrollbar-width: none;
+  font-weight: 500;
+}
+.kmm-empty {
+  margin: 0;
+  font-size: 17.5px;
+  opacity: 0.6;
+}

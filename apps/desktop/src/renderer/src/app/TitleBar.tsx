@@ -4,7 +4,10 @@ import { maskCss } from '../board/style'
 import type { SaveStatus } from '../editor/state/autosave'
 
 export interface EditTools {
-  onAddBlock(type: 'calendar' | 'todo' | 'timer' | 'image', size: 'S' | 'M' | 'L' | 'W'): void
+  onAddBlock(
+    type: 'calendar' | 'todo' | 'timer' | 'image' | 'memo',
+    size: 'S' | 'M' | 'L' | 'W',
+  ): void
   onAddDecor(kind: 'image' | 'sticker'): void
   onUndo(): void
   onRedo(): void
@@ -39,6 +42,9 @@ const BLOCK_MENU = [
   { type: 'todo', size: 'L', label: '투두 · 크게 (4×3)' },
   { type: 'timer', size: 'S', label: '타이머 · 작게 (2×1)' },
   { type: 'timer', size: 'M', label: '타이머 · 크게 (2×2)' },
+  { type: 'memo', size: 'S', label: '메모 · 작게 (2×2)' },
+  { type: 'memo', size: 'M', label: '메모 · 길게 (2×3)' },
+  { type: 'memo', size: 'L', label: '메모 · 크게 (4×3)' },
   { type: 'image', size: 'S', label: '이미지 · 가로 (2×1)' },
   { type: 'image', size: 'M', label: '이미지 · 정사각 (2×2)' },
   { type: 'image', size: 'L', label: '이미지 · 크게 (4×3)' },

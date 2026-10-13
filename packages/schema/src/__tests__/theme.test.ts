@@ -54,6 +54,20 @@ describe('ThemeSchema', () => {
       expectBad(t, '쓸 수 없음')
     })
 
+    it('메모 블록: memoId(null 또는 UUID)만 허용, 크기는 S/M/L', () => {
+      const t = baseTheme()
+      const i = t.blocks.findIndex((b: { type: string }) => b.type === 'todo')
+      t.blocks[i] = { ...t.blocks[i], type: 'memo', props: { memoId: null } }
+      expectOk(t)
+      t.blocks[i].props = { memoId: U(900) }
+      expectOk(t)
+      t.blocks[i].props = { memoId: U(900), body: '<b>x</b>' }
+      expectBad(t)
+      t.blocks[i].props = { memoId: null }
+      t.blocks[i].size = 'W'
+      expectBad(t, '쓸 수 없음')
+    })
+
     it('배너(W)는 image 전용', () => {
       const t = baseTheme()
       t.blocks[2].size = 'W'
@@ -145,6 +159,12 @@ describe('blockRect', () => {
       w: 2,
       h: 3,
     })
+    expect(blockRect({ type: 'memo', col: 4, row: 1, size: 'L' })).toEqual({
+      col: 4,
+      row: 1,
+      w: 4,
+      h: 3,
+    })
     expect(blockRect({ type: 'image', col: 0, row: 0, size: 'W' })).toEqual({
       col: 0,
       row: 0,
@@ -155,5 +175,6 @@ describe('blockRect', () => {
   it('허용되지 않는 조합은 null', () => {
     expect(blockRect({ type: 'calendar', col: 0, row: 0, size: 'S' })).toBeNull()
     expect(blockRect({ type: 'todo', col: 0, row: 0, size: 'W' })).toBeNull()
+    expect(blockRect({ type: 'memo', col: 0, row: 0, size: 'W' })).toBeNull()
   })
 })

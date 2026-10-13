@@ -1,6 +1,8 @@
 import { createContext, useContext } from 'react'
 import type {
   CalendarEvent,
+  GridBlock,
+  Memo,
   PomodoroSettings,
   Theme,
   TimerState,
@@ -26,6 +28,8 @@ export interface BoardData {
   timer?: TimerState
   /** 뽀모도로 설정(단계 표시 "집중 2/4"에 필요) */
   pomodoro?: PomodoroSettings
+  /** 메모(고정 먼저, 최근 수정 순) */
+  memos?: readonly Memo[]
   /** 사용자 데이터가 바뀔 때마다 증가(캘린더 블록이 다시 조회하는 신호) */
   version?: number
 }
@@ -42,7 +46,7 @@ export type TodoPatch = {
 export type EditorTarget = { date: string; time?: string } | { event: CalendarEvent }
 
 /** 세부 페이지가 있는 블록 타입 */
-export type PageType = 'todo' | 'calendar' | 'timer'
+export type PageType = 'todo' | 'calendar' | 'timer' | 'memo'
 
 /**
  * 블록이 사용자 데이터를 바꾸는 통로. 앱이 IPC로 구현해 주입한다(보드는 electron에 의존하지 않음).
@@ -64,8 +68,12 @@ export interface BoardActions {
   timer: {
     command(c: TimerCommand): void
   }
-  /** 블록의 세부 페이지 열기(사용 모드에서 블록 오른쪽 위 버튼). 없는 타입은 버튼을 그리지 않는다. */
-  pages?: Partial<Record<PageType, () => void>>
+  /** 메모 체크리스트 한 줄 토글(없으면 메모 블록은 읽기 전용) */
+  memo?: {
+    toggle(id: string, line: number): void
+  }
+  /** 블록의 세부 페이지 열기(사용 모드에서 블록 빈 곳 클릭). 없는 타입은 열지 않는다. 메모는 블록의 메모를 연다. */
+  pages?: Partial<Record<PageType, (block: GridBlock) => void>>
 }
 
 export interface BoardContextValue {

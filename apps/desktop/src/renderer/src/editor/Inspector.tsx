@@ -3,11 +3,13 @@ import {
   BLOCK_SIZES,
   type FreeItem,
   type GridBlock,
+  type Memo,
   type Palette,
   type TodoList,
 } from '@kkumikkumi/schema'
 import { useState } from 'react'
 import { FONTS } from '../board/fonts'
+import { memoTitle } from '../board/memoFormat'
 import { ColorField, NumberField, Row, Section, Segmented, Slider } from './fields'
 import type { EditorApi } from './useEditor'
 
@@ -19,6 +21,14 @@ interface Props {
   onDelete(): void
   /** 투두 목록 관리(사용자 데이터). 없으면 목록 선택을 숨긴다. */
   todoLists?: TodoListsApi | undefined
+  /** 메모 고르기/새로 만들기(사용자 데이터). 없으면 메모 선택을 숨긴다. */
+  memos?: MemoPickApi | undefined
+}
+
+export interface MemoPickApi {
+  /** 처음 읽기 전에는 undefined */
+  memos: readonly Memo[] | undefined
+  create(): Promise<Memo | null>
 }
 
 export interface TodoListsApi {
@@ -33,6 +43,7 @@ const TYPE_LABEL: Record<GridBlock['type'], string> = {
   todo: '투두',
   timer: '타이머',
   image: '이미지',
+  memo: '메모',
 }
 const SHADOWS = [
   { value: 'none', label: '없음' },
@@ -51,7 +62,7 @@ const PALETTE_LABEL: Record<keyof Palette, string> = {
 const fontOptions = Object.entries(FONTS).map(([id, f]) => ({ id, label: f.label }))
 const pct = (v: number) => `${Math.round(v * 100)}%`
 
-export function Inspector({ ed, pickImage, onDuplicate, onDelete, todoLists }: Props) {
+export function Inspector({ ed, pickImage, onDuplicate, onDelete, todoLists, memos }: Props) {
   const [open, setOpen] = useState(true)
   const t = ed.theme
   const palette = t.defaults.palette
@@ -189,7 +200,13 @@ export function Inspector({ ed, pickImage, onDuplicate, onDelete, todoLists }: P
                   onChange={(size) => ed.dispatch({ type: 'block/resize', id: block.id, size })}
                 />
               </Section>
-              <BlockProps ed={ed} block={block} pickImage={pickImage} todoLists={todoLists} />
+              <BlockProps
+                ed={ed}
+                block={block}
+                pickImage={pickImage}
+                todoLists={todoLists}
+                memos={memos}
+              />
               <Section title="스타일">
                 <ColorField
                   label="배경색"
@@ -513,11 +530,13 @@ function BlockProps({
   block,
   pickImage,
   todoLists,
+  memos,
 }: {
   ed: EditorApi
   block: GridBlock
   pickImage: Props['pickImage']
   todoLists: Props['todoLists']
+  memos: Props['memos']
 }) {
   const set = (patch: Record<string, unknown>, key?: string) =>
     ed.dispatch(
@@ -587,6 +606,20 @@ function BlockProps({
           />
         </Section>
       )
+    case 'memo':
+      return (
+        <Section title="메모">
+          {memos ? (
+            <MemoFields
+              api={memos}
+              memoId={block.props.memoId}
+              onSelect={(memoId) => set({ memoId })}
+            />
+          ) : (
+            <p className="ki-note">메모를 불러오지 못했어요</p>
+          )}
+        </Section>
+      )
     case 'image':
       return (
         <Section title="이미지">
@@ -610,6 +643,49 @@ function BlockProps({
         </Section>
       )
   }
+}
+
+/** 메모 블록이 보여 줄 메모 고르기 + 새 메모 */
+function MemoFields({
+  api,
+  memoId,
+  onSelect,
+}: {
+  api: MemoPickApi
+  memoId: string | null
+  onSelect(memoId: string | null): void
+}) {
+  const all = api.memos ?? []
+  const missing = memoId !== null && api.memos !== undefined && !all.some((m) => m.id === memoId)
+  return (
+    <>
+      <Row label="메모">
+        <select
+          className="ki-select"
+          value={missing ? '' : (memoId ?? '')}
+          onChange={(e) => onSelect(e.target.value || null)}
+        >
+          <option value="">{missing ? '지워진 메모' : '고르지 않음'}</option>
+          {all.map((m) => (
+            <option key={m.id} value={m.id}>
+              {memoTitle(m.body, 30) || '새 메모'}
+            </option>
+          ))}
+        </select>
+      </Row>
+      <div className="ki-buttons">
+        <button
+          type="button"
+          onClick={async () => {
+            const m = await api.create()
+            if (m) onSelect(m.id)
+          }}
+        >
+          새 메모 만들어 연결
+        </button>
+      </div>
+    </>
+  )
 }
 
 function Actions({ onDuplicate, onDelete }: { onDuplicate(): void; onDelete(): void }) {
