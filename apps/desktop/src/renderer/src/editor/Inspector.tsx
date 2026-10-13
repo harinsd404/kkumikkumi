@@ -54,7 +54,7 @@ const SHADOWS = [
 const PALETTE_LABEL: Record<keyof Palette, string> = {
   text: '제목 글자',
   subText: '보조 글자',
-  accent: '강조(테두리)',
+  accent: '강조(외곽선)',
   check: '체크',
   surface: '칸 배경',
   control: '버튼',
@@ -262,6 +262,24 @@ export function Inspector({ ed, pickImage, onDuplicate, onDelete, todoLists, mem
                     )
                   }
                 />
+                <div className="ki-buttons">
+                  <button
+                    type="button"
+                    disabled={ed.theme.blocks.every(
+                      (b) =>
+                        b.style.border.width === block.style.border.width &&
+                        b.style.border.color === block.style.border.color,
+                    )}
+                    onClick={() =>
+                      ed.dispatch({
+                        type: 'block/styleAll',
+                        patch: { border: { ...block.style.border } },
+                      })
+                    }
+                  >
+                    이 외곽선을 모든 블록에 적용
+                  </button>
+                </div>
               </Section>
               <Actions onDuplicate={onDuplicate} onDelete={onDelete} />
             </>
@@ -392,6 +410,8 @@ export function Inspector({ ed, pickImage, onDuplicate, onDelete, todoLists, mem
 }
 
 type Decor = FreeItem['decor']
+/** 외곽선을 켤 때 두께(기본 블록 외곽선과 같음) */
+const DEFAULT_BORDER_WIDTH = 2.5
 
 function DecorFields(props: {
   ed: EditorApi
@@ -409,17 +429,30 @@ function DecorFields(props: {
         max={64}
         onChange={(radius) => apply({ radius }, 'radius')}
       />
-      <Slider
-        label="테두리"
-        value={decor.border.width}
-        min={0}
-        max={16}
-        step={0.5}
-        onChange={(width) => apply({ border: { ...decor.border, width } }, 'bw')}
+      <Segmented
+        label="외곽선"
+        value={decor.border.width > 0 ? 'on' : 'off'}
+        options={[
+          { value: 'on', label: '있음' },
+          { value: 'off', label: '없음' },
+        ]}
+        onChange={(v) =>
+          apply({ border: { ...decor.border, width: v === 'on' ? DEFAULT_BORDER_WIDTH : 0 } })
+        }
       />
       {decor.border.width > 0 && (
+        <Slider
+          label="두께"
+          value={decor.border.width}
+          min={0.5}
+          max={16}
+          step={0.5}
+          onChange={(width) => apply({ border: { ...decor.border, width } }, 'bw')}
+        />
+      )}
+      {decor.border.width > 0 && (
         <ColorField
-          label="테두리 색"
+          label="외곽선 색"
           value={decor.border.color}
           nullLabel="강조색"
           swatches={props.swatches}

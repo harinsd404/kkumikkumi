@@ -3,17 +3,18 @@ import { CANVAS, SCHEMA_VERSION, type Palette, type Pattern, type Theme } from '
 type Style = Theme['blocks'][number]['style']
 
 /** 디자인 시안의 흰 카드 (1280px 시안 값 × 1.25 = 논리 캔버스 값) */
-const cardStyle = (border: boolean): Style => ({
+/** 블록 카드 기본 스타일. 외곽선은 모든 블록이 같다(2.5, 강조색) — 2026-10-14 사용자 지시 */
+const cardStyle = (): Style => ({
   opacity: 1,
   radius: 25,
-  border: { width: border ? 2.5 : 0, color: null },
+  border: { width: 2.5, color: null },
   shadow: 'none',
   bg: '#ffffff',
   fontId: null,
   textColor: null,
 })
 
-const bannerStyle = (): Style => ({ ...cardStyle(false), radius: 15, bg: null })
+const bannerStyle = (): Style => ({ ...cardStyle(), radius: 15, bg: null })
 
 export interface ThemePreset {
   name: string
@@ -94,7 +95,7 @@ export function createDefaultTheme(
         size: 'L',
         col: 0,
         row: 1,
-        style: cardStyle(true),
+        style: cardStyle(),
         props: { view: 'month', weekStartsOn: 0 },
       },
       {
@@ -103,7 +104,7 @@ export function createDefaultTheme(
         size: 'M',
         col: 4,
         row: 1,
-        style: cardStyle(false),
+        style: cardStyle(),
         props: { listId: null, showCompleted: true },
       },
     ],
@@ -161,7 +162,7 @@ export function newBlock(
   col: number,
   row: number,
 ): Block {
-  const style = type === 'image' ? bannerStyle() : cardStyle(type === 'calendar')
+  const style = type === 'image' ? bannerStyle() : cardStyle()
   return structuredCloneJson({
     id,
     type,

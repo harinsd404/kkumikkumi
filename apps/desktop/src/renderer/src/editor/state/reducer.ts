@@ -26,6 +26,8 @@ export type EditorAction =
   | { type: 'block/delete'; id: string }
   | { type: 'block/duplicate'; id: string; newId: string }
   | { type: 'block/style'; id: string; patch: Partial<GridBlock['style']> }
+  /** 모든 블록에 같은 스타일 값(한 번의 실행 취소 단위) */
+  | { type: 'block/styleAll'; patch: Partial<GridBlock['style']> }
   | { type: 'block/props'; id: string; patch: Record<string, unknown> }
   | { type: 'free/add'; item: FreeItem }
   | {
@@ -143,6 +145,11 @@ export function reduce(t: Theme, a: EditorAction): ReduceResult {
     case 'block/style':
       if (!t.blocks.some((b) => b.id === a.id)) return fail('not_found')
       return ok(mapBlock(t, a.id, (b) => ({ ...b, style: { ...b.style, ...a.patch } })))
+    case 'block/styleAll':
+      return ok({
+        ...t,
+        blocks: t.blocks.map((b) => ({ ...b, style: { ...b.style, ...a.patch } })),
+      })
     case 'block/props':
       if (!t.blocks.some((b) => b.id === a.id)) return fail('not_found')
       return ok(

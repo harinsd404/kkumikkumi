@@ -131,6 +131,30 @@ describe('그리드 블록', () => {
   })
 })
 
+describe('외곽선 통일', () => {
+  it('새 블록과 기본 테마의 모든 블록은 같은 외곽선', () => {
+    const t = run(base(), { type: 'block/add', block: { type: 'memo', size: 'S' }, id: U(9) })
+    expect(new Set(t.blocks.map((b) => JSON.stringify(b.style.border)))).toEqual(
+      new Set([JSON.stringify({ width: 2.5, color: null })]),
+    )
+  })
+
+  it('block/styleAll은 모든 블록에 같은 값을 넣고 다른 스타일은 그대로 둔다', () => {
+    const t = run(
+      base(),
+      {
+        type: 'block/style',
+        id: TODO,
+        patch: { border: { width: 0, color: null }, bg: '#000000' },
+      },
+      { type: 'block/styleAll', patch: { border: { width: 4, color: '#112233' } } },
+    )
+    for (const b of t.blocks) expect(b.style.border).toEqual({ width: 4, color: '#112233' })
+    expect(t.blocks.find((b) => b.id === TODO)!.style.bg).toBe('#000000')
+    expect(valid(t)).toBe(true)
+  })
+})
+
 describe('자유 아이템', () => {
   const withItems = () =>
     run(
