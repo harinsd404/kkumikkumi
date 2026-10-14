@@ -63,6 +63,9 @@ body {
 }
 .app-theme {
   flex: none;
+  /* 가운데 정렬 transform이 쌓임 맥락을 만들어 안의 메뉴 z-index가 갇힌다.
+     감싼 요소 자체를 보드·페이지(뒤에 그려짐)보다 위로 올린다. 일정 창(50)보다는 아래. */
+  z-index: 45;
   -webkit-app-region: no-drag;
 }
 .app-theme-pill {
