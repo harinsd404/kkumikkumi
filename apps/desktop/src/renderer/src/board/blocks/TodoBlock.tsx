@@ -4,6 +4,7 @@ import checkUrl from '../icons/check.svg'
 import plusUrl from '../icons/plus.svg'
 import { useBoard, type BoardActions } from '../BoardContext'
 import { addDays, localDate } from '../calendar'
+import { sectionTone } from '../colors'
 import {
   dueForSection,
   groupTodos,
@@ -40,10 +41,11 @@ export function TodoBlock({ block }: { block: TodoBlockT }) {
 
   return (
     <div className={`kt kt--${block.size}`}>
-      {sections.map((s) => (
+      {sections.map((s, idx) => (
         <Section
           key={s}
           section={s}
+          tone={sectionTone(p, idx)}
           items={groups[s]}
           allIds={items.map((i) => i.id)}
           listId={listId ?? null}
@@ -58,6 +60,7 @@ export function TodoBlock({ block }: { block: TodoBlockT }) {
 
 function Section({
   section,
+  tone,
   items,
   allIds,
   listId,
@@ -66,6 +69,7 @@ function Section({
   actions,
 }: {
   section: TodoSection
+  tone: { label: string; done: string }
   items: readonly TodoItem[]
   allIds: readonly string[]
   listId: string | null
@@ -127,7 +131,7 @@ function Section({
   return (
     <section className="kt-section" aria-label={SECTION_LABEL[section]}>
       <div className="kt-chip">
-        <span style={{ color: p.subText }}>{SECTION_LABEL[section]}</span>
+        <span style={{ color: tone.label }}>{SECTION_LABEL[section]}</span>
         {editable ? (
           <button
             type="button"
@@ -169,6 +173,7 @@ function Section({
               item={i}
               today={today}
               palette={p}
+              doneColor={tone.done}
               actions={editable ? actions : undefined}
               dragging={drag?.id === i.id}
               dropBefore={drag !== null && drag.overIndex === idx && drag.id !== i.id}
@@ -190,6 +195,7 @@ function Item({
   item: i,
   today,
   palette: p,
+  doneColor,
   actions,
   dragging,
   dropBefore,
@@ -198,6 +204,8 @@ function Item({
   item: TodoItem
   today: string
   palette: Palette
+  /** 완료한 체크 상자 바탕(구역 색) */
+  doneColor: string
   actions: BoardActions | undefined
   dragging: boolean
   dropBefore: boolean
@@ -229,7 +237,7 @@ function Item({
         <button
           type="button"
           className={`kt-check ${i.done ? 'is-done' : ''}`}
-          style={i.done ? { background: p.check } : undefined}
+          style={i.done ? { background: doneColor } : undefined}
           role="checkbox"
           aria-checked={i.done}
           aria-label={i.title}

@@ -58,7 +58,7 @@ export function ColorField(props: {
           type="text"
           className="ki-hex"
           aria-label={`${props.label} 코드`}
-          placeholder={props.nullLabel ?? '#000000'}
+          placeholder="#rrggbb"
           value={text}
           maxLength={9}
           onChange={(e) => setText(e.target.value.trim())}

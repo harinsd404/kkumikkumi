@@ -1,6 +1,8 @@
 import type { ThemePresetId } from '@kkumikkumi/schema'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import chevronDownUrl from '../board/icons/chevron-down.svg'
+import redoUrl from '../board/icons/redo.svg'
+import undoUrl from '../board/icons/undo.svg'
 import { maskCss } from '../board/style'
 import type { SaveStatus } from '../editor/state/autosave'
 
@@ -151,7 +153,7 @@ export function TitleBar({ themeName, themeMenu, editing, onToggleEdit, tools, n
               aria-label="실행 취소"
               title="실행 취소 (⌘Z)"
             >
-              ↶
+              <span className="tb-glyph" style={maskCss(undoUrl, 'currentColor')} />
             </button>
             <button
               type="button"
@@ -161,7 +163,7 @@ export function TitleBar({ themeName, themeMenu, editing, onToggleEdit, tools, n
               aria-label="다시 실행"
               title="다시 실행 (⇧⌘Z)"
             >
-              ↷
+              <span className="tb-glyph" style={maskCss(redoUrl, 'currentColor')} />
             </button>
           </>
         )}

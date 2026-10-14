@@ -85,3 +85,22 @@ export function uiControl(palette: { control: string; accent: string; check: str
   }
   return tint
 }
+
+/** 옅은 색을 글자로 쓸 수 있게 차분하고 진하게(밝기 0.7 이하, 채도 0.4 이하). 시안 #c4e0f0 → #96bace 근처 */
+export function deepen(hex: string): string {
+  const [h, s, l] = hexToHsl(hex)
+  return hslToHex(h, Math.min(s, 0.4), Math.min(l, 0.7))
+}
+
+/**
+ * 투두 블록 구역 색(시안 6:2384): 구역마다 체크색 → 강조색을 번갈아 쓴다.
+ * label은 구역 이름 글자색(체크색은 옅어서 진하게), done은 완료한 체크 상자 바탕.
+ */
+export function sectionTone(
+  palette: { accent: string; check: string },
+  index: number,
+): { label: string; done: string } {
+  return index % 2 === 0
+    ? { label: deepen(palette.check), done: palette.check }
+    : { label: palette.accent, done: palette.accent }
+}

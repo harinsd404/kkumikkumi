@@ -205,9 +205,14 @@ body {
   outline-offset: 1px;
 }
 .tb-icon {
+  display: inline-grid;
+  place-items: center;
   width: 28px;
   padding: 0;
-  font-size: 14px;
+}
+.tb-glyph {
+  width: 16px;
+  height: 16px;
 }
 .tb-primary {
   border-color: transparent;

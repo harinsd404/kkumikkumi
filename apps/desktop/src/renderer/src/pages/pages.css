@@ -1248,17 +1248,17 @@
   opacity: 0;
   pointer-events: none;
 }
+/* 시안(6:2384)의 체크 상자: 안 고르면 회색 채움, 고르면 체크색 + 흰 체크(투두·메모·일정 창과 같은 모양) */
 .tt-check-box {
   display: grid;
   place-items: center;
   width: 20px;
   height: 20px;
-  border: 2px solid var(--t-sub);
-  border-radius: 6px;
+  border-radius: 4px;
+  background: #dbdddf;
 }
 .tt-check input:checked + .tt-check-box {
-  border-color: var(--t-accent);
-  background: var(--t-accent);
+  background: var(--t-check);
 }
 .tt-check input:checked + .tt-check-box::after {
   content: '';
@@ -1283,4 +1283,62 @@
   align-items: center;
   justify-content: center;
   gap: 14px;
+}
+
+/* ── 통일 규칙(2026-10-14): 구역 제목 / 버튼 3종 / 탭 ──
+   구역 제목은 버튼과 헷갈리지 않게 바탕 없는 작은 글자.
+   버튼: 보조(기본, control 바탕) · 주(tp-primary, 강조색) · 위험(is-danger, 옅은 빨강).
+   탭(role=tablist/radiogroup): 홈 안에 고른 칸만 흰색으로 떠오르는 한 덩어리. */
+.pg-chip {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--t-sub);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.pg-pill:not([role='tab']):not([role='radio']) {
+  background: var(--t-control);
+}
+.pg-pill:not([role='tab']):not([role='radio']):hover:not(:disabled) {
+  background: color-mix(in srgb, var(--t-control) 85%, var(--t-text));
+}
+.pg-pill.tp-primary:not([role='tab']):not([role='radio']) {
+  background: var(--t-accent);
+}
+.pg-pill.tp-primary:not([role='tab']):not([role='radio']):hover:not(:disabled) {
+  background: color-mix(in srgb, var(--t-accent) 85%, var(--t-text));
+}
+.pg-pill.is-danger:not([role='tab']) {
+  background: color-mix(in srgb, #c0392b 10%, #ffffff);
+  color: #c0392b;
+}
+.pg-pill.is-danger:not([role='tab']):hover:not(:disabled) {
+  background: color-mix(in srgb, #c0392b 18%, #ffffff);
+}
+.pg-tabs[role='tablist'],
+.pg-tabs[role='radiogroup'] {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--t-control);
+}
+.pg-tabs[role='tablist'] .pg-pill,
+.pg-tabs[role='radiogroup'] .pg-pill {
+  padding: 6px 16px;
+  background: transparent;
+  color: var(--t-sub);
+}
+.pg-tabs[role='tablist'] .pg-pill[aria-selected='true'],
+.pg-tabs[role='radiogroup'] .pg-pill[aria-checked='true'] {
+  background: #ffffff;
+  color: var(--t-text);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.1);
+}
+.tp-head {
+  align-self: stretch;
 }

@@ -1,6 +1,6 @@
 import { THEME_PRESETS } from '@kkumikkumi/schema'
 import { describe, expect, it } from 'vitest'
-import { luminance, mixHex, uiControl } from '../colors'
+import { deepen, luminance, mixHex, sectionTone, uiControl } from '../colors'
 
 describe('colors', () => {
   it('luminance: 검정 0, 흰색 1', () => {
@@ -33,5 +33,22 @@ describe('colors', () => {
 
   it('uiControl: 섞어도 안 되면 진한 색 그대로', () => {
     expect(uiControl({ control: '#ffffff', accent: '#fefefe', check: '#fdfdfd' })).toBe('#fdfdfd')
+  })
+
+  it('deepen: 옅은 하늘색을 시안의 구역 글자색 근처로', () => {
+    const c = deepen('#c4e0f0')
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16))
+    // 시안 #96bace(150, 186, 206)과 채널마다 12 안쪽
+    expect(Math.abs(r! - 0x96)).toBeLessThanOrEqual(12)
+    expect(Math.abs(g! - 0xba)).toBeLessThanOrEqual(12)
+    expect(Math.abs(b! - 0xce)).toBeLessThanOrEqual(12)
+    expect(deepen('#4a3a36')).toBe('#4a3a36') // 이미 진하고 차분하면 그대로
+  })
+
+  it('sectionTone: 체크색 → 강조색 번갈아', () => {
+    const p = THEME_PRESETS.cottonCandy.palette
+    expect(sectionTone(p, 0)).toEqual({ label: deepen(p.check), done: p.check })
+    expect(sectionTone(p, 1)).toEqual({ label: p.accent, done: p.accent })
+    expect(sectionTone(p, 2)).toEqual(sectionTone(p, 0))
   })
 })

@@ -154,6 +154,7 @@ function Today({
     const el = list.current
     const row = el?.children[focusIndex] as HTMLElement | undefined
     if (el && row) el.scrollTop = Math.max(0, row.offsetTop - el.offsetTop - 4)
+    if (el) markScrolled(el)
   }, [focusIndex, items.length])
   return (
     <>
@@ -166,7 +167,7 @@ function Today({
       {items.length === 0 ? (
         <p className="ktt-empty">오늘은 수업이 없어요</p>
       ) : (
-        <ul className="ktt-list" ref={list}>
+        <ul className="ktt-list" ref={list} onScroll={(e) => markScrolled(e.currentTarget)}>
           {items.map((i) => {
             const state = isNow(i, minute) ? 'is-now' : toMin(i.end) <= minute ? 'is-past' : ''
             return (
@@ -260,6 +261,11 @@ function Week({ tt, now, tones }: { tt: TimetableView; now: Date; tones: readonl
       ))}
     </div>
   )
+}
+
+/** 내려가 있으면 위쪽 끝도 흐리게(잘린 줄이 의도된 것처럼 보이게) */
+const markScrolled = (el: HTMLElement) => {
+  el.dataset['scrolled'] = String(el.scrollTop > 0)
 }
 
 /** 그리드 행을 묶는 투명 래퍼(display: contents) */

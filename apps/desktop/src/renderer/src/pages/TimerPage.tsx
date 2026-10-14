@@ -51,20 +51,22 @@ export function TimerPage(p: Props) {
   return (
     <div className="pg pg-timer">
       <section className="pg-card tp-main" aria-label="타이머">
-        <div className="pg-tabs" role="tablist" aria-label="종류">
-          {(['timer', 'pomodoro'] as const).map((k) => (
-            <button
-              key={k}
-              type="button"
-              role="tab"
-              className="pg-pill"
-              aria-selected={tab === k}
-              disabled={!idle && tab !== k}
-              onClick={() => setPickTab(k)}
-            >
-              {k === 'timer' ? '타이머' : '뽀모도로'}
-            </button>
-          ))}
+        <div className="pg-head tp-head">
+          <div className="pg-tabs" role="tablist" aria-label="종류">
+            {(['timer', 'pomodoro'] as const).map((k) => (
+              <button
+                key={k}
+                type="button"
+                role="tab"
+                className="pg-pill"
+                aria-selected={tab === k}
+                disabled={!idle && tab !== k}
+                onClick={() => setPickTab(k)}
+              >
+                {k === 'timer' ? '타이머' : '뽀모도로'}
+              </button>
+            ))}
+          </div>
           <span className="pg-spacer" />
           <button type="button" className="pg-pill is-filled" onClick={p.openMini}>
             미니 창으로 띄우기
