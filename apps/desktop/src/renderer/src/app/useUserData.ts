@@ -89,6 +89,20 @@ export function useUserData(onError: (text: string) => void): UserData {
     },
     [refreshTodos, onError],
   )
+  /** 결과 값이 없는(null을 돌려주는) 채널용: 성공 여부만. run의 null은 실패와 구분되지 않는다. */
+  const runOk = useCallback(
+    async (p: Promise<IpcResult<unknown>>): Promise<boolean> => {
+      let ok = false
+      await run(
+        p.then((r) => {
+          ok = r.ok
+          return r
+        }),
+      )
+      return ok
+    },
+    [run],
+  )
 
   useEffect(() => {
     // 비동기 로드 결과를 상태에 넣는다(마운트 시 한 번)
@@ -116,11 +130,10 @@ export function useUserData(onError: (text: string) => void): UserData {
           setTodos((t) => t && patchItem(t, id, patch))
           return (await run(window.kkumi.invoke('todo.items.update', { id, patch }))) !== null
         },
-        remove: async (id) =>
-          (await run(window.kkumi.invoke('todo.items.delete', { id }))) !== null,
+        remove: (id) => runOk(window.kkumi.invoke('todo.items.delete', { id })),
         reorder: async (listId, ids) => {
           setTodos((t) => t && reorderLocal(t, listId, ids))
-          return (await run(window.kkumi.invoke('todo.items.reorder', { listId, ids }))) !== null
+          return runOk(window.kkumi.invoke('todo.items.reorder', { listId, ids }))
         },
       },
       calendar: {
@@ -140,7 +153,7 @@ export function useUserData(onError: (text: string) => void): UserData {
         },
       },
     }),
-    [run, onError],
+    [run, runOk, onError],
   )
 
   const lists = useMemo<UserData['lists']>(
@@ -149,9 +162,9 @@ export function useUserData(onError: (text: string) => void): UserData {
       create: (name) => run(window.kkumi.invoke('todo.lists.create', { name })),
       rename: async (id, name) =>
         (await run(window.kkumi.invoke('todo.lists.update', { id, name }))) !== null,
-      remove: async (id) => (await run(window.kkumi.invoke('todo.lists.delete', { id }))) !== null,
+      remove: (id) => runOk(window.kkumi.invoke('todo.lists.delete', { id })),
     }),
-    [run, todos?.lists],
+    [run, runOk, todos?.lists],
   )
 
   const events = useMemo<UserData['events']>(
@@ -160,9 +173,9 @@ export function useUserData(onError: (text: string) => void): UserData {
         (await run(window.kkumi.invoke('calendar.create', { event: { ...e } }))) !== null,
       update: async (id, e) =>
         (await run(window.kkumi.invoke('calendar.update', { event: { ...e, id } }))) !== null,
-      remove: async (id) => (await run(window.kkumi.invoke('calendar.delete', { id }))) !== null,
+      remove: (id) => runOk(window.kkumi.invoke('calendar.delete', { id })),
     }),
-    [run],
+    [run, runOk],
   )
 
   const data = useMemo<BoardData>(
