@@ -1,5 +1,6 @@
 import type { GridBlock } from '@kkumikkumi/schema'
-import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import type { TimetableData } from '../../../../shared/api'
 import { useBoard } from '../BoardContext'
 import {
   autoColors,
@@ -22,26 +23,106 @@ type TimetableBlockT = Extract<GridBlock, { type: 'timetable' }>
 
 /**
  * 시간표 블록. S·M은 오늘 수업 목록(지금 수업 강조, 끝난 수업은 흐리게), L은 한 주.
- * 편집은 시간표 페이지에서만 한다(블록은 보기 전용).
+ * 편집은 시간표 페이지에서만 한다. props.timetableId가 null(또는 지워진 시간표)이면 고른 시간표를 따라가고,
+ * 그때는 블록 머리의 이름을 눌러 고른 시간표를 바꿀 수 있다(전역 설정이 바뀌고 테마는 그대로).
  */
 export function TimetableBlock({ block }: { block: TimetableBlockT }) {
   const { theme, data, now } = useBoard()
   const p = theme.defaults.palette
   const vars = { '--ktt-accent': p.accent, '--ktt-sub': p.subText } as CSSProperties
-  const tt = data.timetable && pickTimetable(data.timetable)
-  if (!tt)
+  const all = data.timetable
+  const tt = all && pickTimetable(all, block.props.timetableId)
+  if (!all || !tt)
     return (
       <div className={`ktt ktt--${block.size}`} style={vars}>
-        {data.timetable && <p className="ktt-empty">시간표가 없어요</p>}
+        {all && <p className="ktt-empty">시간표가 없어요</p>}
       </div>
     )
   const tones = themeTones(p)
+  const follows = !all.timetables.some((t) => t.id === block.props.timetableId)
+  // 시간표가 하나뿐이면 이름은 보여 주지 않는다
+  const name = all.timetables.length > 1 && <Switcher all={all} tt={tt} follows={follows} />
   return (
     <div className={`ktt ktt--${block.size}`} style={vars}>
       {block.size === 'L' ? (
-        <Week tt={tt} now={now} tones={tones} />
+        <>
+          {name && <div className="ktt-head">{name}</div>}
+          <Week tt={tt} now={now} tones={tones} />
+        </>
       ) : (
-        <Today tt={tt} now={now} sub={p.subText} tones={tones} />
+        <Today tt={tt} now={now} sub={p.subText} tones={tones} name={name} />
+      )}
+    </div>
+  )
+}
+
+/** 블록 머리의 시간표 이름. 따라가는 블록이면(사용 모드) 눌러서 고른 시간표를 바꾼다. */
+function Switcher({
+  all,
+  tt,
+  follows,
+}: {
+  all: TimetableData
+  tt: TimetableView
+  follows: boolean
+}) {
+  const { mode, actions } = useBoard()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: PointerEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    window.addEventListener('pointerdown', onDown)
+    window.addEventListener('keydown', onKey, true)
+    return () => {
+      window.removeEventListener('pointerdown', onDown)
+      window.removeEventListener('keydown', onKey, true)
+    }
+  }, [open])
+
+  const select = mode === 'use' && follows ? actions?.timetable?.select : undefined
+  if (!select)
+    return (
+      <span
+        className="ktt-name"
+        title={follows ? undefined : '이 블록은 이 시간표로 고정돼 있어요'}
+      >
+        {tt.timetable.name}
+      </span>
+    )
+  return (
+    <div className="ktt-switch" ref={ref}>
+      <button
+        type="button"
+        className="ktt-name is-button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title="시간표 바꾸기"
+        onClick={() => setOpen(!open)}
+      >
+        <span className="ktt-name-text">{tt.timetable.name}</span>
+        <span className="ktt-caret" aria-hidden />
+      </button>
+      {open && (
+        <div className="ktt-menu" role="menu" aria-label="시간표 고르기">
+          {all.timetables.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="menuitemradio"
+              aria-checked={t.id === tt.timetable.id}
+              onClick={() => {
+                setOpen(false)
+                if (t.id !== tt.timetable.id) select(t.id)
+              }}
+            >
+              {t.name}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   )
@@ -52,11 +133,13 @@ function Today({
   now,
   sub,
   tones,
+  name,
 }: {
   tt: TimetableView
   now: Date
   sub: string
   tones: readonly string[]
+  name: ReactNode
 }) {
   const s = tt.settings
   const day = weekdayOf(now)
@@ -74,8 +157,11 @@ function Today({
   }, [focusIndex, items.length])
   return (
     <>
-      <div className="kt-chip">
-        <span style={{ color: sub }}>오늘 · {DAY_LABEL[day]}요일</span>
+      <div className="ktt-head">
+        <div className="kt-chip">
+          <span style={{ color: sub }}>오늘 · {DAY_LABEL[day]}요일</span>
+        </div>
+        {name}
       </div>
       {items.length === 0 ? (
         <p className="ktt-empty">오늘은 수업이 없어요</p>

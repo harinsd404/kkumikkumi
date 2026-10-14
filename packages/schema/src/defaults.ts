@@ -152,7 +152,7 @@ const defaultProps = {
   timer: { presetsMin: [25, 5], display: 'ring' },
   image: { assetHash: null, fit: 'cover', focus: { x: 0.5, y: 0.5, zoom: 1 }, shape: 'rect' },
   memo: { memoId: null },
-  timetable: {},
+  timetable: { timetableId: null },
 } as const
 
 /** 새 그리드 블록(시안의 흰 카드 스타일). 위치/크기 유효성은 호출 측(에디터 리듀서)이 확인한다. */

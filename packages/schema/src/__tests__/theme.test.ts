@@ -68,14 +68,19 @@ describe('ThemeSchema', () => {
       expectBad(t, '쓸 수 없음')
     })
 
-    it('시간표 블록: props는 빈 객체만, 크기는 S/M/L', () => {
+    it('시간표 블록: timetableId(null 또는 UUID)만, 예전 {}는 null로 읽음, 크기는 S/M/L', () => {
       const t = baseTheme()
       const i = t.blocks.findIndex((b: { type: string }) => b.type === 'todo')
       t.blocks[i] = { ...t.blocks[i], type: 'timetable', props: {} }
+      const old = parseTheme(t)
+      expect(old.success && old.data.blocks[i]!.props).toEqual({ timetableId: null })
+      t.blocks[i].props = { timetableId: U(900) }
       expectOk(t)
-      t.blocks[i].props = { entries: [] }
+      t.blocks[i].props = { timetableId: 'x' }
       expectBad(t)
-      t.blocks[i].props = {}
+      t.blocks[i].props = { timetableId: null, entries: [] }
+      expectBad(t)
+      t.blocks[i].props = { timetableId: null }
       t.blocks[i].size = 'W'
       expectBad(t, '쓸 수 없음')
     })

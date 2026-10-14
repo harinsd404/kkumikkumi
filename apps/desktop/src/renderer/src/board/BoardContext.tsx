@@ -75,6 +75,10 @@ export interface BoardActions {
   memo?: {
     toggle(id: string, line: number): void
   }
+  /** 고른 시간표 바꾸기(따라가는 시간표 블록 머리에서). 없으면 이름만 보여 준다. */
+  timetable?: {
+    select(id: string): void
+  }
   /** 블록의 세부 페이지 열기(사용 모드에서 블록 빈 곳 클릭). 없는 타입은 열지 않는다. 메모는 블록의 메모를 연다. */
   pages?: Partial<Record<PageType, (block: GridBlock) => void>>
 }

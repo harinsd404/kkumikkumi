@@ -163,8 +163,11 @@ export const BlockSchema = z.discriminatedUnion('type', [
   z.strictObject({
     ...blockBase,
     type: z.literal('timetable'),
-    // 시간표는 하나뿐이라 블록 설정이 없다(사용자 데이터 참조 없음)
-    props: z.strictObject({}),
+    props: z.strictObject({
+      // 사용자 데이터(시간표) 참조. null = 고른 시간표 따라가기. 가져올 때 null로 치환.
+      // 시간표가 하나뿐이던 때 저장한 블록({})은 null로 읽는다.
+      timetableId: Uuid.nullable().default(null),
+    }),
   }),
 ])
 

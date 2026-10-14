@@ -5,6 +5,7 @@ import {
   type GridBlock,
   type Memo,
   type Palette,
+  type Timetable,
   type TodoList,
 } from '@kkumikkumi/schema'
 import { useState } from 'react'
@@ -23,6 +24,14 @@ interface Props {
   todoLists?: TodoListsApi | undefined
   /** 메모 고르기/새로 만들기(사용자 데이터). 없으면 메모 선택을 숨긴다. */
   memos?: MemoPickApi | undefined
+  /** 시간표 목록(사용자 데이터). 없으면 시간표 선택을 숨긴다. */
+  timetables?: TimetablePick | undefined
+}
+
+export interface TimetablePick {
+  timetables: readonly Timetable[]
+  /** 고른 시간표(따라가는 블록이 보여 줄 것) */
+  activeId: string | null
 }
 
 export interface MemoPickApi {
@@ -63,7 +72,15 @@ const PALETTE_LABEL: Record<keyof Palette, string> = {
 const fontOptions = Object.entries(FONTS).map(([id, f]) => ({ id, label: f.label }))
 const pct = (v: number) => `${Math.round(v * 100)}%`
 
-export function Inspector({ ed, pickImage, onDuplicate, onDelete, todoLists, memos }: Props) {
+export function Inspector({
+  ed,
+  pickImage,
+  onDuplicate,
+  onDelete,
+  todoLists,
+  memos,
+  timetables,
+}: Props) {
   const [open, setOpen] = useState(true)
   const t = ed.theme
   const palette = t.defaults.palette
@@ -207,6 +224,7 @@ export function Inspector({ ed, pickImage, onDuplicate, onDelete, todoLists, mem
                 pickImage={pickImage}
                 todoLists={todoLists}
                 memos={memos}
+                timetables={timetables}
               />
               <Section title="스타일">
                 <ColorField
@@ -565,12 +583,14 @@ function BlockProps({
   pickImage,
   todoLists,
   memos,
+  timetables,
 }: {
   ed: EditorApi
   block: GridBlock
   pickImage: Props['pickImage']
   todoLists: Props['todoLists']
   memos: Props['memos']
+  timetables: Props['timetables']
 }) {
   const set = (patch: Record<string, unknown>, key?: string) =>
     ed.dispatch(
@@ -657,8 +677,16 @@ function BlockProps({
     case 'timetable':
       return (
         <Section title="시간표">
+          {timetables && (
+            <TimetableFields
+              pick={timetables}
+              timetableId={block.props.timetableId}
+              onSelect={(timetableId) => set({ timetableId })}
+            />
+          )}
           <p className="ki-note">
             과목과 교시 시각은 시간표 페이지에서 고쳐요. S·M은 오늘 수업, L은 한 주를 보여 줘요.
+            따라가는 블록은 사용 모드에서 이름을 눌러 고른 시간표를 바꿀 수 있어요.
           </p>
         </Section>
       )
@@ -726,6 +754,41 @@ function MemoFields({
           새 메모 만들어 연결
         </button>
       </div>
+    </>
+  )
+}
+
+/** 시간표 블록이 보여 줄 시간표: 고른 시간표 따라가기 또는 특정 시간표로 고정 */
+function TimetableFields({
+  pick,
+  timetableId,
+  onSelect,
+}: {
+  pick: TimetablePick
+  timetableId: string | null
+  onSelect(timetableId: string | null): void
+}) {
+  const missing = timetableId !== null && !pick.timetables.some((t) => t.id === timetableId)
+  const active = pick.timetables.find((t) => t.id === pick.activeId)
+  return (
+    <>
+      <Row label="보여 줄 시간표">
+        <select
+          className="ki-select"
+          value={missing ? '' : (timetableId ?? '')}
+          onChange={(e) => onSelect(e.target.value || null)}
+        >
+          <option value="">
+            {active ? `고른 시간표 따라가기 (지금: ${active.name})` : '고른 시간표 따라가기'}
+          </option>
+          {pick.timetables.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}만
+            </option>
+          ))}
+        </select>
+      </Row>
+      {missing && <p className="ki-note">고정했던 시간표가 지워져서 고른 시간표를 보여 줘요.</p>}
     </>
   )
 }

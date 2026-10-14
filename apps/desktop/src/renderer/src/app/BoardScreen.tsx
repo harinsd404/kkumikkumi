@@ -66,10 +66,12 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
   const theme = ed.theme
   // 블록의 "크게 보기" 버튼이 세부 페이지로 보낸다
   const memoToggle = memos.toggle
+  const timetableSelect = timetable.select
   const boardActions = useMemo<BoardActions>(
     () => ({
       ...user.actions,
       memo: { toggle: memoToggle },
+      timetable: { select: (id) => void timetableSelect(id) },
       pages: {
         todo: () => setPage('todo'),
         calendar: () => setPage('calendar'),
@@ -81,7 +83,7 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
         },
       },
     }),
-    [user.actions, memoToggle],
+    [user.actions, memoToggle, timetableSelect],
   )
   const boardData = useMemo(
     () => ({
@@ -313,6 +315,7 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
             onDelete={remove}
             todoLists={user.lists}
             memos={memos}
+            timetables={timetable.data}
           />
         )}
         {user.editing && !editing && (
