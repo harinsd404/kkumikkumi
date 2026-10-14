@@ -3,6 +3,7 @@ import {
   DEFAULT_TIMETABLE,
   type CalendarEvent,
   type Memo,
+  type Timetable,
   type TimetableEntry,
   type Settings,
   type ThemeRule,
@@ -265,14 +266,35 @@ describe('MemoRepo', () => {
 })
 
 describe('TimetableRepo / 시간표 설정', () => {
-  const entry = (n: number, slot: TimetableEntry['slot']): TimetableEntry => ({
+  // 마이그레이션이 만든 "내 시간표"
+  const first = () => repos.timetable.listTimetables()[0]!
+  const entry = (
+    n: number,
+    slot: TimetableEntry['slot'],
+    timetableId = first().id,
+  ): TimetableEntry => ({
     id: U(400 + n),
+    timetableId,
     slot,
     subject: `과목${n}`,
     room: '',
-    color: null,
+    tone: null,
     createdAt: n,
     updatedAt: n,
+  })
+  const timetable = (n: number, name = `시간표${n}`): Timetable => ({
+    id: U(450 + n),
+    name,
+    settings: DEFAULT_TIMETABLE,
+    createdAt: 100 + n,
+    updatedAt: 100 + n,
+  })
+
+  it('처음에는 기본 설정의 "내 시간표" 하나가 고른 상태', () => {
+    expect(repos.timetable.listTimetables()).toEqual([
+      expect.objectContaining({ name: '내 시간표', settings: DEFAULT_TIMETABLE }),
+    ])
+    expect(repos.settings.timetablePrefs()).toEqual({ activeId: first().id })
   })
 
   it('교시 칸과 시간 항목을 저장/복원한다', () => {
@@ -284,35 +306,69 @@ describe('TimetableRepo / 시간표 설정', () => {
     expect(repos.timetable.get(b.id)).toEqual(b)
   })
 
-  it('같은 요일·교시 칸은 하나만(ConflictError), 자기 자신으로 고치기는 허용', () => {
+  it('같은 시간표의 같은 요일·교시 칸은 하나만(ConflictError), 다른 시간표는 따로', () => {
     const a = repos.timetable.insert(entry(1, { kind: 'period', day: 1, period: 1 }))
     expect(() => repos.timetable.insert(entry(2, { kind: 'period', day: 1, period: 1 }))).toThrow(
       ConflictError,
     )
     expect(repos.timetable.update({ ...a, subject: '수학', updatedAt: 5 }).subject).toBe('수학')
     // 시간 항목은 겹쳐도 된다
-    repos.timetable.insert(entry(3, { kind: 'time', day: 1, start: '09:00', end: '10:00' }))
+    const c = repos.timetable.insert(
+      entry(3, { kind: 'time', day: 1, start: '09:00', end: '10:00' }),
+    )
     repos.timetable.insert(entry(4, { kind: 'time', day: 1, start: '09:00', end: '10:00' }))
-    expect(repos.timetable.list()).toHaveLength(3)
+    const t2 = repos.timetable.insertTimetable(timetable(1))
+    repos.timetable.insert(entry(5, { kind: 'period', day: 1, period: 1 }, t2.id))
+    expect(repos.timetable.list()).toHaveLength(4)
+    expect(repos.timetable.listOf(t2.id).map((e) => e.id)).toEqual([U(405)])
+    // 항목을 다른 시간표로 옮기는 수정은 하지 않는다
+    expect(() => repos.timetable.update({ ...c, timetableId: t2.id })).toThrow(NotFoundError)
   })
 
-  it('뒤 교시 지우기, 없는 항목은 NotFoundError, 잘못된 시각 거부', () => {
+  it('없는 시간표에는 항목을 넣을 수 없다(외래 키)', () => {
+    expect(() =>
+      repos.timetable.insert(entry(1, { kind: 'period', day: 0, period: 1 }, U(499))),
+    ).toThrow()
+  })
+
+  it('뒤 교시 지우기는 그 시간표만, 없는 항목은 NotFoundError, 잘못된 시각 거부', () => {
+    const t2 = repos.timetable.insertTimetable(timetable(1))
     repos.timetable.insert(entry(1, { kind: 'period', day: 0, period: 7 }))
     repos.timetable.insert(entry(2, { kind: 'period', day: 0, period: 8 }))
     repos.timetable.insert(entry(3, { kind: 'time', day: 0, start: '20:00', end: '21:00' }))
-    expect(repos.timetable.deletePeriodsAfter(7)).toBe(1)
-    expect(repos.timetable.list()).toHaveLength(2)
+    repos.timetable.insert(entry(6, { kind: 'period', day: 0, period: 8 }, t2.id))
+    expect(repos.timetable.deletePeriodsAfter(first().id, 7)).toBe(1)
+    expect(repos.timetable.list()).toHaveLength(3)
     expect(() => repos.timetable.delete(U(499))).toThrow(NotFoundError)
     expect(() =>
       repos.timetable.insert(entry(5, { kind: 'time', day: 0, start: '10:00', end: '09:00' })),
     ).toThrow()
   })
 
-  it('설정: 없으면 기본값, 저장/복원', () => {
-    expect(repos.settings.timetable()).toEqual(DEFAULT_TIMETABLE)
+  it('시간표 고치기/지우기(칸도 함께), 잘못된 이름·설정 거부', () => {
+    const t2 = repos.timetable.insertTimetable(timetable(1))
+    repos.timetable.insert(entry(1, { kind: 'period', day: 0, period: 1 }, t2.id))
     const s = { ...DEFAULT_TIMETABLE, mode: 'time' as const, showSat: true }
-    repos.settings.saveTimetable(s)
-    expect(repos.settings.timetable()).toEqual(s)
+    repos.timetable.updateTimetable({ ...t2, name: '2학기', settings: s })
+    expect(repos.timetable.getTimetable(t2.id)).toMatchObject({ name: '2학기', settings: s })
+    expect(repos.timetable.countTimetables()).toBe(2)
+    expect(() => repos.timetable.insertTimetable(timetable(2, ' '))).toThrow()
+    expect(() =>
+      repos.timetable.insertTimetable({
+        ...timetable(3),
+        settings: { ...DEFAULT_TIMETABLE, periods: [] },
+      }),
+    ).toThrow()
+    repos.timetable.deleteTimetable(t2.id)
+    expect(repos.timetable.list()).toEqual([])
+    expect(() => repos.timetable.deleteTimetable(t2.id)).toThrow(NotFoundError)
+  })
+
+  it('전역 설정: 저장/복원, 손상되면 고른 것 없음', () => {
+    repos.settings.saveTimetablePrefs({ activeId: U(451) })
+    expect(repos.settings.timetablePrefs()).toEqual({ activeId: U(451) })
+    db.prepare("UPDATE settings SET value = '{' WHERE key = 'timetablePrefs'").run()
+    expect(repos.settings.timetablePrefs()).toEqual({ activeId: null })
   })
 })
 

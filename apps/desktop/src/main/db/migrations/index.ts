@@ -4,6 +4,7 @@ import { m002TodoNote } from './002_todo_note'
 import { m003Pomodoro } from './003_pomodoro'
 import { m004Memos } from './004_memos'
 import { m005Timetable } from './005_timetable'
+import { m006Timetables } from './006_timetables'
 
 export const migrations: readonly Migration[] = [
   m001Init,
@@ -11,4 +12,5 @@ export const migrations: readonly Migration[] = [
   m003Pomodoro,
   m004Memos,
   m005Timetable,
+  m006Timetables,
 ]

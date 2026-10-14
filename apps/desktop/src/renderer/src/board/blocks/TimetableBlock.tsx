@@ -1,6 +1,5 @@
 import type { GridBlock } from '@kkumikkumi/schema'
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
-import type { TimetableData } from '../../../../shared/api'
 import { useBoard } from '../BoardContext'
 import {
   autoColors,
@@ -11,9 +10,12 @@ import {
   entryColor,
   isNow,
   minuteOfDay,
+  pickTimetable,
+  themeTones,
   toMin,
   visibleDays,
   weekdayOf,
+  type TimetableView,
 } from '../timetable'
 
 type TimetableBlockT = Extract<GridBlock, { type: 'timetable' }>
@@ -26,20 +28,36 @@ export function TimetableBlock({ block }: { block: TimetableBlockT }) {
   const { theme, data, now } = useBoard()
   const p = theme.defaults.palette
   const vars = { '--ktt-accent': p.accent, '--ktt-sub': p.subText } as CSSProperties
-  const tt = data.timetable
-  if (!tt) return <div className={`ktt ktt--${block.size}`} style={vars} />
+  const tt = data.timetable && pickTimetable(data.timetable)
+  if (!tt)
+    return (
+      <div className={`ktt ktt--${block.size}`} style={vars}>
+        {data.timetable && <p className="ktt-empty">시간표가 없어요</p>}
+      </div>
+    )
+  const tones = themeTones(p)
   return (
     <div className={`ktt ktt--${block.size}`} style={vars}>
       {block.size === 'L' ? (
-        <Week tt={tt} now={now} />
+        <Week tt={tt} now={now} tones={tones} />
       ) : (
-        <Today tt={tt} now={now} sub={p.subText} />
+        <Today tt={tt} now={now} sub={p.subText} tones={tones} />
       )}
     </div>
   )
 }
 
-function Today({ tt, now, sub }: { tt: TimetableData; now: Date; sub: string }) {
+function Today({
+  tt,
+  now,
+  sub,
+  tones,
+}: {
+  tt: TimetableView
+  now: Date
+  sub: string
+  tones: readonly string[]
+}) {
   const s = tt.settings
   const day = weekdayOf(now)
   const minute = minuteOfDay(now)
@@ -68,7 +86,10 @@ function Today({ tt, now, sub }: { tt: TimetableData; now: Date; sub: string }) 
             return (
               <li key={i.entry.id} className={`ktt-row ${state}`}>
                 <span className="ktt-when">{i.period !== null ? `${i.period}교시` : i.start}</span>
-                <span className="ktt-bar" style={{ background: entryColor(i.entry, auto) }} />
+                <span
+                  className="ktt-bar"
+                  style={{ background: entryColor(i.entry, auto, tones) }}
+                />
                 <span className="ktt-what">
                   <span className="ktt-subject">{i.entry.subject}</span>
                   {i.entry.room && <span className="ktt-room">{i.entry.room}</span>}
@@ -82,7 +103,7 @@ function Today({ tt, now, sub }: { tt: TimetableData; now: Date; sub: string }) 
   )
 }
 
-function Week({ tt, now }: { tt: TimetableData; now: Date }) {
+function Week({ tt, now, tones }: { tt: TimetableView; now: Date; tones: readonly string[] }) {
   const s = tt.settings
   const days = visibleDays(s)
   const today = weekdayOf(now)
@@ -118,7 +139,7 @@ function Week({ tt, now }: { tt: TimetableData; now: Date }) {
                 <div
                   key={d}
                   className={`ktt-cell ${e ? 'is-filled' : ''} ${isNowCell ? 'is-now' : ''}`}
-                  style={e ? { background: entryColor(e, auto) } : undefined}
+                  style={e ? { background: entryColor(e, auto, tones) } : undefined}
                 >
                   {e?.subject}
                 </div>
@@ -143,7 +164,7 @@ function Week({ tt, now }: { tt: TimetableData; now: Date }) {
             <li
               key={i.entry.id}
               className={`ktt-chipitem ${d === today && isNow(i, minute) ? 'is-now' : ''}`}
-              style={{ background: entryColor(i.entry, auto) }}
+              style={{ background: entryColor(i.entry, auto, tones) }}
             >
               <span className="ktt-time">{i.start}</span>
               <span className="ktt-subject">{i.entry.subject}</span>

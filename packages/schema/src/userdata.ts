@@ -54,9 +54,12 @@ export const MemoSchema = z.strictObject({
   updatedAt: EpochMs,
 })
 
-/* ───────── 시간표 (하나, 교시/시간 두 방식) ───────── */
+/* ───────── 시간표 (여러 개, 교시/시간 두 방식) ───────── */
 
 export const TIMETABLE_MAX_PERIODS = 12
+export const TIMETABLE_MAX_COUNT = 20
+/** 칸 색은 테마 색(강조·체크)의 톤 중에서 고른다. 0~11번 톤(실제 색은 테마에서 계산). */
+export const TIMETABLE_TONES = 12
 /** 0=월 … 6=일 */
 export const Weekday = z.number().int().min(0).max(6)
 
@@ -101,8 +104,13 @@ export const DEFAULT_TIMETABLE: z.infer<typeof TimetableSettingsSchema> = {
 export const TimetableContentSchema = z.strictObject({
   subject: z.string().trim().min(1).max(40),
   room: z.string().trim().max(40),
-  /** null = 과목 이름으로 자동 */
-  color: HexColor.nullable(),
+  /** 테마 색 톤 번호. null = 과목마다 자동 */
+  tone: z
+    .number()
+    .int()
+    .min(0)
+    .max(TIMETABLE_TONES - 1)
+    .nullable(),
 })
 
 /** 교시 칸(같은 요일·교시에 하나) 또는 시간 항목(시작 < 끝) */
@@ -117,8 +125,21 @@ export const TimetableSlotSchema = z.discriminatedUnion('kind', [
     .refine((s) => s.start < s.end, '끝이 시작보다 빠름'),
 ])
 
+/** 시간표 하나. 방식·주말·교시 시각은 시간표마다 따로. */
+export const TimetableSchema = z.strictObject({
+  id: Uuid,
+  name: z.string().trim().min(1).max(30),
+  settings: TimetableSettingsSchema,
+  createdAt: EpochMs,
+  updatedAt: EpochMs,
+})
+
+/** 시간표 전역 설정: 지금 고른 시간표(블록이 "따라가기"면 이걸 보여 준다). 없거나 지워졌으면 첫 시간표. */
+export const TimetablePrefsSchema = z.strictObject({ activeId: Uuid.nullable() })
+
 export const TimetableEntrySchema = z.strictObject({
   id: Uuid,
+  timetableId: Uuid,
   slot: TimetableSlotSchema,
   ...TimetableContentSchema.shape,
   createdAt: EpochMs,
@@ -291,6 +312,8 @@ export type TodoList = z.infer<typeof TodoListSchema>
 export type TodoItem = z.infer<typeof TodoItemSchema>
 export type Memo = z.infer<typeof MemoSchema>
 export type TimetableSettings = z.infer<typeof TimetableSettingsSchema>
+export type Timetable = z.infer<typeof TimetableSchema>
+export type TimetablePrefs = z.infer<typeof TimetablePrefsSchema>
 export type TimetableSlot = z.infer<typeof TimetableSlotSchema>
 export type TimetableContent = z.infer<typeof TimetableContentSchema>
 export type TimetableEntry = z.infer<typeof TimetableEntrySchema>

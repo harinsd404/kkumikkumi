@@ -1,3 +1,4 @@
+import { DEFAULT_TIMETABLE } from '@kkumikkumi/schema'
 import { describe, expect, it } from 'vitest'
 import { openDb } from '../connection'
 import { FutureDbVersionError, getUserVersion, migrate, type Migration } from '../migrate'
@@ -23,6 +24,7 @@ describe('migrate', () => {
       'timer_sessions',
       'timer_state',
       'timetable_entries',
+      'timetables',
       'todo_items',
       'todo_lists',
     ])
@@ -39,6 +41,53 @@ describe('migrate', () => {
       title: '할 일',
       note: '',
     })
+  })
+
+  it('006: 하나뿐이던 시간표의 설정과 칸은 "내 시간표"로 옮겨지고 고른 상태가 된다', () => {
+    const db = openDb(':memory:')
+    migrate(db, migrations.slice(0, 5))
+    const settings = {
+      mode: 'time',
+      showSat: true,
+      showSun: false,
+      periods: [{ start: '09:00', end: '09:50' }],
+    }
+    db.prepare("INSERT INTO settings (key, value) VALUES ('timetable', ?)").run(
+      JSON.stringify(settings),
+    )
+    db.exec(`INSERT INTO timetable_entries VALUES
+      ('a', 'period', 0, 1, NULL, NULL, '국어', '', NULL, 1, 1),
+      ('b', 'time', 2, NULL, '10:00', '11:00', '수학', '3-1', '#AABBCC', 2, 2)`)
+    expect(migrate(db, migrations)).toEqual({ from: 5, to: migrations.length })
+
+    const t = db.prepare('SELECT id, name, settings FROM timetables').all() as {
+      id: string
+      name: string
+      settings: string
+    }[]
+    expect(t).toHaveLength(1)
+    expect(t[0]!.name).toBe('내 시간표')
+    expect(JSON.parse(t[0]!.settings)).toEqual(settings)
+    expect(
+      db
+        .prepare('SELECT id, timetable_id, subject, room, tone FROM timetable_entries ORDER BY id')
+        .all(),
+    ).toEqual([
+      { id: 'a', timetable_id: t[0]!.id, subject: '국어', room: '', tone: null },
+      { id: 'b', timetable_id: t[0]!.id, subject: '수학', room: '3-1', tone: null },
+    ])
+    expect(db.prepare("SELECT key, value FROM settings WHERE key LIKE 'timetable%'").all()).toEqual(
+      [{ key: 'timetablePrefs', value: JSON.stringify({ activeId: t[0]!.id }) }],
+    )
+  })
+
+  it('006: 손상된 시간표 설정은 기본값으로', () => {
+    const db = openDb(':memory:')
+    migrate(db, migrations.slice(0, 5))
+    db.prepare("INSERT INTO settings (key, value) VALUES ('timetable', '{')").run()
+    migrate(db, migrations)
+    const r = db.prepare('SELECT settings FROM timetables').get() as { settings: string }
+    expect(JSON.parse(r.settings)).toEqual(DEFAULT_TIMETABLE)
   })
 
   it('두 번 실행해도 아무것도 하지 않는다', () => {

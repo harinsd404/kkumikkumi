@@ -335,24 +335,34 @@ describe('memos', () => {
 })
 
 describe('timetable', () => {
-  const content = { subject: '국어', room: '', color: null }
+  const content = { subject: '국어', room: '', tone: null }
+  const first = async () => (await h['timetable.get'](undefined)).activeId!
 
-  it('기본 설정, 칸 채우기/고치기/지우기, 이미 채워진 칸은 conflict', async () => {
+  it('처음 시간표, 칸 채우기/고치기/지우기, 이미 채워진 칸은 conflict', async () => {
     const t = await h['timetable.get'](undefined)
-    expect(t.settings.periods).toHaveLength(8)
+    expect(t.timetables).toHaveLength(1)
+    expect(t.activeId).toBe(t.timetables[0]!.id)
+    expect(t.timetables[0]!.settings.periods).toHaveLength(8)
     expect(t.entries).toEqual([])
+    const timetableId = t.activeId!
     const a = await h['timetable.entries.create']({
+      timetableId,
       slot: { kind: 'period', day: 0, period: 1 },
       content,
     })
+    expect(a.timetableId).toBe(timetableId)
     expect(
       await codeOf(
-        h['timetable.entries.create']({ slot: { kind: 'period', day: 0, period: 1 }, content }),
+        h['timetable.entries.create']({
+          timetableId,
+          slot: { kind: 'period', day: 0, period: 1 },
+          content,
+        }),
       ),
     ).toBe('conflict')
     env.clock.now += 1000
-    const b = await h['timetable.entries.update']({ id: a.id, content: { room: '3-1' } })
-    expect(b).toMatchObject({ subject: '국어', room: '3-1', updatedAt: env.clock.now })
+    const b = await h['timetable.entries.update']({ id: a.id, content: { room: '3-1', tone: 11 } })
+    expect(b).toMatchObject({ subject: '국어', room: '3-1', tone: 11, updatedAt: env.clock.now })
     const moved = await h['timetable.entries.update']({
       id: a.id,
       slot: { kind: 'period', day: 2, period: 3 },
@@ -362,49 +372,156 @@ describe('timetable', () => {
     expect(await codeOf(h['timetable.entries.delete']({ id: a.id }))).toBe('not_found')
   })
 
-  it('교시 수를 줄이면 뒤 교시 칸이 지워지고, 없는 교시는 거부', async () => {
-    await h['timetable.entries.create']({ slot: { kind: 'period', day: 0, period: 8 }, content })
+  it('교시 수를 줄이면 그 시간표의 뒤 교시 칸만 지워지고, 없는 교시는 거부', async () => {
+    const id = await first()
     await h['timetable.entries.create']({
+      timetableId: id,
+      slot: { kind: 'period', day: 0, period: 8 },
+      content,
+    })
+    await h['timetable.entries.create']({
+      timetableId: id,
       slot: { kind: 'time', day: 0, start: '18:00', end: '19:00' },
       content,
     })
-    const periods = (await h['timetable.get'](undefined)).settings.periods.slice(0, 6)
-    const r = await h['timetable.settings.update']({ patch: { periods, showSat: true } })
-    expect(r.settings).toMatchObject({ showSat: true, mode: 'period' })
-    expect(r.entries.map((e) => e.slot.kind)).toEqual(['time'])
+    const copy = await h['timetables.create']({ name: '복사본', copyFrom: id })
+    const periods = copy.timetables[0]!.settings.periods.slice(0, 6)
+    const r = await h['timetables.update']({ id, patch: { settings: { periods, showSat: true } } })
+    expect(r.timetables[0]!.settings).toMatchObject({ showSat: true, mode: 'period' })
+    expect(r.entries.filter((e) => e.timetableId === id).map((e) => e.slot.kind)).toEqual(['time'])
+    expect(r.entries.filter((e) => e.timetableId !== id)).toHaveLength(2)
     expect(
       await codeOf(
-        h['timetable.entries.create']({ slot: { kind: 'period', day: 0, period: 7 }, content }),
+        h['timetable.entries.create']({
+          timetableId: id,
+          slot: { kind: 'period', day: 0, period: 7 },
+          content,
+        }),
       ),
     ).toBe('not_found')
   })
 
+  it('시간표 만들기(빈/복제), 이름 바꾸기, 고르기, 지우기', async () => {
+    const id = await first()
+    await h['timetables.update']({ id, patch: { settings: { mode: 'time' } } })
+    await h['timetable.entries.create']({
+      timetableId: id,
+      slot: { kind: 'period', day: 1, period: 2 },
+      content,
+    })
+    env.clock.now += 1000
+    const blank = await h['timetables.create']({ name: ' 학원 ' })
+    const b = blank.timetables[1]!
+    expect(b).toMatchObject({ name: '학원', settings: { mode: 'period' } })
+    expect(blank.activeId).toBe(b.id)
+    expect(blank.entries.filter((e) => e.timetableId === b.id)).toEqual([])
+
+    const copied = await h['timetables.create']({ name: '2학기', copyFrom: id })
+    const c = copied.timetables[2]!
+    expect(c.settings.mode).toBe('time')
+    const cEntries = copied.entries.filter((e) => e.timetableId === c.id)
+    expect(cEntries).toEqual([
+      expect.objectContaining({ subject: '국어', slot: { kind: 'period', day: 1, period: 2 } }),
+    ])
+    // 복제는 새 ID
+    expect(copied.entries.filter((e) => e.id === cEntries[0]!.id)).toHaveLength(1)
+
+    const renamed = await h['timetables.update']({ id: c.id, patch: { name: '2학기 시간표' } })
+    expect(renamed.timetables[2]!.name).toBe('2학기 시간표')
+
+    expect(await h['timetables.select']({ id })).toBeNull()
+    expect((await h['timetable.get'](undefined)).activeId).toBe(id)
+
+    // 고른 시간표를 지우면 첫 시간표로
+    const afterDelete = await h['timetables.delete']({ id })
+    expect(afterDelete.timetables.map((t) => t.id)).toEqual([b.id, c.id])
+    expect(afterDelete.activeId).toBe(b.id)
+    expect(afterDelete.entries.every((e) => e.timetableId === c.id)).toBe(true)
+
+    await h['timetables.delete']({ id: b.id })
+    await h['timetables.delete']({ id: c.id })
+    expect(await h['timetable.get'](undefined)).toEqual({
+      timetables: [],
+      activeId: null,
+      entries: [],
+    })
+  })
+
+  it('최대 개수, 없는 시간표', async () => {
+    for (let n = 1; n < 20; n++) await h['timetables.create']({ name: `t${n}` })
+    expect(await codeOf(h['timetables.create']({ name: 'over' }))).toBe('conflict')
+    const missing = env.newId()
+    for (const p of [
+      h['timetables.create']({ name: 'x', copyFrom: missing }),
+      h['timetables.update']({ id: missing, patch: { name: 'x' } }),
+      h['timetables.delete']({ id: missing }),
+      h['timetables.select']({ id: missing }),
+      h['timetable.entries.create']({
+        timetableId: missing,
+        slot: { kind: 'period', day: 0, period: 1 },
+        content,
+      }),
+    ])
+      expect(await codeOf(p)).toBe('not_found')
+  })
+
   it('잘못된 입력 거부', async () => {
+    const id = await first()
     const bad = [
       h['timetable.entries.create']({
+        timetableId: id,
         slot: { kind: 'time', day: 0, start: '10:00', end: '09:00' },
         content,
       }),
-      h['timetable.entries.create']({ slot: { kind: 'period', day: 7, period: 1 }, content }),
       h['timetable.entries.create']({
+        timetableId: id,
+        slot: { kind: 'period', day: 7, period: 1 },
+        content,
+      }),
+      h['timetable.entries.create']({
+        timetableId: id,
         slot: { kind: 'period', day: 0, period: 1 },
         content: { ...content, subject: ' ' },
       }),
       h['timetable.entries.create']({
+        timetableId: id,
         slot: { kind: 'period', day: 0, period: 1 },
         content: { ...content, html: '<b>' },
       }),
-      h['timetable.settings.update']({ patch: { periods: [{ start: '10:00', end: '09:00' }] } }),
-      h['timetable.settings.update']({ patch: { periods: [] } }),
-      h['timetable.settings.update']({
+      h['timetable.entries.create']({
+        timetableId: id,
+        slot: { kind: 'period', day: 0, period: 1 },
+        content: { ...content, tone: 12 },
+      }),
+      h['timetable.entries.create']({
+        timetableId: id,
+        slot: { kind: 'period', day: 0, period: 1 },
+        content: { ...content, tone: '#ff0000' },
+      }),
+      h['timetable.entries.create']({ slot: { kind: 'period', day: 0, period: 1 }, content }),
+      h['timetables.update']({
+        id,
+        patch: { settings: { periods: [{ start: '10:00', end: '09:00' }] } },
+      }),
+      h['timetables.update']({ id, patch: { settings: { periods: [] } } }),
+      h['timetables.update']({
+        id,
         patch: {
-          periods: [
-            { start: '09:00', end: '10:00' },
-            { start: '09:30', end: '10:30' },
-          ],
+          settings: {
+            periods: [
+              { start: '09:00', end: '10:00' },
+              { start: '09:30', end: '10:30' },
+            ],
+          },
         },
       }),
-      h['timetable.settings.update']({ patch: { mode: 'grid' } }),
+      h['timetables.update']({ id, patch: { settings: { mode: 'grid' } } }),
+      h['timetables.update']({ id, patch: { name: '' } }),
+      h['timetables.update']({ id, patch: { name: 'a'.repeat(31) } }),
+      h['timetables.update']({ id, patch: { color: '#fff' } }),
+      h['timetables.create']({ name: '' }),
+      h['timetables.create']({ name: 'x', copyFrom: 'nope' }),
+      h['timetables.select']({ id: 'nope' }),
     ]
     for (const p of bad) expect(await codeOf(p)).toBe('invalid_input')
   })

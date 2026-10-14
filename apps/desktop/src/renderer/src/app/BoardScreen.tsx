@@ -15,6 +15,7 @@ import { PHASE_LABEL } from '../../../shared/pomodoro'
 import { CalendarPage } from '../pages/CalendarPage'
 import { MemoPage } from '../pages/MemoPage'
 import { TimetablePage } from '../pages/TimetablePage'
+import { themeTones } from '../board/timetable'
 import { TimerPage } from '../pages/TimerPage'
 import { TodoPage } from '../pages/TodoPage'
 import { themeVars } from './themeVars'
@@ -263,7 +264,7 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
         )}
         {page === 'timetable' && (
           <div className="app-page" style={themeVars(theme)}>
-            <TimetablePage store={timetable} now={now} />
+            <TimetablePage store={timetable} now={now} tones={themeTones(theme.defaults.palette)} />
           </div>
         )}
         {page === 'board' && (

@@ -1104,7 +1104,12 @@
 }
 .tt-swatches {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.tt-swatch-row {
+  display: flex;
   gap: 6px;
 }
 .tt-swatch {
@@ -1117,7 +1122,8 @@
 }
 .tt-swatch.is-auto {
   width: auto;
-  padding: 0 10px;
+  height: 26px;
+  padding: 0 12px;
   border-radius: 999px;
   color: #3a2f2a;
   font: inherit;
@@ -1162,4 +1168,119 @@
 /* 좁은 칸에서 시각이 잘리지 않게 시계 아이콘은 숨긴다(키보드/숫자 입력은 그대로) */
 .tt-period-list .pg-input::-webkit-calendar-picker-indicator {
   display: none;
+}
+
+/* 시간표 고르기(제목 자리), 목록, 보기 방식, 표시 설정 */
+.tt-picker {
+  field-sizing: content;
+  min-width: 0;
+  max-width: 320px;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 22px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.tt-picker:hover {
+  background: var(--t-control);
+}
+.tt-picker:focus-visible,
+.tt-seg button:focus-visible,
+.tt-check input:focus-visible + .tt-check-box {
+  outline: 2px solid var(--t-accent);
+  outline-offset: 2px;
+}
+.tt-list-toggle {
+  background: var(--t-control);
+}
+.tt-list-toggle[aria-pressed='true'] {
+  background: var(--t-accent);
+}
+/* 보기 방식: 한 덩어리로 붙은 두 칸(둘 중 하나) */
+.tt-seg {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--t-control);
+}
+.tt-seg button {
+  padding: 6px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--t-sub);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tt-seg button[aria-selected='true'] {
+  background: #ffffff;
+  color: var(--t-text);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.1);
+}
+/* 표시: 체크 상자(켜고 끄는 것, 여러 개 가능) */
+.tt-show {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.tt-show legend {
+  margin-bottom: 10px;
+}
+.tt-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.tt-check input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.tt-check-box {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--t-sub);
+  border-radius: 6px;
+}
+.tt-check input:checked + .tt-check-box {
+  border-color: var(--t-accent);
+  background: var(--t-accent);
+}
+.tt-check input:checked + .tt-check-box::after {
+  content: '';
+  width: 5px;
+  height: 10px;
+  margin-top: -2px;
+  border: solid #ffffff;
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg);
+}
+.tt-tlist {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+}
+.tt-rename {
+  width: 100%;
+  padding: 8px 12px;
+}
+.tt-none {
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
 }

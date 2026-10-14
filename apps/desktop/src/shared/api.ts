@@ -10,6 +10,7 @@ import type {
   ThemeRule,
   TimerSession,
   TimerState,
+  Timetable,
   TimetableContent,
   TimetableEntry,
   TimetableSettings,
@@ -116,11 +117,20 @@ export interface IpcSpec {
   'memos.update': { in: { id: string; patch: { body?: string; pinned?: boolean } }; out: Memo }
   'memos.delete': { in: Id; out: null }
   'timetable.get': { in: undefined; out: TimetableData }
+  /** 새 시간표(copyFrom이면 설정과 칸을 복제). 만든 시간표를 고른 상태로 바꾼다. 최대 개수면 conflict. */
+  'timetables.create': { in: { name: string; copyFrom?: string }; out: TimetableData }
   /** 교시 수를 줄이면 뒤 교시 칸은 함께 지워진다(renderer가 먼저 확인). 결과는 전체 다시 읽기. */
-  'timetable.settings.update': { in: { patch: Partial<TimetableSettings> }; out: TimetableData }
+  'timetables.update': {
+    in: { id: string; patch: { name?: string; settings?: Partial<TimetableSettings> } }
+    out: TimetableData
+  }
+  /** 칸/항목도 함께 지운다 */
+  'timetables.delete': { in: Id; out: TimetableData }
+  /** 고른 시간표 바꾸기(블록의 "따라가기"와 페이지가 이걸 보여 준다) */
+  'timetables.select': { in: Id; out: null }
   /** 이미 채워진 교시 칸이면 conflict */
   'timetable.entries.create': {
-    in: { slot: TimetableSlot; content: TimetableContent }
+    in: { timetableId: string; slot: TimetableSlot; content: TimetableContent }
     out: TimetableEntry
   }
   'timetable.entries.update': {
@@ -146,7 +156,11 @@ type _Exhaustive = Channel extends keyof IpcSpec
 export const _ipcSpecIsExhaustive: _Exhaustive = true
 
 export interface TimetableData {
-  settings: TimetableSettings
+  /** 만든 순서 */
+  timetables: Timetable[]
+  /** 고른 시간표. 저장된 값이 없거나 지워졌으면 첫 시간표, 하나도 없으면 null. */
+  activeId: string | null
+  /** 모든 시간표의 칸/항목(timetableId로 나뉜다) */
   entries: TimetableEntry[]
 }
 
