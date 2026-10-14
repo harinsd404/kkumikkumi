@@ -168,6 +168,47 @@ describe('assets', () => {
     ).toBe('invalid_input')
   })
 
+  it('흰 배경 판별 + removeWhiteBackground: 새 투명 PNG 에셋, 원본은 그대로', async () => {
+    const id = activeId()
+    const w = 48
+    const raw = new Uint8Array(w * w * 4).fill(255)
+    for (let y = 12; y < 36; y++)
+      for (let x = 12; x < 36; x++) raw.set([40, 90, 200, 255], (y * w + x) * 4)
+    const jpg = await sharp(raw, { raw: { width: w, height: w, channels: 4 } })
+      .jpeg()
+      .toBuffer()
+    const imported = await h['assets.importBytes']({ themeId: id, purpose: 'image', bytes: jpg })
+    expect(imported).toMatchObject({ hasTransparency: false, whiteBackground: true })
+    const cut = await h['assets.removeWhiteBackground']({
+      themeId: id,
+      hash: imported.asset.hash,
+      strength: 40,
+    })
+    // 흰 여백을 지우고 사각형 크기로 잘린다(남은 것은 불투명한 사각형뿐)
+    expect(cut.asset.mime).toBe('image/png')
+    expect(cut.asset.width).toBeLessThan(w)
+    expect(cut.asset.width).toBeGreaterThanOrEqual(24)
+    expect((await stat(env.core.themes.assetPath(id, imported.asset))).isFile()).toBe(true)
+    // 잘못된 입력
+    expect(
+      await codeOf(
+        h['assets.removeWhiteBackground']({
+          themeId: id,
+          hash: imported.asset.hash,
+          strength: 101,
+        }),
+      ),
+    ).toBe('invalid_input')
+    expect(
+      await codeOf(h['assets.removeWhiteBackground']({ themeId: id, hash: '../x', strength: 40 })),
+    ).toBe('invalid_input')
+    expect(
+      await codeOf(
+        h['assets.removeWhiteBackground']({ themeId: id, hash: 'a'.repeat(64), strength: 40 }),
+      ),
+    ).toBe('not_found')
+  })
+
   it('importFromDialog: 취소하면 null', async () => {
     expect(await h['assets.importFromDialog']({ themeId: activeId(), purpose: 'image' })).toBeNull()
     picked = await pngBytes()

@@ -8,6 +8,7 @@ import { app, type BrowserWindow } from 'electron'
  * - KKUMI_DEV_CAPTURE_JS: 캡처 전에 페이지에서 실행할 스크립트(편집 모드 화면 확인 등)
  * - KKUMI_DEV_CLOSE_AFTER_JS=1: 스크립트 직후 캡처 대신 win.close()(빨간 버튼과 같은 경로, 닫기 전 저장 확인용)
  * - KKUMI_DEV_CAPTURE_MINI: 미니 타이머 창이 열리면 잠시 뒤 PNG로 저장(앱은 종료하지 않음)
+ * - KKUMI_DEV_PICK_FILE: 이미지 파일 고르기 창 대신 이 파일을 고른 것으로 한다
  */
 export function applyDevUserData(): void {
   const dir = process.env['KKUMI_DEV_USER_DATA']
@@ -51,4 +52,10 @@ export function maybeCaptureMini(win: BrowserWindow): void {
         .catch(() => {})
     }, 4000)
   })
+}
+
+/** 개발용: 파일 고르기 창을 건너뛸 파일 경로(패키징된 앱에서는 항상 null) */
+export function devPickedFile(): string | null {
+  const path = process.env['KKUMI_DEV_PICK_FILE']
+  return !app.isPackaged && path ? path : null
 }

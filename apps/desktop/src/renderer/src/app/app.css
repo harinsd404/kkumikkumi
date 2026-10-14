@@ -1066,3 +1066,84 @@ form.ki-row {
   opacity: 0.85;
   filter: drop-shadow(0 8px 18px rgb(0 0 0 / 0.18));
 }
+
+/* 스티커 흰 배경 지우기 미리보기 */
+.dlg.cut {
+  gap: 0;
+  width: min(560px, calc(100vw - 48px));
+}
+.dlg.cut .dlg-actions {
+  margin-top: 18px;
+}
+.cut-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+.cut-note,
+.cut-hint {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--t-sub);
+}
+.cut-panes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 14px;
+}
+.cut-pane {
+  margin: 0;
+  text-align: center;
+}
+.cut-pane figcaption {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--t-sub);
+}
+/* 투명한 곳이 보이도록 체크무늬 바탕 */
+.cut-check {
+  display: grid;
+  place-items: center;
+  height: 220px;
+  padding: 10px;
+  border-radius: 12px;
+  background: repeating-conic-gradient(#e9e9ee 0% 25%, #ffffff 0% 50%) 50% / 16px 16px;
+  transition: opacity 0.15s;
+}
+.cut-check.is-busy {
+  opacity: 0.55;
+}
+.cut-check {
+  overflow: hidden;
+}
+.cut-check img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: contain;
+}
+.cut-error {
+  margin: 0;
+  padding: 0 8px;
+  font-size: 13px;
+  color: #c0392b;
+}
+.cut-slider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.cut-slider input {
+  flex: 1;
+}
+.cut-slider output {
+  width: 28px;
+  text-align: right;
+  color: var(--t-sub);
+}

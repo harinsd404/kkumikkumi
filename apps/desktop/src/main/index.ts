@@ -16,7 +16,12 @@ import { APP_DISPLAY_NAME, APP_INTERNAL_NAME } from '../shared/identity'
 import { AssetError, DEFAULT_PIPELINE_OPTIONS } from './assets/pipeline'
 import { handleAssetProtocol, registerAssetScheme } from './assets/protocol'
 import { bootstrap, type AppCore } from './bootstrap'
-import { applyDevUserData, maybeCaptureAndQuit, maybeCaptureMini } from './devCapture'
+import {
+  applyDevUserData,
+  devPickedFile,
+  maybeCaptureAndQuit,
+  maybeCaptureMini,
+} from './devCapture'
 import { bus } from './events'
 import { createHandlers } from './ipc/handlers'
 import { registerIpc } from './ipc/register'
@@ -224,6 +229,8 @@ function applyMiniPrefs(p: MiniTimerPrefs): void {
 
 /** 파일 선택 → 바이트. 경로는 main 안에서만 다루고 renderer로 보내지 않는다. */
 async function pickImageFile(purpose: 'image' | 'pet'): Promise<Uint8Array | null> {
+  const dev = devPickedFile()
+  if (dev) return new Uint8Array(await readFile(dev))
   const parent = BrowserWindow.getFocusedWindow()
   const options: Electron.OpenDialogOptions = {
     properties: ['openFile'],

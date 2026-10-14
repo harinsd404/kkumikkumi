@@ -20,7 +20,9 @@ import { keyToCommand } from '../editor/state/shortcuts'
 import { useEditor, type EditorApi } from '../editor/useEditor'
 import { WidgetGallery, WidgetPreview, type WidgetKind } from '../editor/WidgetGallery'
 import { makeAssetUrl } from './assetUrl'
+import { CutoutDialog } from './CutoutDialog'
 import { EventDialog } from './EventDialog'
+import type { ImportedAsset } from '../../../shared/api'
 import { PHASE_LABEL } from '../../../shared/pomodoro'
 import { CalendarPage } from '../pages/CalendarPage'
 import { MemoPage } from '../pages/MemoPage'
@@ -95,6 +97,8 @@ export function BoardScreen({
     target: { rect: { col: number; row: number; w: number; h: number }; valid: boolean } | null
   } | null>(null)
   const toCanvasRef = useRef<ToCanvas | null>(null)
+  /** 흰 배경 스티커: 지울지 물어보는 중인 원본 에셋 */
+  const [cutout, setCutout] = useState<Asset | null>(null)
   const [page, setPage] = useState<AppPage>(initialPage)
   const themes = useThemes()
   /** 메모 블록에서 들어오면 그 메모를 연다 */
@@ -188,9 +192,7 @@ export function BoardScreen({
   }, [ed, flushMemos])
 
   const importAsset = useCallback(
-    async (
-      src: { dialog: true } | { bytes: Uint8Array },
-    ): Promise<{ asset: Asset; hasTransparency: boolean } | null> => {
+    async (src: { dialog: true } | { bytes: Uint8Array }): Promise<ImportedAsset | null> => {
       const r =
         'dialog' in src
           ? await window.kkumi.invoke('assets.importFromDialog', {
@@ -459,7 +461,10 @@ export function BoardScreen({
                 onPick={pickWidget}
                 onAddDecor={async (kind) => {
                   const r = await importAsset({ dialog: true })
-                  if (r) addDecor(kind, r.asset)
+                  if (!r) return
+                  // 스티커로 넣을 때만, 흰 배경이면 지울지 물어본다
+                  if (kind === 'sticker' && r.whiteBackground) setCutout(r.asset)
+                  else addDecor(kind, r.asset)
                 }}
               />
             ) : (
@@ -484,6 +489,22 @@ export function BoardScreen({
           >
             <WidgetPreview kind={incoming.kind} env={previewEnv} maxW={180} maxH={140} />
           </div>
+        )}
+        {cutout && (
+          <CutoutDialog
+            themeId={theme.id}
+            original={cutout}
+            onCancel={() => setCutout(null)}
+            onUseOriginal={() => {
+              setCutout(null)
+              addDecor('sticker', cutout)
+            }}
+            onUseCutout={(asset) => {
+              setCutout(null)
+              ed.dispatch({ type: 'asset/add', asset })
+              addDecor('sticker', asset)
+            }}
+          />
         )}
         {user.editing && !editing && (
           <EventDialog

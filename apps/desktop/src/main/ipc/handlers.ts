@@ -9,6 +9,7 @@ import {
   ThemeRuleSchema,
   ThemeSchema,
   TimerStateSchema,
+  Sha256,
   THEME_PRESET_IDS,
   DEFAULT_TIMETABLE,
   TIMETABLE_MAX_COUNT,
@@ -28,7 +29,9 @@ import {
 import { z } from 'zod'
 import type { IpcSpec, TimerDoneInfo } from '../../shared/api'
 import type { Channel } from '../../shared/channels'
+import { readFile } from 'node:fs/promises'
 import { DEFAULT_PIPELINE_OPTIONS, processImage, type PipelineOptions } from '../assets/pipeline'
+import { cutOutWhite, looksWhiteBackground } from '../assets/whiteBackground'
 import { transaction, type Db } from '../db/connection'
 import { ConflictError, NotFoundError, type Repos } from '../db/repos'
 import type { ThemeStore } from '../themes/themeStore'
@@ -127,7 +130,22 @@ export function createHandlers(d: HandlerDeps): Handlers {
     await assertTheme(themeId)
     const { asset, data, hasTransparency } = await processImage(bytes, purpose, pipelineOpts)
     await themes.writeAsset(themeId, asset, data)
-    return { asset, hasTransparency }
+    const whiteBackground = purpose === 'image' && !hasTransparency && (await looksWhite(data))
+    return { asset, hasTransparency, whiteBackground }
+  }
+  // 판별 실패는 "흰 배경 아님"으로(가져오기 자체는 이미 성공)
+  const looksWhite = (data: Uint8Array) => looksWhiteBackground(data).catch(() => false)
+
+  /** 테마 assets 폴더의 에셋 바이트(확장자는 저장 형식 둘 중 하나) */
+  const readAsset = async (themeId: string, hash: string) => {
+    for (const mime of ['image/png', 'image/jpeg'] as const) {
+      try {
+        return new Uint8Array(await readFile(themes.assetPath(themeId, { hash, mime })))
+      } catch {
+        // 다음 형식
+      }
+    }
+    throw new NotFoundError('asset')
   }
 
   return {
@@ -191,6 +209,17 @@ export function createHandlers(d: HandlerDeps): Handlers {
         })
         .parse(i)
       return importBytes(themeId, purpose, bytes)
+    },
+
+    'assets.removeWhiteBackground': async (i) => {
+      const { themeId, hash, strength } = z
+        .strictObject({ themeId: Uuid, hash: Sha256, strength: z.number().int().min(0).max(100) })
+        .parse(i)
+      await assertTheme(themeId)
+      const png = await cutOutWhite(await readAsset(themeId, hash), strength)
+      const { asset, data, hasTransparency } = await processImage(png, 'image', pipelineOpts)
+      await themes.writeAsset(themeId, asset, data)
+      return { asset, hasTransparency, whiteBackground: false }
     },
 
     /* ── 설정 ── */

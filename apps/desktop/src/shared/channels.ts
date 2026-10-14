@@ -10,6 +10,7 @@ export const CHANNELS = [
   'themes.pruneAssets',
   'assets.importFromDialog',
   'assets.importBytes',
+  'assets.removeWhiteBackground',
   'settings.get',
   'settings.update',
   'todo.lists.list',

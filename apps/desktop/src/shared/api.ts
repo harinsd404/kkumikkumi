@@ -42,6 +42,8 @@ export type AssetPurpose = 'image' | 'pet'
 export interface ImportedAsset {
   asset: Asset
   hasTransparency: boolean
+  /** 투명도가 없고 가장자리가 거의 흰색(스티커로 넣을 때 배경 지우기를 물어본다) */
+  whiteBackground: boolean
 }
 
 type Id = { id: string }
@@ -62,6 +64,11 @@ export interface IpcSpec {
   }
   'assets.importBytes': {
     in: { themeId: string; purpose: AssetPurpose; bytes: Uint8Array }
+    out: ImportedAsset
+  }
+  /** 이미 가져온 에셋의 흰 배경을 지우고 남은 그림 크기로 잘라 새 에셋으로(원본은 그대로). strength 0~100 */
+  'assets.removeWhiteBackground': {
+    in: { themeId: string; hash: string; strength: number }
     out: ImportedAsset
   }
   'settings.get': { in: undefined; out: Settings }
