@@ -1,4 +1,6 @@
 import { useState, type ReactNode } from 'react'
+import type { SwatchGroup } from '../app/colorGroups'
+import { Swatches } from '../app/Swatches'
 
 // 인스펙터 입력 컴포넌트(작고 단순하게). 색은 HexColor(#rrggbb / #rrggbbaa)만 받는다.
 const HEX = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/
@@ -25,7 +27,7 @@ export function ColorField(props: {
   label: string
   value: string | null
   onChange(v: string | null): void
-  swatches: readonly string[]
+  swatches: readonly SwatchGroup[]
   /** null 선택지(예: "투명", "팔레트") */
   nullLabel?: string
 }) {
@@ -73,19 +75,7 @@ export function ColorField(props: {
           </button>
         )}
       </div>
-      <div className="ki-swatches">
-        {[...new Set(props.swatches)].map((c) => (
-          <button
-            key={c}
-            type="button"
-            className="ki-swatch"
-            style={{ background: c }}
-            aria-label={c}
-            title={c}
-            onClick={() => onChange(c)}
-          />
-        ))}
-      </div>
+      <Swatches groups={props.swatches} value={value} onPick={onChange} />
     </div>
   )
 }

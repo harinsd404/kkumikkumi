@@ -10,12 +10,16 @@ import {
 } from '../board/calendar'
 import type { EditorTarget } from '../board/BoardContext'
 import { addMinutesToTime } from '../pages/calendarView'
+import { colorGroups, type ThemeColors } from './colorGroups'
+import { Swatches } from './Swatches'
 import { themeVars } from './themeVars'
 
 interface Props {
   target: EditorTarget
   /** 팔레트/폰트를 보드와 맞춘다 */
   theme: Theme
+  /** 색 고르기에 함께 보여 줄 다른 테마들 */
+  otherThemes: readonly ThemeColors[]
   onCreate(e: EventInput): Promise<boolean>
   onUpdate(id: string, e: EventInput): Promise<boolean>
   onDelete(id: string): Promise<boolean>
@@ -23,17 +27,25 @@ interface Props {
 }
 
 /** 일정 추가/수정 창. 보드 축소와 상관없이 읽기 쉬운 크기로 앱 레이어에 띄운다. */
-export function EventDialog({ target, theme, onCreate, onUpdate, onDelete, onClose }: Props) {
+export function EventDialog({
+  target,
+  theme,
+  otherThemes,
+  onCreate,
+  onUpdate,
+  onDelete,
+  onClose,
+}: Props) {
   const existing = 'event' in target ? target.event : null
   const palette = theme.defaults.palette
-  const colors = [
-    palette.accent,
-    palette.check,
-    palette.text,
-    palette.subText,
-    '#e76f51',
-    '#4f86c6',
-  ]
+  const swatches = colorGroups(
+    {
+      name: theme.name,
+      palette,
+      bgColor: theme.background.type === 'color' ? theme.background.color : null,
+    },
+    otherThemes,
+  )
   const [form, setForm] = useState<EventForm>(() => {
     if (existing) return eventToForm(existing)
     const date = 'date' in target ? target.date : ''
@@ -164,20 +176,12 @@ export function EventDialog({ target, theme, onCreate, onUpdate, onDelete, onClo
         </div>
         <div className="dlg-field">
           <span>색</span>
-          <div className="dlg-swatches" role="radiogroup" aria-label="색">
-            {colors.map((c) => (
-              <button
-                key={c}
-                type="button"
-                role="radio"
-                aria-checked={form.color.toLowerCase() === c.toLowerCase()}
-                aria-label={c}
-                className="dlg-swatch"
-                style={{ background: c }}
-                onClick={() => set({ color: c })}
-              />
-            ))}
-          </div>
+          <Swatches
+            groups={swatches}
+            value={form.color}
+            onPick={(c) => set({ color: c })}
+            size="large"
+          />
         </div>
         <label className="dlg-field">
           <span>메모</span>

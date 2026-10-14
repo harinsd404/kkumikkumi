@@ -14,6 +14,19 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
+  /* 앱 화면 색. 테마 팔레트(--t-*, themeColorVars)에서 만들고, 없으면(불러오는 중) 푸딩 아침 색 */
+  --ui-text: var(--t-text, #4a3a36);
+  --ui-sub: var(--t-sub, #85705f);
+  --ui-accent: var(--t-accent, #d9b48a);
+  --ui-control: var(--t-control, #fdefc9);
+  --ui-hover: color-mix(in srgb, var(--ui-control) 40%, #ffffff);
+  --ui-tabs: color-mix(in srgb, var(--ui-control) 45%, #ffffff);
+  --ui-line: color-mix(in srgb, var(--ui-accent) 40%, #ffffff);
+  --ui-line-soft: color-mix(in srgb, var(--ui-accent) 22%, #ffffff);
+  --ui-line-strong: color-mix(in srgb, var(--ui-accent) 55%, #ffffff);
+  --ui-faint: color-mix(in srgb, var(--ui-sub) 65%, #ffffff);
+  /* 편집 중 고른 것 표시: 강조색을 글자색 쪽으로 진하게 */
+  --ui-select: color-mix(in srgb, var(--ui-accent) 60%, var(--ui-text));
 }
 /* 시안: 높이 36, 흰 배경, 아래 1px #F1E2C8. main의 TITLE_BAR_HEIGHT와 같아야 한다. */
 .app-titlebar {
@@ -24,7 +37,7 @@ body {
   align-items: center;
   justify-content: center;
   background: #ffffff;
-  border-bottom: 1px solid #f1e2c8;
+  border-bottom: 1px solid var(--ui-line);
   -webkit-app-region: drag;
 }
 .app-theme-pill {
@@ -34,16 +47,95 @@ body {
   padding: 6px 12px;
   border: 0;
   border-radius: 999px;
-  background: #fdefc9;
-  color: #4a3a36;
+  background: var(--ui-control);
+  color: var(--ui-text);
   font:
     700 12px 'Pretendard',
     system-ui,
     sans-serif;
   -webkit-app-region: no-drag;
 }
-.app-theme-pill:disabled {
+.app-theme-pill.is-static {
   cursor: default;
+}
+.app-theme-pill:not(.is-static):hover {
+  background: color-mix(in srgb, var(--ui-control) 85%, var(--ui-text));
+}
+.app-theme {
+  flex: none;
+  -webkit-app-region: no-drag;
+}
+.app-theme-pill {
+  white-space: nowrap;
+  cursor: pointer;
+}
+.app-theme-list {
+  left: 50%;
+  translate: -50% 0;
+  min-width: 180px;
+}
+.tb-menu-head {
+  margin: 6px 10px 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ui-sub);
+}
+.tb-menu-list button[aria-checked='true'] {
+  background: var(--ui-hover);
+  font-weight: 700;
+}
+/* 색 고르기 팔레트(Swatches): 묶음 이름 + 색 한 줄 */
+.sw {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+.sw-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sw-label {
+  flex: none;
+  width: 56px;
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--ui-sub, var(--t-sub));
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sw-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.sw-swatch {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid rgb(0 0 0 / 0.12);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.sw-swatch[aria-pressed='true'] {
+  outline: 2px solid var(--ui-text, var(--t-text));
+  outline-offset: 1px;
+}
+.sw--large .sw-group {
+  gap: 10px;
+}
+.sw--large .sw-label {
+  width: 64px;
+  font-size: 12px;
+}
+.sw--large .sw-row {
+  gap: 6px;
+}
+.sw--large .sw-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
 }
 .app-theme-chevron {
   width: 8.4px;
@@ -57,7 +149,7 @@ body {
 }
 .app-error {
   margin: 24px;
-  color: #4a3a36;
+  color: var(--ui-text);
 }
 
 /* ── 타이틀바 도구 ── */
@@ -65,7 +157,8 @@ body {
   position: relative;
   padding: 0 12px 0 84px; /* 왼쪽: 신호등 버튼 자리 */
 }
-.app-theme-pill {
+.app-theme-pill.is-static,
+.tb-menu.app-theme {
   position: absolute;
   left: 50%;
   top: 50%;
@@ -87,10 +180,10 @@ body {
 .tb-btn {
   height: 24px;
   padding: 0 10px;
-  border: 1px solid #f1e2c8;
+  border: 1px solid var(--ui-line);
   border-radius: 999px;
   background: #ffffff;
-  color: #4a3a36;
+  color: var(--ui-text);
   font:
     600 12px 'Pretendard',
     system-ui,
@@ -98,7 +191,7 @@ body {
   cursor: pointer;
 }
 .tb-btn:hover:not(:disabled) {
-  background: #fff8e4;
+  background: var(--ui-hover);
 }
 .tb-btn:disabled {
   opacity: 0.4;
@@ -108,7 +201,7 @@ body {
 .ki button:focus-visible,
 .ki input:focus-visible,
 .ki select:focus-visible {
-  outline: 2px solid #d9b48a;
+  outline: 2px solid var(--ui-accent);
   outline-offset: 1px;
 }
 .tb-icon {
@@ -118,12 +211,12 @@ body {
 }
 .tb-primary {
   border-color: transparent;
-  background: #fdefc9;
+  background: var(--ui-control);
   font-weight: 700;
 }
 .tb-status {
   font-size: 11px;
-  color: #85705f;
+  color: var(--ui-sub);
   max-width: 260px;
   white-space: nowrap;
   overflow: hidden;
@@ -146,9 +239,9 @@ body {
   display: flex;
   flex-direction: column;
   background: #ffffff;
-  border: 1px solid #f1e2c8;
+  border: 1px solid var(--ui-line);
   border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(74, 58, 54, 0.15);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--ui-text) 15%, transparent);
 }
 .tb-menu-list button {
   text-align: left;
@@ -156,7 +249,7 @@ body {
   border: 0;
   border-radius: 6px;
   background: none;
-  color: #4a3a36;
+  color: var(--ui-text);
   font:
     500 12px 'Pretendard',
     system-ui,
@@ -165,7 +258,7 @@ body {
 }
 .tb-menu-list button:hover,
 .tb-menu-list button:focus-visible {
-  background: #fff8e4;
+  background: var(--ui-hover);
 }
 
 /* ── 안내 토스트 ── */
@@ -177,7 +270,7 @@ body {
   z-index: 30;
   padding: 8px 14px;
   border-radius: 999px;
-  background: rgba(74, 58, 54, 0.92);
+  background: color-mix(in srgb, var(--ui-text) 92%, transparent);
   color: #ffffff;
   font-size: 12px;
   pointer-events: none;
@@ -191,23 +284,23 @@ body {
 }
 .ke-cell {
   position: absolute;
-  border: 0 dashed rgba(74, 58, 54, 0.18);
+  border: 0 dashed color-mix(in srgb, var(--ui-text) 18%, transparent);
   border-style: dashed;
   border-radius: 12px;
   pointer-events: none;
 }
 .ke-hit {
   position: absolute;
-  outline: 0 solid rgba(74, 58, 54, 0.25);
+  outline: 0 solid color-mix(in srgb, var(--ui-text) 25%, transparent);
   outline-style: solid;
   cursor: grab;
   touch-action: none;
 }
 .ke-hit:hover {
-  outline-color: rgba(74, 58, 54, 0.5);
+  outline-color: color-mix(in srgb, var(--ui-text) 50%, transparent);
 }
 .ke-hit.is-selected {
-  outline-color: #e08a4a;
+  outline-color: var(--ui-select);
 }
 .ke-hit.is-locked {
   cursor: default;
@@ -220,7 +313,7 @@ body {
 .ke-rotate {
   position: absolute;
   box-sizing: border-box;
-  border: 0 solid #e08a4a;
+  border: 0 solid var(--ui-select);
   border-style: solid;
   background: #ffffff;
   touch-action: none;
@@ -271,7 +364,7 @@ body {
 .ke-dragging {
   position: absolute;
   border-radius: 25px;
-  outline: 0 solid rgba(74, 58, 54, 0.6);
+  outline: 0 solid color-mix(in srgb, var(--ui-text) 60%, transparent);
   outline-style: solid;
   background: rgba(255, 255, 255, 0.35);
   pointer-events: none;
@@ -288,10 +381,10 @@ body {
   display: flex;
   flex-direction: column;
   background: rgba(255, 255, 255, 0.97);
-  border: 1px solid #f1e2c8;
+  border: 1px solid var(--ui-line);
   border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(74, 58, 54, 0.16);
-  color: #4a3a36;
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--ui-text) 16%, transparent);
+  color: var(--ui-text);
   font:
     400 12px 'Pretendard',
     system-ui,
@@ -307,7 +400,7 @@ body {
   justify-content: space-between;
   gap: 12px;
   padding: 10px 12px;
-  border-bottom: 1px solid #f6ead3;
+  border-bottom: 1px solid var(--ui-line-soft);
   font-size: 13px;
 }
 .ki.is-closed .ki-head {
@@ -316,7 +409,7 @@ body {
 .ki-toggle {
   border: 0;
   background: none;
-  color: #85705f;
+  color: var(--ui-sub);
   font: inherit;
   cursor: pointer;
 }
@@ -326,7 +419,7 @@ body {
 }
 .ki-section {
   padding: 8px 0;
-  border-bottom: 1px solid #f6ead3;
+  border-bottom: 1px solid var(--ui-line-soft);
 }
 .ki-section:last-of-type {
   border-bottom: 0;
@@ -335,7 +428,7 @@ body {
   margin: 4px 0 8px;
   font-size: 11px;
   font-weight: 700;
-  color: #85705f;
+  color: var(--ui-sub);
 }
 .ki-row {
   display: flex;
@@ -347,7 +440,7 @@ body {
 .ki-label,
 .ki-row-label {
   flex: none;
-  color: #4a3a36;
+  color: var(--ui-text);
 }
 .ki-control {
   display: flex;
@@ -361,7 +454,7 @@ body {
 .ki-out {
   width: 38px;
   text-align: right;
-  color: #85705f;
+  color: var(--ui-sub);
   font-variant-numeric: tabular-nums;
 }
 .ki-num {
@@ -372,7 +465,7 @@ body {
 .ki-hex {
   height: 24px;
   padding: 0 6px;
-  border: 1px solid #ead9bb;
+  border: 1px solid var(--ui-line-strong);
   border-radius: 6px;
   background: #ffffff;
   color: inherit;
@@ -396,27 +489,13 @@ body {
   width: 28px;
   height: 24px;
   padding: 0;
-  border: 1px solid #ead9bb;
+  border: 1px solid var(--ui-line-strong);
   border-radius: 6px;
   background: none;
 }
 .ki-hex {
   width: 84px;
   font-family: ui-monospace, monospace;
-}
-.ki-swatches {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 6px;
-}
-.ki-swatch {
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 4px;
-  cursor: pointer;
 }
 .ki-seg {
   display: inline-flex;
@@ -425,7 +504,7 @@ body {
   gap: 2px;
   padding: 2px;
   border-radius: 8px;
-  background: #fff8e4;
+  background: var(--ui-hover);
 }
 .ki-seg button,
 .ki-chip,
@@ -441,7 +520,7 @@ body {
 .ki-seg button.is-on,
 .ki-chip.is-on {
   background: #ffffff;
-  box-shadow: 0 1px 3px rgba(74, 58, 54, 0.18);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--ui-text) 18%, transparent);
   font-weight: 600;
 }
 .ki-seg button:disabled {
@@ -449,7 +528,7 @@ body {
   cursor: default;
 }
 .ki-chip {
-  border: 1px solid #ead9bb;
+  border: 1px solid var(--ui-line-strong);
 }
 .ki-buttons {
   display: flex;
@@ -458,11 +537,11 @@ body {
   margin: 6px 0;
 }
 .ki-buttons button {
-  border: 1px solid #ead9bb;
+  border: 1px solid var(--ui-line-strong);
   background: #ffffff;
 }
 .ki-buttons button:hover {
-  background: #fff8e4;
+  background: var(--ui-hover);
 }
 .ki-actions {
   margin-top: 12px;
@@ -472,12 +551,12 @@ body {
 }
 .ki kbd {
   margin-left: 4px;
-  color: #a99886;
+  color: var(--ui-faint);
   font: inherit;
 }
 .ki-note {
   margin: 8px 0 0;
-  color: #85705f;
+  color: var(--ui-sub);
 }
 
 /* ── 일정 입력 창 (앱 레이어, 보드 축소와 무관) ── */
@@ -572,23 +651,6 @@ body {
   width: 75%;
   height: 75%;
 }
-.dlg-swatches {
-  display: flex;
-  gap: 10px;
-  padding-top: 4px;
-}
-.dlg-swatch {
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 2px solid #ffffff;
-  border-radius: 50%;
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08);
-  cursor: pointer;
-}
-.dlg-swatch[aria-checked='true'] {
-  box-shadow: 0 0 0 2px var(--t-text);
-}
 .dlg-error {
   margin: 0;
   color: #c0392b;
@@ -668,7 +730,7 @@ body {
   flex: 1;
   min-width: 0;
   padding: 4px 6px;
-  border: 1px solid #dddddd;
+  border: 1px solid var(--ui-line-strong);
   border-radius: 6px;
   font: inherit;
 }
@@ -676,7 +738,7 @@ body {
   padding: 4px 10px;
   border: 0;
   border-radius: 6px;
-  background: #f0f0f0;
+  background: var(--ui-hover);
   font: inherit;
   cursor: pointer;
 }
@@ -703,7 +765,7 @@ form.ki-row {
   gap: 2px;
   padding: 2px;
   border-radius: 999px;
-  background: #fbf3e2;
+  background: var(--ui-tabs);
 }
 .tb-tab {
   height: 22px;
@@ -711,7 +773,7 @@ form.ki-row {
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: #85705f;
+  color: var(--ui-sub);
   font:
     600 12px 'Pretendard',
     system-ui,
@@ -720,11 +782,11 @@ form.ki-row {
 }
 .tb-tab[aria-selected='true'] {
   background: #ffffff;
-  color: #4a3a36;
+  color: var(--ui-text);
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.08);
 }
 .tb-tab:focus-visible {
-  outline: 2px solid #4f86c6;
+  outline: 2px solid var(--ui-select);
   outline-offset: 1px;
 }
 .app-page {

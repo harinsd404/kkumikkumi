@@ -1,4 +1,5 @@
 import type { Timetable, TimetableEntry, TimetableSettings } from '@kkumikkumi/schema'
+import { hexToHsl, hslToHex } from './colors'
 
 // 시간표 계산(순수 함수). 요일은 0=월 … 6=일, 시각은 "HH:MM" 또는 그 날 0시부터의 분.
 
@@ -97,49 +98,6 @@ const TONE_COUNT = 12
 /** 톤 k의 밝기(HSL L). 글자(테마 글자색)가 잘 보이도록 옅은 쪽에서만 고른다. */
 const TONE_LIGHTNESS = [0.87, 0.79, 0.91, 0.73, 0.83, 0.67] as const
 const MAX_SATURATION = 0.75
-
-const hexToHsl = (hex: string): [number, number, number] => {
-  const n = parseInt(hex.slice(1, 7), 16)
-  const r = ((n >> 16) & 255) / 255
-  const g = ((n >> 8) & 255) / 255
-  const b = (n & 255) / 255
-  const max = Math.max(r, g, b)
-  const min = Math.min(r, g, b)
-  const l = (max + min) / 2
-  const d = max - min
-  if (d === 0) return [0, 0, l]
-  const s = d / (1 - Math.abs(2 * l - 1))
-  const h =
-    max === r
-      ? ((g - b) / d + (g < b ? 6 : 0)) * 60
-      : max === g
-        ? ((b - r) / d + 2) * 60
-        : ((r - g) / d + 4) * 60
-  return [h, s, l]
-}
-
-const hslToHex = (h: number, s: number, l: number): string => {
-  const c = (1 - Math.abs(2 * l - 1)) * s
-  const x = c * (1 - Math.abs(((h / 60) % 2) - 1))
-  const m = l - c / 2
-  const [r, g, b] =
-    h < 60
-      ? [c, x, 0]
-      : h < 120
-        ? [x, c, 0]
-        : h < 180
-          ? [0, c, x]
-          : h < 240
-            ? [0, x, c]
-            : h < 300
-              ? [x, 0, c]
-              : [c, 0, x]
-  const hex = (v: number) =>
-    Math.round((v + m) * 255)
-      .toString(16)
-      .padStart(2, '0')
-  return `#${hex(r)}${hex(g)}${hex(b)}`
-}
 
 /**
  * 테마의 강조색·체크색에서 만든 톤 12개. i번 톤 = (i % 2 == 0 ? 강조 : 체크)의 (i / 2)번째 밝기.

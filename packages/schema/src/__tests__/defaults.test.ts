@@ -11,7 +11,7 @@ describe('createDefaultTheme', () => {
     expect(r.success, r.success ? '' : JSON.stringify(r.error.issues)).toBe(true)
   })
   it('두 프리셋 모두 ThemeSchema를 통과한다', () => {
-    for (const preset of ['pudding', 'pretzel'] as const) {
+    for (const preset of ['pudding', 'cottonCandy'] as const) {
       expect(parseTheme(createDefaultTheme(ids, 0, undefined, preset)).success).toBe(true)
     }
   })

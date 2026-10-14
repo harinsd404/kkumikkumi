@@ -8,7 +8,8 @@ import {
   type Timetable,
   type TodoList,
 } from '@kkumikkumi/schema'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { colorGroups, type SwatchGroup, type ThemeColors } from '../app/colorGroups'
 import { FONTS } from '../board/fonts'
 import { memoTitle } from '../board/memoFormat'
 import { ColorField, NumberField, Row, Section, Segmented, Slider } from './fields'
@@ -26,6 +27,8 @@ interface Props {
   memos?: MemoPickApi | undefined
   /** 시간표 목록(사용자 데이터). 없으면 시간표 선택을 숨긴다. */
   timetables?: TimetablePick | undefined
+  /** 색 고르기에 함께 보여 줄 다른 테마들 */
+  otherThemes?: readonly ThemeColors[] | undefined
 }
 
 export interface TimetablePick {
@@ -80,11 +83,16 @@ export function Inspector({
   todoLists,
   memos,
   timetables,
+  otherThemes,
 }: Props) {
   const [open, setOpen] = useState(true)
   const t = ed.theme
   const palette = t.defaults.palette
-  const swatches = [...Object.values(palette), '#ffffff', '#000000']
+  const bgColor = t.background.type === 'color' ? t.background.color : null
+  const swatches = useMemo(
+    () => colorGroups({ name: t.name, palette, bgColor }, otherThemes ?? []),
+    [t.name, palette, bgColor, otherThemes],
+  )
   const sel = ed.selection
   const block = sel?.kind === 'block' ? t.blocks.find((b) => b.id === sel.id) : undefined
   const free = sel?.kind === 'free' ? t.freeItems.find((f) => f.id === sel.id) : undefined
@@ -435,7 +443,7 @@ const DEFAULT_BORDER_WIDTH = 2.5
 function DecorFields(props: {
   ed: EditorApi
   decor: Decor
-  swatches: readonly string[]
+  swatches: readonly SwatchGroup[]
   apply(patch: Partial<Decor>, groupKey?: string): void
 }) {
   const { decor, apply } = props

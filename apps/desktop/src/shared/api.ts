@@ -1,5 +1,7 @@
 import type {
   Asset,
+  Palette,
+  ThemePresetId,
   CalendarEvent,
   Memo,
   MiniTimerPrefs,
@@ -24,7 +26,16 @@ import type { TimerCommand, TimerMode } from './timer'
 // renderer ↔ main 계약(타입만). 입력 검증 스키마는 main/ipc/handlers.ts에 있고 main이 항상 재검증한다.
 
 export type ThemeSummary =
-  | { id: string; ok: true; name: string; updatedAt: number }
+  | {
+      id: string
+      ok: true
+      name: string
+      updatedAt: number
+      /** 다른 테마 색을 고를 때 쓰는 대표색 */
+      palette: Palette
+      /** 배경이 색이면 그 색 */
+      bgColor: string | null
+    }
   | { id: string; ok: false; error: string }
 
 export type AssetPurpose = 'image' | 'pet'
@@ -39,7 +50,7 @@ type CalendarInput = Record<string, unknown>
 export interface IpcSpec {
   'themes.list': { in: undefined; out: ThemeSummary[] }
   'themes.get': { in: Id; out: Theme }
-  'themes.create': { in: { name: string }; out: Theme }
+  'themes.create': { in: { name: string; preset?: ThemePresetId }; out: Theme }
   'themes.save': { in: { theme: Theme }; out: Theme }
   'themes.duplicate': { in: { id: string; name: string }; out: Theme }
   'themes.rename': { in: { id: string; name: string }; out: Theme }

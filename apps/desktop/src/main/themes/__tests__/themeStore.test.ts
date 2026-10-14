@@ -1,7 +1,7 @@
 import { mkdtemp, readdir, readFile, rm, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { Asset, Theme } from '@kkumikkumi/schema'
+import { THEME_PRESETS, type Asset, type Theme } from '@kkumikkumi/schema'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { assetFileName, ThemeStore, ThemeStoreError } from '../themeStore'
 
@@ -54,7 +54,22 @@ describe('ThemeStore', () => {
   it('create → read → list', async () => {
     const t = await store.create('아침')
     expect(await store.read(t.id)).toEqual(t)
-    expect(await store.list()).toEqual([{ id: t.id, ok: true, name: '아침', updatedAt: clock }])
+    expect(await store.list()).toEqual([
+      {
+        id: t.id,
+        ok: true,
+        name: '아침',
+        updatedAt: clock,
+        palette: THEME_PRESETS.pudding.palette,
+        bgColor: THEME_PRESETS.pudding.background.color,
+      },
+    ])
+  })
+
+  it('create: 프리셋 색으로 만든다', async () => {
+    const t = await store.create('솜사탕', 'cottonCandy')
+    expect(t.defaults.palette).toEqual(THEME_PRESETS.cottonCandy.palette)
+    expect(t.background).toMatchObject({ type: 'color', color: '#daecf6' })
   })
 
   it('ensureAtLeastOne: 비어 있으면 기본 테마 생성, 있으면 재사용', async () => {

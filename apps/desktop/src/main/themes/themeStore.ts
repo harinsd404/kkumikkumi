@@ -2,6 +2,8 @@ import { cp, mkdir, readdir, readFile, rename, rm, stat } from 'node:fs/promises
 import { join } from 'node:path'
 import {
   createDefaultTheme,
+  type Palette,
+  type ThemePresetId,
   Name,
   referencedAssetHashes,
   Sha256,
@@ -37,7 +39,14 @@ export class ThemeStoreError extends Error {
 }
 
 export type ThemeSummary =
-  | { id: string; ok: true; name: string; updatedAt: number }
+  | {
+      id: string
+      ok: true
+      name: string
+      updatedAt: number
+      palette: Palette
+      bgColor: string | null
+    }
   | { id: string; ok: false; error: ThemeErrorCode }
 
 const THEME_FILE = 'theme.json'
@@ -90,7 +99,14 @@ export class ThemeStore {
     for (const id of ids) {
       try {
         const t = await this.read(id)
-        out.push({ id, ok: true, name: t.name, updatedAt: t.updatedAt })
+        out.push({
+          id,
+          ok: true,
+          name: t.name,
+          updatedAt: t.updatedAt,
+          palette: t.defaults.palette,
+          bgColor: t.background.type === 'color' ? t.background.color : null,
+        })
       } catch (err) {
         out.push({
           id,
@@ -150,7 +166,7 @@ export class ThemeStore {
     return t
   }
 
-  async create(name: string): Promise<Theme> {
+  async create(name: string, preset: ThemePresetId = 'pudding'): Promise<Theme> {
     const now = this.deps.now()
     const n = Name.parse(name)
     const t = createDefaultTheme(
@@ -160,6 +176,7 @@ export class ThemeStore {
       },
       now,
       n,
+      preset,
     )
     await this.writeNew(t)
     return t

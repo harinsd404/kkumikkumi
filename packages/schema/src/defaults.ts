@@ -22,7 +22,7 @@ export interface ThemePreset {
   palette: Palette
 }
 
-/** 디자인 시안의 두 테마 (Figma 3:1079 푸딩 아침, 6:2384 프리첼). 이미지 에셋은 포함하지 않는다. */
+/** 디자인 시안의 두 테마 (Figma 3:1079 푸딩 아침, 6:2384 코튼캔디). 이미지 에셋은 포함하지 않는다. */
 export const THEME_PRESETS = {
   pudding: {
     name: '푸딩 아침',
@@ -36,8 +36,8 @@ export const THEME_PRESETS = {
       control: '#fdefc9',
     },
   },
-  pretzel: {
-    name: '프리첼',
+  cottonCandy: {
+    name: '코튼캔디',
     background: { color: '#daecf6', pattern: { id: 'stars', color: '#fffae7' } },
     palette: {
       text: '#806e7a',
@@ -51,6 +51,10 @@ export const THEME_PRESETS = {
 } as const satisfies Record<string, ThemePreset>
 
 export type ThemePresetId = keyof typeof THEME_PRESETS
+export const THEME_PRESET_IDS = [
+  'pudding',
+  'cottonCandy',
+] as const satisfies readonly ThemePresetId[]
 
 export interface DefaultThemeIds {
   theme: string

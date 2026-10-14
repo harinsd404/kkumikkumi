@@ -1,4 +1,10 @@
-import { blockRect, type Asset, type Theme } from '@kkumikkumi/schema'
+import {
+  blockRect,
+  THEME_PRESETS,
+  type Asset,
+  type Theme,
+  type ThemePresetId,
+} from '@kkumikkumi/schema'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Board } from '../board/Board'
 import type { BoardActions } from '../board/BoardContext'
@@ -15,12 +21,14 @@ import { PHASE_LABEL } from '../../../shared/pomodoro'
 import { CalendarPage } from '../pages/CalendarPage'
 import { MemoPage } from '../pages/MemoPage'
 import { TimetablePage } from '../pages/TimetablePage'
-import { themeTones } from '../board/timetable'
+import { themeTones, uniqueName } from '../board/timetable'
+import { otherThemes } from './colorGroups'
 import { TimerPage } from '../pages/TimerPage'
 import { TodoPage } from '../pages/TodoPage'
-import { themeVars } from './themeVars'
-import { TitleBar, type AppPage, type PageNav } from './TitleBar'
+import { themeColorVars, themeVars } from './themeVars'
+import { TitleBar, type AppPage, type PageNav, type ThemeMenu } from './TitleBar'
 import { useMemos } from './useMemos'
+import { useThemes } from './useThemes'
 import { useTimetable } from './useTimetable'
 import { useUserData } from './useUserData'
 
@@ -53,14 +61,24 @@ const isTextField = (el: EventTarget | null) =>
   el instanceof HTMLElement &&
   (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))
 
-export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
+export function BoardScreen({
+  initialTheme,
+  initialPage = 'board',
+  onSwitchTheme,
+}: {
+  initialTheme: Theme
+  initialPage?: AppPage
+  /** 활성 테마 바꾸기(App이 이 화면을 새 테마로 다시 만든다) */
+  onSwitchTheme?(id: string, page: AppPage): Promise<boolean>
+}) {
   const ed = useEditor(initialTheme, { save: saveTheme })
   const user = useUserData(ed.showNotice)
   const memos = useMemos(ed.showNotice)
   const timetable = useTimetable(ed.showNotice)
   const now = useMinuteClock()
   const [editing, setEditing] = useState(false)
-  const [page, setPage] = useState<AppPage>('board')
+  const [page, setPage] = useState<AppPage>(initialPage)
+  const themes = useThemes()
   /** 메모 블록에서 들어오면 그 메모를 연다 */
   const [memoOpen, setMemoOpen] = useState<string | null>(null)
   const theme = ed.theme
@@ -98,6 +116,46 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
     setPage(p)
   }, [])
   const assetUrl = useMemo(() => makeAssetUrl(theme), [theme])
+  const others = useMemo(() => otherThemes(themes.list, theme.id), [themes.list, theme.id])
+
+  const showNotice = ed.showNotice
+  const flushTheme = ed.flush
+  const flushMemoEdits = memos.flush
+  const refreshThemes = themes.refresh
+  const themeMenu = useMemo<ThemeMenu | undefined>(() => {
+    if (!onSwitchTheme) return undefined
+    const switchTo = async (id: string) => {
+      await Promise.all([flushTheme(), flushMemoEdits()]) // 남은 변경 저장
+      if (!(await onSwitchTheme(id, page))) showNotice('테마를 바꾸지 못했어요')
+    }
+    return {
+      currentId: theme.id,
+      themes: themes.list.flatMap((s) => (s.ok ? [{ id: s.id, name: s.name }] : [])),
+      presets: (Object.keys(THEME_PRESETS) as ThemePresetId[]).map((id) => ({
+        id,
+        name: THEME_PRESETS[id].name,
+      })),
+      onOpen: () => void refreshThemes(),
+      onSelect: (id) => void switchTo(id),
+      onCreate: (preset) =>
+        void (async () => {
+          const names = themes.list.flatMap((s) => (s.ok ? [s.name] : []))
+          const name = uniqueName(names, THEME_PRESETS[preset].name)
+          const r = await window.kkumi.invoke('themes.create', { name, preset })
+          if (!r.ok) return showNotice(`테마를 만들지 못했어요 (${r.error.code})`)
+          await switchTo(r.value.id)
+        })(),
+    }
+  }, [
+    onSwitchTheme,
+    flushTheme,
+    flushMemoEdits,
+    showNotice,
+    refreshThemes,
+    page,
+    theme.id,
+    themes.list,
+  ])
 
   // 창을 닫을 때 남은 변경 저장
   const flushMemos = memos.flush
@@ -205,9 +263,10 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
   }, [editing, ed, remove, duplicate, exitEdit])
 
   return (
-    <div className="app">
+    <div className="app" style={themeColorVars(theme)}>
       <TitleBar
         themeName={theme.name}
+        themeMenu={editing ? undefined : themeMenu}
         editing={editing}
         onToggleEdit={() => (editing ? void exitEdit() : setEditing(true))}
         nav={{ current: page, pages: PAGES, onNavigate: navigate }}
@@ -316,12 +375,14 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
             todoLists={user.lists}
             memos={memos}
             timetables={timetable.data}
+            otherThemes={others}
           />
         )}
         {user.editing && !editing && (
           <EventDialog
             target={user.editing}
             theme={theme}
+            otherThemes={others}
             onCreate={user.events.create}
             onUpdate={user.events.update}
             onDelete={user.events.remove}

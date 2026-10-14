@@ -100,6 +100,14 @@ describe('themes', () => {
     expect(await codeOf(h['themes.save']({ theme: bad }))).toBe('invalid_input')
   })
 
+  it('create: 프리셋을 고를 수 있고, 없는 프리셋은 거부', async () => {
+    const t = await h['themes.create']({ name: '코튼캔디', preset: 'cottonCandy' })
+    expect(t.defaults.palette.accent).toBe('#f4c2df')
+    const list = await h['themes.list'](undefined)
+    expect(list.find((s) => s.id === t.id)).toMatchObject({ ok: true, bgColor: '#daecf6' })
+    expect(await codeOf(h['themes.create']({ name: 'x', preset: 'pretzel' }))).toBe('invalid_input')
+  })
+
   it('delete: 활성 테마를 지우면 다른 테마로 전환하고 규칙/오버라이드 정리', async () => {
     const first = activeId()
     const second = await h['themes.create']({ name: '둘째' })
