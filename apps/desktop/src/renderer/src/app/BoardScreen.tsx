@@ -1,20 +1,24 @@
 import {
+  blockCells,
   blockRect,
+  CANVAS,
+  canPlace,
   THEME_PRESETS,
   type Asset,
   type Theme,
   type ThemePresetId,
 } from '@kkumikkumi/schema'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Board } from '../board/Board'
 import type { BoardActions } from '../board/BoardContext'
 import { blockBox } from '../board/layout'
-import { EditorOverlay } from '../editor/EditorOverlay'
+import { EditorOverlay, type ToCanvas } from '../editor/EditorOverlay'
 import { Inspector } from '../editor/Inspector'
-import type { Point } from '../editor/state/geometry'
+import { dropCell, type Point } from '../editor/state/geometry'
 import { newFreeItem } from '../editor/state/reducer'
 import { keyToCommand } from '../editor/state/shortcuts'
 import { useEditor, type EditorApi } from '../editor/useEditor'
+import { WidgetGallery, WidgetPreview, type WidgetKind } from '../editor/WidgetGallery'
 import { makeAssetUrl } from './assetUrl'
 import { EventDialog } from './EventDialog'
 import { PHASE_LABEL } from '../../../shared/pomodoro'
@@ -77,6 +81,20 @@ export function BoardScreen({
   const timetable = useTimetable(ed.showNotice)
   const now = useMinuteClock()
   const [editing, setEditing] = useState(false)
+  /** 편집 패널 탭: 고른 것이 생기면 설정, 없어지면 위젯 추가 */
+  const [panelTab, setPanelTab] = useState<'add' | 'settings'>('add')
+  const [prevSel, setPrevSel] = useState(ed.selection)
+  if (prevSel !== ed.selection) {
+    setPrevSel(ed.selection)
+    if (!!ed.selection !== !!prevSel) setPanelTab(ed.selection ? 'settings' : 'add')
+  }
+  /** 갤러리에서 끌어 오는 중인 위젯(커서 위치, 놓일 자리) */
+  const [incoming, setIncoming] = useState<{
+    kind: WidgetKind
+    client: { x: number; y: number }
+    target: { rect: { col: number; row: number; w: number; h: number }; valid: boolean } | null
+  } | null>(null)
+  const toCanvasRef = useRef<ToCanvas | null>(null)
   const [page, setPage] = useState<AppPage>(initialPage)
   const themes = useThemes()
   /** 메모 블록에서 들어오면 그 메모를 연다 */
@@ -116,6 +134,10 @@ export function BoardScreen({
     setPage(p)
   }, [])
   const assetUrl = useMemo(() => makeAssetUrl(theme), [theme])
+  const previewEnv = useMemo(
+    () => ({ theme, data: boardData, assetUrl, now }),
+    [theme, boardData, assetUrl, now],
+  )
   const others = useMemo(() => otherThemes(themes.list, theme.id), [themes.list, theme.id])
 
   const showNotice = ed.showNotice
@@ -212,6 +234,56 @@ export function BoardScreen({
     if (ok) ed.select({ kind: s.kind, id: newId })
   }, [ed])
 
+  const addBlock = useCallback(
+    (kind: WidgetKind, at?: { col: number; row: number }) => {
+      const id = crypto.randomUUID()
+      if (ed.dispatch({ type: 'block/add', block: kind, id, ...(at ? { at } : {}) }))
+        ed.select({ kind: 'block', id })
+    },
+    [ed],
+  )
+
+  /** 갤러리 위젯: 그냥 떼면 빈 자리에, 끌어서 보드에 놓으면 그 칸에(겹치면 거부) */
+  const pickWidget = useCallback(
+    (kind: WidgetKind, start: { clientX: number; clientY: number } | null) => {
+      const cells = blockCells(kind.type, kind.size)
+      if (!start || !cells) return addBlock(kind)
+      const items = ed.theme.blocks.flatMap((b) => {
+        const r = blockRect(b)
+        return r ? [{ id: b.id, ...r }] : []
+      })
+      const targetAt = (e: PointerEvent) => {
+        const p = toCanvasRef.current?.(e)
+        const cell = p ? dropCell(p, cells.w, cells.h) : null
+        if (!cell) return null
+        const rect = { ...cell, ...cells }
+        return { rect, valid: canPlace(CANVAS, items, rect) }
+      }
+      let moved = false
+      const onMove = (e: PointerEvent) => {
+        if (!moved && Math.hypot(e.clientX - start.clientX, e.clientY - start.clientY) < 4) return
+        moved = true
+        setIncoming({ kind, client: { x: e.clientX, y: e.clientY }, target: targetAt(e) })
+      }
+      const onUp = (e: PointerEvent) => {
+        window.removeEventListener('pointermove', onMove)
+        window.removeEventListener('pointerup', onUp)
+        window.removeEventListener('pointercancel', onUp)
+        setIncoming(null)
+        if (e.type === 'pointercancel') return
+        if (!moved) return addBlock(kind)
+        const target = targetAt(e)
+        if (!target) return // 보드 밖에 놓으면 취소
+        if (!target.valid) return ed.showNotice('다른 블록과 겹쳐서 놓을 수 없어요')
+        addBlock(kind, { col: target.rect.col, row: target.rect.row })
+      }
+      window.addEventListener('pointermove', onMove)
+      window.addEventListener('pointerup', onUp)
+      window.addEventListener('pointercancel', onUp)
+    },
+    [ed, addBlock],
+  )
+
   const remove = useCallback(() => {
     const s = ed.selection
     if (!s) return
@@ -271,15 +343,6 @@ export function BoardScreen({
         onToggleEdit={() => (editing ? void exitEdit() : setEditing(true))}
         nav={{ current: page, pages: PAGES, onNavigate: navigate }}
         tools={{
-          onAddBlock: (type, size) => {
-            const id = crypto.randomUUID()
-            if (ed.dispatch({ type: 'block/add', block: { type, size }, id }))
-              ed.select({ kind: 'block', id })
-          },
-          onAddDecor: async (kind) => {
-            const r = await importAsset({ dialog: true })
-            if (r) addDecor(kind, r.asset)
-          },
           onUndo: ed.undo,
           onRedo: ed.redo,
           canUndo: ed.canUndo,
@@ -287,7 +350,7 @@ export function BoardScreen({
           status: ed.status,
         }}
       />
-      <main className="app-board">
+      <main className={`app-board ${editing && page === 'board' ? 'is-editing' : ''}`}>
         {page === 'todo' && (
           <div className="app-page" style={themeVars(theme)}>
             <TodoPage todos={user.data.todos} actions={user.actions} lists={user.lists} now={now} />
@@ -329,54 +392,98 @@ export function BoardScreen({
           </div>
         )}
         {page === 'board' && (
-          <Board
-            theme={theme}
-            assetUrl={assetUrl}
-            data={boardData}
-            actions={boardActions}
-            now={now}
-            mode={editing ? 'edit' : 'use'}
-            overlay={
-              editing
-                ? (scale) => (
-                    <EditorOverlay
-                      ed={ed}
-                      scale={scale}
-                      onDropFile={async (file, at) => {
-                        const bytes = new Uint8Array(await file.arrayBuffer())
-                        const r = await importAsset({ bytes })
-                        if (!r) return
-                        // 이미지 블록 위에 놓으면 그 블록의 이미지로(블록마다 따로)
-                        const target = imageBlockAt(ed.theme, at)
-                        if (target) {
-                          ed.dispatch({
-                            type: 'block/props',
-                            id: target.id,
-                            patch: { assetHash: r.asset.hash },
-                          })
-                          ed.select({ kind: 'block', id: target.id })
-                          return
-                        }
-                        // 투명 영역이 있으면 스티커(잘리지 않게), 아니면 이미지
-                        addDecor(r.hasTransparency ? 'sticker' : 'image', r.asset, at)
-                      }}
-                    />
-                  )
-                : undefined
-            }
-          />
+          <div className="app-stage">
+            <Board
+              theme={theme}
+              assetUrl={assetUrl}
+              data={boardData}
+              actions={boardActions}
+              now={now}
+              mode={editing ? 'edit' : 'use'}
+              overlay={
+                editing
+                  ? (scale) => (
+                      <EditorOverlay
+                        ed={ed}
+                        scale={scale}
+                        incoming={incoming?.target}
+                        toCanvasRef={toCanvasRef}
+                        onDropFile={async (file, at) => {
+                          const bytes = new Uint8Array(await file.arrayBuffer())
+                          const r = await importAsset({ bytes })
+                          if (!r) return
+                          // 이미지 블록 위에 놓으면 그 블록의 이미지로(블록마다 따로)
+                          const target = imageBlockAt(ed.theme, at)
+                          if (target) {
+                            ed.dispatch({
+                              type: 'block/props',
+                              id: target.id,
+                              patch: { assetHash: r.asset.hash },
+                            })
+                            ed.select({ kind: 'block', id: target.id })
+                            return
+                          }
+                          // 투명 영역이 있으면 스티커(잘리지 않게), 아니면 이미지
+                          addDecor(r.hasTransparency ? 'sticker' : 'image', r.asset, at)
+                        }}
+                      />
+                    )
+                  : undefined
+              }
+            />
+          </div>
         )}
-        {editing && (
-          <Inspector
-            ed={ed}
-            pickImage={async () => (await importAsset({ dialog: true }))?.asset ?? null}
-            onDuplicate={duplicate}
-            onDelete={remove}
-            todoLists={user.lists}
-            memos={memos}
-            timetables={timetable.data}
-            otherThemes={others}
-          />
+        {editing && page === 'board' && (
+          <aside className="edit-panel" aria-label="편집">
+            <div className="edit-tabs" role="tablist" aria-label="편집 패널">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={panelTab === 'add'}
+                onClick={() => setPanelTab('add')}
+              >
+                위젯 추가
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={panelTab === 'settings'}
+                onClick={() => setPanelTab('settings')}
+              >
+                {ed.selection ? '설정' : '테마 설정'}
+              </button>
+            </div>
+            {panelTab === 'add' ? (
+              <WidgetGallery
+                env={previewEnv}
+                onPick={pickWidget}
+                onAddDecor={async (kind) => {
+                  const r = await importAsset({ dialog: true })
+                  if (r) addDecor(kind, r.asset)
+                }}
+              />
+            ) : (
+              <Inspector
+                ed={ed}
+                pickImage={async () => (await importAsset({ dialog: true }))?.asset ?? null}
+                onDuplicate={duplicate}
+                onDelete={remove}
+                todoLists={user.lists}
+                memos={memos}
+                timetables={timetable.data}
+                otherThemes={others}
+              />
+            )}
+          </aside>
+        )}
+        {incoming && (
+          <div
+            className="wg-drag"
+            style={{ left: incoming.client.x, top: incoming.client.y }}
+            aria-hidden
+          >
+            <WidgetPreview kind={incoming.kind} env={previewEnv} maxW={180} maxH={140} />
+          </div>
         )}
         {user.editing && !editing && (
           <EventDialog

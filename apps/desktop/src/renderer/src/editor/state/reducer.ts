@@ -20,7 +20,13 @@ import { clampPosition, MIN_ITEM_SIZE } from './geometry'
  * 스키마 전체 검증은 저장 직전에 한 번 더 한다(여기서는 그리드/범위 규칙만 즉시 지킨다).
  */
 export type EditorAction =
-  | { type: 'block/add'; block: { type: GridBlock['type']; size: GridBlock['size'] }; id: string }
+  | {
+      type: 'block/add'
+      block: { type: GridBlock['type']; size: GridBlock['size'] }
+      id: string
+      /** 놓을 칸(갤러리에서 끌어 놓기). 없으면 빈 자리를 찾는다. */
+      at?: { col: number; row: number }
+    }
   | { type: 'block/move'; id: string; col: number; row: number }
   | { type: 'block/resize'; id: string; size: GridBlock['size'] }
   | { type: 'block/delete'; id: string }
@@ -101,6 +107,11 @@ export function reduce(t: Theme, a: EditorAction): ReduceResult {
       const probe = newBlock(a.block.type, a.block.size, a.id, 0, 0)
       const rect = blockRect(probe)
       if (!rect) return fail('size_not_allowed')
+      if (a.at) {
+        const r = { ...rect, ...a.at }
+        if (!canPlace(CANVAS, gridItems(t.blocks), r)) return fail('collision')
+        return ok({ ...t, blocks: [...t.blocks, { ...probe, ...a.at }] })
+      }
       const slot = findFreeSlot(CANVAS, gridItems(t.blocks), { w: rect.w, h: rect.h })
       if (!slot) return fail('no_space')
       return ok({ ...t, blocks: [...t.blocks, { ...probe, ...slot }] })

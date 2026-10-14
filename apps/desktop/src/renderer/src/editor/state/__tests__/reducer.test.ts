@@ -30,6 +30,15 @@ describe('그리드 블록', () => {
     expect(t.blocks.at(-1)).toMatchObject({ id: U(9), col: 6, row: 1 })
     expect(valid(t)).toBe(true)
   })
+  it('놓을 칸을 주면 그 칸에, 겹치거나 밖이면 collision', () => {
+    const add = (at: { col: number; row: number }) =>
+      ({ type: 'block/add', block: { type: 'timer', size: 'S' }, id: U(9), at }) as const
+    const t = run(base(), add({ col: 2, row: 4 }))
+    expect(t.blocks.at(-1)).toMatchObject({ id: U(9), col: 2, row: 4 })
+    expect(valid(t)).toBe(true)
+    expect(err(base(), add({ col: 0, row: 1 }))).toBe('collision') // 캘린더 자리
+    expect(err(base(), add({ col: 7, row: 4 }))).toBe('collision') // 2칸이라 밖으로 나감
+  })
   it('자리가 없으면 no_space', () => {
     let t = base()
     for (let i = 0; i < 20; i++) {

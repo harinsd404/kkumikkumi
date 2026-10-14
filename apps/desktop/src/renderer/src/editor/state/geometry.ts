@@ -1,5 +1,5 @@
 import { CANVAS, type FreeItem } from '@kkumikkumi/schema'
-import { BOARD_PADDING, pitchX, pitchY } from '../../board/layout'
+import { BOARD_GAP, BOARD_PADDING, pitchX, pitchY } from '../../board/layout'
 
 export interface Point {
   x: number
@@ -23,6 +23,17 @@ export function snapToCell(
     col: Math.min(Math.max(col, 0), CANVAS.cols - w),
     row: Math.min(Math.max(row, 0), CANVAS.rows - h),
   }
+}
+
+/**
+ * 갤러리에서 끌어 온 블록(w×h 칸)을 놓을 칸. 커서가 블록 가운데에 오도록 맞춘다.
+ * 커서가 캔버스 밖이면 null(놓지 않음).
+ */
+export function dropCell(p: Point, w: number, h: number): { col: number; row: number } | null {
+  if (p.x < 0 || p.y < 0 || p.x > CANVAS.width || p.y > CANVAS.height) return null
+  const width = w * pitchX - BOARD_GAP
+  const height = h * pitchY - BOARD_GAP
+  return snapToCell(p.x - width / 2, p.y - height / 2, w, h)
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi)

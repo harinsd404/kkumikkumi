@@ -8,7 +8,13 @@ import {
   type GridItem,
   type GridRect,
 } from '@kkumikkumi/schema'
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type RefObject,
+} from 'react'
 import { blockBox, type Box } from '../board/layout'
 import {
   resizeFromCorner,
@@ -19,10 +25,17 @@ import {
 } from './state/geometry'
 import type { EditorApi } from './useEditor'
 
+/** 화면 좌표 → 캔버스 좌표(갤러리에서 끌어 올 때 부모가 쓴다) */
+export type ToCanvas = (client: { clientX: number; clientY: number }) => Point
+
 interface Props {
   ed: EditorApi
   scale: number
   onDropFile(file: File, at: Point): void
+  /** 갤러리에서 끌어 오는 중인 블록이 놓일 자리 */
+  incoming?: { rect: GridRect; valid: boolean } | null | undefined
+  /** 이 레이어의 좌표 변환을 부모에게 알려 준다 */
+  toCanvasRef?: RefObject<ToCanvas | null> | undefined
 }
 
 const DRAG_THRESHOLD = 3
@@ -43,7 +56,7 @@ function track(onMove: (e: PointerEvent) => void, onUp: (e: PointerEvent) => voi
 }
 
 /** 편집 모드 레이어: 그리드 안내선, 선택/드래그/핸들, 파일 드롭. 캔버스 좌표계 안에서 그려진다. */
-export function EditorOverlay({ ed, scale, onDropFile }: Props) {
+export function EditorOverlay({ ed, scale, onDropFile, incoming, toCanvasRef }: Props) {
   const root = useRef<HTMLDivElement>(null)
   const [ghost, setGhost] = useState<{ rect: GridRect; from: Box; at: Box; valid: boolean } | null>(
     null,
@@ -55,6 +68,17 @@ export function EditorOverlay({ ed, scale, onDropFile }: Props) {
     const r = root.current!.getBoundingClientRect()
     return { x: (e.clientX - r.left) / scale, y: (e.clientY - r.top) / scale }
   }
+
+  useLayoutEffect(() => {
+    if (!toCanvasRef) return
+    toCanvasRef.current = (c) => {
+      const r = root.current!.getBoundingClientRect()
+      return { x: (c.clientX - r.left) / scale, y: (c.clientY - r.top) / scale }
+    }
+    return () => {
+      toCanvasRef.current = null
+    }
+  }, [toCanvasRef, scale])
 
   const items: GridItem[] = t.blocks.flatMap((b) => {
     const r = blockRect(b)
@@ -245,6 +269,12 @@ export function EditorOverlay({ ed, scale, onDropFile }: Props) {
         )
       })}
       {front.map(freeHit)}
+      {incoming && (
+        <div
+          className={`ke-ghost ${incoming.valid ? 'is-valid' : 'is-invalid'}`}
+          style={{ ...blockBox(incoming.rect), borderWidth: px(2) }}
+        />
+      )}
       {ghost && (
         <>
           <div

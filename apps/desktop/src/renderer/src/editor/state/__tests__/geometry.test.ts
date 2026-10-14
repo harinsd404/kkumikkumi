@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { blockBox } from '../../../board/layout'
 import {
   clampPosition,
+  dropCell,
   MIN_ITEM_SIZE,
   MIN_VISIBLE,
   resizeFromCorner,
@@ -10,6 +11,22 @@ import {
 } from '../geometry'
 
 const box = { x: 100, y: 100, w: 200, h: 100, rotation: 0 }
+
+describe('dropCell', () => {
+  it('커서가 블록 가운데에 오는 칸', () => {
+    const b = blockBox({ col: 3, row: 2, w: 2, h: 2 })
+    const center = { x: b.left + b.width / 2, y: b.top + b.height / 2 }
+    expect(dropCell(center, 2, 2)).toEqual({ col: 3, row: 2 })
+  })
+  it('가장자리 근처면 그리드 안으로 당긴다', () => {
+    expect(dropCell({ x: 5, y: 5 }, 4, 3)).toEqual({ col: 0, row: 0 })
+    expect(dropCell({ x: 1595, y: 995 }, 4, 3)).toEqual({ col: 4, row: 2 })
+  })
+  it('캔버스 밖이면 null', () => {
+    expect(dropCell({ x: -1, y: 10 }, 2, 2)).toBeNull()
+    expect(dropCell({ x: 10, y: 1001 }, 2, 2)).toBeNull()
+  })
+})
 
 describe('snapToCell', () => {
   it('칸 위치를 그대로 돌려준다(왕복)', () => {

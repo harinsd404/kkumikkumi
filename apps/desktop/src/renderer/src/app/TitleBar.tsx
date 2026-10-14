@@ -1,17 +1,13 @@
 import type { ThemePresetId } from '@kkumikkumi/schema'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import chevronDownUrl from '../board/icons/chevron-down.svg'
 import redoUrl from '../board/icons/redo.svg'
 import undoUrl from '../board/icons/undo.svg'
 import { maskCss } from '../board/style'
 import type { SaveStatus } from '../editor/state/autosave'
 
+/** 편집 중 타이틀바 도구(위젯·꾸미기 추가는 편집 패널의 갤러리에서) */
 export interface EditTools {
-  onAddBlock(
-    type: 'calendar' | 'todo' | 'timer' | 'image' | 'memo' | 'timetable',
-    size: 'S' | 'M' | 'L' | 'W',
-  ): void
-  onAddDecor(kind: 'image' | 'sticker'): void
   onUndo(): void
   onRedo(): void
   canUndo: boolean
@@ -48,26 +44,6 @@ interface Props {
   tools?: EditTools
   nav?: PageNav
 }
-
-const BLOCK_MENU = [
-  { type: 'calendar', size: 'L', label: '캘린더 · 월간 (4×3)' },
-  { type: 'calendar', size: 'M', label: '캘린더 · 미니 (2×2)' },
-  { type: 'todo', size: 'S', label: '투두 · 작게 (2×2)' },
-  { type: 'todo', size: 'M', label: '투두 · 길게 (2×3)' },
-  { type: 'todo', size: 'L', label: '투두 · 크게 (4×3)' },
-  { type: 'timer', size: 'S', label: '타이머 · 작게 (2×1)' },
-  { type: 'timer', size: 'M', label: '타이머 · 크게 (2×2)' },
-  { type: 'memo', size: 'S', label: '메모 · 작게 (2×2)' },
-  { type: 'memo', size: 'M', label: '메모 · 길게 (2×3)' },
-  { type: 'memo', size: 'L', label: '메모 · 크게 (4×3)' },
-  { type: 'timetable', size: 'S', label: '시간표 · 오늘 (2×2)' },
-  { type: 'timetable', size: 'M', label: '시간표 · 오늘 길게 (2×3)' },
-  { type: 'timetable', size: 'L', label: '시간표 · 한 주 (4×3)' },
-  { type: 'image', size: 'S', label: '이미지 · 가로 (2×1)' },
-  { type: 'image', size: 'M', label: '이미지 · 정사각 (2×2)' },
-  { type: 'image', size: 'L', label: '이미지 · 크게 (4×3)' },
-  { type: 'image', size: 'W', label: '이미지 · 배너 (8×1)' },
-] as const
 
 const statusText = (s: SaveStatus): string => {
   switch (s.state) {
@@ -108,43 +84,6 @@ export function TitleBar({ themeName, themeMenu, editing, onToggleEdit, tools, n
         )}
         {editing && tools && (
           <>
-            <Menu label="+ 블록">
-              {(close) =>
-                BLOCK_MENU.map((m) => (
-                  <button
-                    key={`${m.type}-${m.size}`}
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      close()
-                      tools.onAddBlock(m.type, m.size)
-                    }}
-                  >
-                    {m.label}
-                  </button>
-                ))
-              }
-            </Menu>
-            <Menu label="+ 꾸미기">
-              {(close) => (
-                <>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => (close(), tools.onAddDecor('image'))}
-                  >
-                    이미지 (사진, 잘라서 채움)
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => (close(), tools.onAddDecor('sticker'))}
-                  >
-                    스티커 (투명 PNG 권장)
-                  </button>
-                </>
-              )}
-            </Menu>
             <button
               type="button"
               className="tb-btn tb-icon"
@@ -187,28 +126,6 @@ export function TitleBar({ themeName, themeMenu, editing, onToggleEdit, tools, n
         )}
       </div>
     </header>
-  )
-}
-
-function Menu({ label, children }: { label: string; children(close: () => void): ReactNode }) {
-  const [open, setOpen, ref] = useClosable()
-  return (
-    <div className="tb-menu" ref={ref}>
-      <button
-        type="button"
-        className="tb-btn"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-      >
-        {label}
-      </button>
-      {open && (
-        <div className="tb-menu-list" role="menu">
-          {children(() => setOpen(false))}
-        </div>
-      )}
-    </div>
   )
 }
 

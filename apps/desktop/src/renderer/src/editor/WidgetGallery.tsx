@@ -1,0 +1,196 @@
+import { blockCells, newBlock, type GridBlock, type Theme } from '@kkumikkumi/schema'
+import { useMemo } from 'react'
+import { BlockView } from '../board/BlockView'
+import { BoardProvider, type BoardContextValue, type BoardData } from '../board/BoardContext'
+import { blockBox } from '../board/layout'
+
+export type WidgetKind = { type: GridBlock['type']; size: GridBlock['size'] }
+
+/** 갤러리 목록: 종류별로 고를 수 있는 크기와 짧은 이름 */
+const GALLERY: readonly {
+  type: GridBlock['type']
+  label: string
+  sizes: readonly { size: GridBlock['size']; label: string }[]
+}[] = [
+  {
+    type: 'calendar',
+    label: '캘린더',
+    sizes: [
+      { size: 'M', label: '미니' },
+      { size: 'L', label: '월간' },
+    ],
+  },
+  {
+    type: 'todo',
+    label: '할 일',
+    sizes: [
+      { size: 'S', label: '작게' },
+      { size: 'M', label: '길게' },
+      { size: 'L', label: '크게' },
+    ],
+  },
+  {
+    type: 'timer',
+    label: '타이머',
+    sizes: [
+      { size: 'S', label: '작게' },
+      { size: 'M', label: '크게' },
+    ],
+  },
+  {
+    type: 'memo',
+    label: '메모',
+    sizes: [
+      { size: 'S', label: '작게' },
+      { size: 'M', label: '길게' },
+      { size: 'L', label: '크게' },
+    ],
+  },
+  {
+    type: 'timetable',
+    label: '시간표',
+    sizes: [
+      { size: 'S', label: '오늘' },
+      { size: 'M', label: '오늘 길게' },
+      { size: 'L', label: '한 주' },
+    ],
+  },
+  {
+    type: 'image',
+    label: '이미지',
+    sizes: [
+      { size: 'S', label: '가로' },
+      { size: 'M', label: '정사각' },
+      { size: 'L', label: '크게' },
+      { size: 'W', label: '배너' },
+    ],
+  },
+]
+
+/** 미리보기 상자의 최대 크기(화면 px) */
+const MAX_W = 244
+const MAX_H = 170
+
+interface PreviewEnv {
+  theme: Theme
+  data: BoardData
+  assetUrl(hash: string): string | null
+  now: Date
+}
+
+/**
+ * 위젯 실제 미리보기: 지금 테마와 데이터로 블록을 그려 작게 줄인다. 안의 버튼은 눌리지 않는다.
+ * maxW/maxH 안에 들어가게 균일 스케일.
+ */
+export function WidgetPreview({
+  kind,
+  env,
+  maxW = MAX_W,
+  maxH = MAX_H,
+}: {
+  kind: WidgetKind
+  env: PreviewEnv
+  maxW?: number
+  maxH?: number
+}) {
+  const cells = blockCells(kind.type, kind.size)
+  const ctx = useMemo<BoardContextValue>(
+    () => ({
+      mode: 'edit',
+      theme: env.theme,
+      assetUrl: env.assetUrl,
+      data: env.data,
+      actions: undefined,
+      now: env.now,
+    }),
+    [env.theme, env.assetUrl, env.data, env.now],
+  )
+  if (!cells) return null
+  const block = newBlock(kind.type, kind.size, 'preview', 0, 0)
+  const box = blockBox({ col: 0, row: 0, ...cells })
+  const scale = Math.min(maxW / box.width, maxH / box.height)
+  return (
+    <div
+      className="wg-frame"
+      style={{ width: box.width * scale, height: box.height * scale }}
+      aria-hidden
+    >
+      <div
+        className="kb-canvas wg-canvas"
+        style={{ width: box.width, height: box.height, transform: `scale(${scale})` }}
+      >
+        <BoardProvider value={ctx}>
+          <BlockView block={block} box={{ ...box, left: 0, top: 0 }} />
+        </BoardProvider>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * 위젯 추가 갤러리(애플 위젯 편집 방식). 누르면 빈 자리에 추가, 보드로 끌면 그 칸에 추가.
+ * 끌기는 부모(BoardScreen)가 처리한다: onPick(kind, 누른 이벤트).
+ */
+export function WidgetGallery({
+  env,
+  onPick,
+  onAddDecor,
+}: {
+  env: PreviewEnv
+  /** 위젯을 누르기 시작했다(누르기/끌기 판정은 부모가). 키보드로 고르면 start는 null(바로 추가). */
+  onPick(kind: WidgetKind, start: { clientX: number; clientY: number } | null): void
+  onAddDecor(kind: 'image' | 'sticker'): void
+}) {
+  return (
+    <div className="wg">
+      <p className="wg-hint">누르면 빈 자리에 넣고, 보드로 끌어 놓으면 그 자리에 넣어요.</p>
+      {GALLERY.map((g) => (
+        <section key={g.type} className="wg-group" aria-label={g.label}>
+          <h3 className="wg-title">{g.label}</h3>
+          <div className="wg-items">
+            {g.sizes.map((s) => {
+              const cells = blockCells(g.type, s.size)!
+              const kind = { type: g.type, size: s.size }
+              return (
+                <button
+                  key={s.size}
+                  type="button"
+                  className="wg-item"
+                  aria-label={`${g.label} ${s.label} (${cells.w}×${cells.h}) 추가`}
+                  onPointerDown={(e) => {
+                    if (e.button === 0) onPick(kind, { clientX: e.clientX, clientY: e.clientY })
+                  }}
+                  onKeyDown={(e) => {
+                    // 키보드: Enter/Space로 빈 자리에 추가(끌기 없이)
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      onPick(kind, null)
+                    }
+                  }}
+                >
+                  <WidgetPreview kind={kind} env={env} />
+                  <span className="wg-caption">
+                    {s.label} <span className="wg-cells">{`${cells.w}×${cells.h}`}</span>
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </section>
+      ))}
+      <section className="wg-group" aria-label="꾸미기">
+        <h3 className="wg-title">꾸미기</h3>
+        <div className="wg-decor">
+          <button type="button" className="wg-decor-btn" onClick={() => onAddDecor('image')}>
+            사진 넣기
+            <span>잘라서 채움</span>
+          </button>
+          <button type="button" className="wg-decor-btn" onClick={() => onAddDecor('sticker')}>
+            스티커 넣기
+            <span>투명 PNG 권장</span>
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
