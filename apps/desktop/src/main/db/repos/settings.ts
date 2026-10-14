@@ -1,12 +1,15 @@
 import {
   DEFAULT_MINI_TIMER,
   DEFAULT_POMODORO,
+  DEFAULT_TIMETABLE,
   MiniTimerPrefsSchema,
   PomodoroSettingsSchema,
   SettingsSchema,
+  TimetableSettingsSchema,
   type MiniTimerPrefs,
   type PomodoroSettings,
   type Settings,
+  type TimetableSettings,
 } from '@kkumikkumi/schema'
 import type { Db } from '../connection'
 import type { Row } from './rows'
@@ -14,6 +17,7 @@ import type { Row } from './rows'
 const KEY = 'app'
 const POMODORO_KEY = 'pomodoro'
 const MINI_KEY = 'miniTimer'
+const TIMETABLE_KEY = 'timetable'
 
 /** 설정은 JSON 한 행으로 저장하고 읽을 때 SettingsSchema로 검증한다. */
 export class SettingsRepo {
@@ -70,6 +74,25 @@ export class SettingsRepo {
         'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
       )
       .run(MINI_KEY, JSON.stringify(s))
+    return s
+  }
+
+  /** 시간표 설정(없거나 손상됐으면 기본값) */
+  timetable(): TimetableSettings {
+    const r = this.db.prepare('SELECT value FROM settings WHERE key = ?').get(TIMETABLE_KEY) as
+      Row | undefined
+    if (!r) return DEFAULT_TIMETABLE
+    const p = TimetableSettingsSchema.safeParse(safeJson(String(r['value'])))
+    return p.success ? p.data : DEFAULT_TIMETABLE
+  }
+
+  saveTimetable(settings: TimetableSettings): TimetableSettings {
+    const s = TimetableSettingsSchema.parse(settings)
+    this.db
+      .prepare(
+        'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+      )
+      .run(TIMETABLE_KEY, JSON.stringify(s))
     return s
   }
 }

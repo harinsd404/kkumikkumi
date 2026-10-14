@@ -4,6 +4,7 @@ import { MemoRepo } from './memos'
 import { SettingsRepo } from './settings'
 import { ThemeRuleRepo } from './themeRules'
 import { TimerRepo } from './timer'
+import { TimetableRepo } from './timetable'
 import { TimerSessionRepo } from './timerSessions'
 import { TodoRepo } from './todo'
 import { WindowStateRepo } from './windowState'
@@ -14,6 +15,7 @@ export interface Repos {
   timer: TimerRepo
   timerSessions: TimerSessionRepo
   memos: MemoRepo
+  timetable: TimetableRepo
   themeRules: ThemeRuleRepo
   settings: SettingsRepo
   windowState: WindowStateRepo
@@ -26,11 +28,12 @@ export const createRepos = (db: Db): Repos => ({
   timer: new TimerRepo(db),
   timerSessions: new TimerSessionRepo(db),
   memos: new MemoRepo(db),
+  timetable: new TimetableRepo(db),
   themeRules: new ThemeRuleRepo(db),
   settings: new SettingsRepo(db),
   windowState: new WindowStateRepo(db),
   miniWindowState: new WindowStateRepo(db, 'miniWindow'),
 })
 
-export { NotFoundError } from './rows'
+export { ConflictError, NotFoundError } from './rows'
 export type { CalendarRange } from './calendar'

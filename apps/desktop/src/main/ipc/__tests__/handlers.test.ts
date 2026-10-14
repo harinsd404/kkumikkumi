@@ -334,6 +334,82 @@ describe('memos', () => {
   })
 })
 
+describe('timetable', () => {
+  const content = { subject: '국어', room: '', color: null }
+
+  it('기본 설정, 칸 채우기/고치기/지우기, 이미 채워진 칸은 conflict', async () => {
+    const t = await h['timetable.get'](undefined)
+    expect(t.settings.periods).toHaveLength(8)
+    expect(t.entries).toEqual([])
+    const a = await h['timetable.entries.create']({
+      slot: { kind: 'period', day: 0, period: 1 },
+      content,
+    })
+    expect(
+      await codeOf(
+        h['timetable.entries.create']({ slot: { kind: 'period', day: 0, period: 1 }, content }),
+      ),
+    ).toBe('conflict')
+    env.clock.now += 1000
+    const b = await h['timetable.entries.update']({ id: a.id, content: { room: '3-1' } })
+    expect(b).toMatchObject({ subject: '국어', room: '3-1', updatedAt: env.clock.now })
+    const moved = await h['timetable.entries.update']({
+      id: a.id,
+      slot: { kind: 'period', day: 2, period: 3 },
+    })
+    expect(moved.slot).toEqual({ kind: 'period', day: 2, period: 3 })
+    await h['timetable.entries.delete']({ id: a.id })
+    expect(await codeOf(h['timetable.entries.delete']({ id: a.id }))).toBe('not_found')
+  })
+
+  it('교시 수를 줄이면 뒤 교시 칸이 지워지고, 없는 교시는 거부', async () => {
+    await h['timetable.entries.create']({ slot: { kind: 'period', day: 0, period: 8 }, content })
+    await h['timetable.entries.create']({
+      slot: { kind: 'time', day: 0, start: '18:00', end: '19:00' },
+      content,
+    })
+    const periods = (await h['timetable.get'](undefined)).settings.periods.slice(0, 6)
+    const r = await h['timetable.settings.update']({ patch: { periods, showSat: true } })
+    expect(r.settings).toMatchObject({ showSat: true, mode: 'period' })
+    expect(r.entries.map((e) => e.slot.kind)).toEqual(['time'])
+    expect(
+      await codeOf(
+        h['timetable.entries.create']({ slot: { kind: 'period', day: 0, period: 7 }, content }),
+      ),
+    ).toBe('not_found')
+  })
+
+  it('잘못된 입력 거부', async () => {
+    const bad = [
+      h['timetable.entries.create']({
+        slot: { kind: 'time', day: 0, start: '10:00', end: '09:00' },
+        content,
+      }),
+      h['timetable.entries.create']({ slot: { kind: 'period', day: 7, period: 1 }, content }),
+      h['timetable.entries.create']({
+        slot: { kind: 'period', day: 0, period: 1 },
+        content: { ...content, subject: ' ' },
+      }),
+      h['timetable.entries.create']({
+        slot: { kind: 'period', day: 0, period: 1 },
+        content: { ...content, html: '<b>' },
+      }),
+      h['timetable.settings.update']({ patch: { periods: [{ start: '10:00', end: '09:00' }] } }),
+      h['timetable.settings.update']({ patch: { periods: [] } }),
+      h['timetable.settings.update']({
+        patch: {
+          periods: [
+            { start: '09:00', end: '10:00' },
+            { start: '09:30', end: '10:30' },
+          ],
+        },
+      }),
+      h['timetable.settings.update']({ patch: { mode: 'grid' } }),
+    ]
+    for (const p of bad) expect(await codeOf(p)).toBe('invalid_input')
+  })
+})
+
 describe('themeRules', () => {
   it('없는 테마를 가리키는 규칙은 거부', async () => {
     expect(await codeOf(h['themeRules.create']({ rule: anyRule(env.newId()) }))).toBe('not_found')

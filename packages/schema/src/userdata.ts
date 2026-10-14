@@ -7,7 +7,7 @@ import { EpochMs, HexColor, Uuid } from './theme'
  * ════════════════════════════════════════════════════════════ */
 
 export const DateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/) // 로컬 날짜 (타임존 무관)
-const TimeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+export const TimeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)
 
 const isValidTz = (tz: string) => {
   try {
@@ -50,6 +50,77 @@ export const MemoSchema = z.strictObject({
   id: Uuid,
   body: z.string().max(MEMO_MAX_CHARS),
   pinned: z.boolean(),
+  createdAt: EpochMs,
+  updatedAt: EpochMs,
+})
+
+/* ───────── 시간표 (하나, 교시/시간 두 방식) ───────── */
+
+export const TIMETABLE_MAX_PERIODS = 12
+/** 0=월 … 6=일 */
+export const Weekday = z.number().int().min(0).max(6)
+
+const PeriodTimeSchema = z.strictObject({ start: TimeOfDay, end: TimeOfDay })
+
+export const TimetableSettingsSchema = z
+  .strictObject({
+    /** 보드 블록과 페이지가 보여 줄 방식. 두 방식의 항목은 따로 저장된다. */
+    mode: z.enum(['period', 'time']),
+    showSat: z.boolean(),
+    showSun: z.boolean(),
+    /** i번째 = (i+1)교시 */
+    periods: z.array(PeriodTimeSchema).min(1).max(TIMETABLE_MAX_PERIODS),
+  })
+  .superRefine((t, ctx) => {
+    t.periods.forEach((p, i) => {
+      if (p.start >= p.end)
+        ctx.addIssue({ code: 'custom', path: ['periods', i], message: '끝이 시작보다 빠름' })
+      const prev = t.periods[i - 1]
+      if (prev && p.start < prev.end)
+        ctx.addIssue({ code: 'custom', path: ['periods', i], message: '앞 교시와 겹침' })
+    })
+  })
+
+export const DEFAULT_TIMETABLE: z.infer<typeof TimetableSettingsSchema> = {
+  mode: 'period',
+  showSat: false,
+  showSun: false,
+  periods: [
+    { start: '08:40', end: '09:30' },
+    { start: '09:40', end: '10:30' },
+    { start: '10:40', end: '11:30' },
+    { start: '11:40', end: '12:30' },
+    { start: '13:30', end: '14:20' },
+    { start: '14:30', end: '15:20' },
+    { start: '15:30', end: '16:20' },
+    { start: '16:30', end: '17:20' },
+  ],
+}
+
+/** 시간표 칸/항목의 내용(id와 시각 정보 제외) */
+export const TimetableContentSchema = z.strictObject({
+  subject: z.string().trim().min(1).max(40),
+  room: z.string().trim().max(40),
+  /** null = 과목 이름으로 자동 */
+  color: HexColor.nullable(),
+})
+
+/** 교시 칸(같은 요일·교시에 하나) 또는 시간 항목(시작 < 끝) */
+export const TimetableSlotSchema = z.discriminatedUnion('kind', [
+  z.strictObject({
+    kind: z.literal('period'),
+    day: Weekday,
+    period: z.number().int().min(1).max(TIMETABLE_MAX_PERIODS),
+  }),
+  z
+    .strictObject({ kind: z.literal('time'), day: Weekday, start: TimeOfDay, end: TimeOfDay })
+    .refine((s) => s.start < s.end, '끝이 시작보다 빠름'),
+])
+
+export const TimetableEntrySchema = z.strictObject({
+  id: Uuid,
+  slot: TimetableSlotSchema,
+  ...TimetableContentSchema.shape,
   createdAt: EpochMs,
   updatedAt: EpochMs,
 })
@@ -219,6 +290,10 @@ export type MiniTimerPrefs = z.infer<typeof MiniTimerPrefsSchema>
 export type TodoList = z.infer<typeof TodoListSchema>
 export type TodoItem = z.infer<typeof TodoItemSchema>
 export type Memo = z.infer<typeof MemoSchema>
+export type TimetableSettings = z.infer<typeof TimetableSettingsSchema>
+export type TimetableSlot = z.infer<typeof TimetableSlotSchema>
+export type TimetableContent = z.infer<typeof TimetableContentSchema>
+export type TimetableEntry = z.infer<typeof TimetableEntrySchema>
 export type CalendarEvent = z.infer<typeof CalendarEventSchema>
 export type TimerState = z.infer<typeof TimerStateSchema>
 export type PomodoroSettings = z.infer<typeof PomodoroSettingsSchema>

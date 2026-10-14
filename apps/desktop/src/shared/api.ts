@@ -10,6 +10,10 @@ import type {
   ThemeRule,
   TimerSession,
   TimerState,
+  TimetableContent,
+  TimetableEntry,
+  TimetableSettings,
+  TimetableSlot,
   TodoItem,
   TodoList,
 } from '@kkumikkumi/schema'
@@ -111,6 +115,19 @@ export interface IpcSpec {
   /** 고정만 바꾸면 updatedAt은 그대로(수정 순서가 흔들리지 않게) */
   'memos.update': { in: { id: string; patch: { body?: string; pinned?: boolean } }; out: Memo }
   'memos.delete': { in: Id; out: null }
+  'timetable.get': { in: undefined; out: TimetableData }
+  /** 교시 수를 줄이면 뒤 교시 칸은 함께 지워진다(renderer가 먼저 확인). 결과는 전체 다시 읽기. */
+  'timetable.settings.update': { in: { patch: Partial<TimetableSettings> }; out: TimetableData }
+  /** 이미 채워진 교시 칸이면 conflict */
+  'timetable.entries.create': {
+    in: { slot: TimetableSlot; content: TimetableContent }
+    out: TimetableEntry
+  }
+  'timetable.entries.update': {
+    in: { id: string; slot?: TimetableSlot; content?: Partial<TimetableContent> }
+    out: TimetableEntry
+  }
+  'timetable.entries.delete': { in: Id; out: null }
   'themeRules.list': { in: undefined; out: ThemeRule[] }
   'themeRules.create': {
     in: { rule: Omit<ThemeRule, 'id' | 'createdAt' | 'updatedAt'> }
@@ -127,6 +144,11 @@ type _Exhaustive = Channel extends keyof IpcSpec
     : never
   : never
 export const _ipcSpecIsExhaustive: _Exhaustive = true
+
+export interface TimetableData {
+  settings: TimetableSettings
+  entries: TimetableEntry[]
+}
 
 export interface TimerDoneInfo {
   mode: TimerMode

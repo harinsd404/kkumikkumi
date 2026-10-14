@@ -14,11 +14,13 @@ import { EventDialog } from './EventDialog'
 import { PHASE_LABEL } from '../../../shared/pomodoro'
 import { CalendarPage } from '../pages/CalendarPage'
 import { MemoPage } from '../pages/MemoPage'
+import { TimetablePage } from '../pages/TimetablePage'
 import { TimerPage } from '../pages/TimerPage'
 import { TodoPage } from '../pages/TodoPage'
 import { themeVars } from './themeVars'
 import { TitleBar, type AppPage, type PageNav } from './TitleBar'
 import { useMemos } from './useMemos'
+import { useTimetable } from './useTimetable'
 import { useUserData } from './useUserData'
 
 /** 구현된 화면(세부 페이지는 단계별로 추가) */
@@ -28,6 +30,7 @@ const PAGES: PageNav['pages'] = [
   { id: 'calendar', label: '캘린더' },
   { id: 'timer', label: '타이머' },
   { id: 'memo', label: '메모' },
+  { id: 'timetable', label: '시간표' },
 ]
 
 const ASSET_ERRORS: Record<string, string> = {
@@ -53,6 +56,7 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
   const ed = useEditor(initialTheme, { save: saveTheme })
   const user = useUserData(ed.showNotice)
   const memos = useMemos(ed.showNotice)
+  const timetable = useTimetable(ed.showNotice)
   const now = useMinuteClock()
   const [editing, setEditing] = useState(false)
   const [page, setPage] = useState<AppPage>('board')
@@ -250,6 +254,11 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
         {page === 'memo' && (
           <div className="app-page" style={themeVars(theme)}>
             <MemoPage store={memos} initialId={memoOpen} now={now} />
+          </div>
+        )}
+        {page === 'timetable' && (
+          <div className="app-page" style={themeVars(theme)}>
+            <TimetablePage store={timetable} now={now} />
           </div>
         )}
         {page === 'board' && (

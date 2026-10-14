@@ -22,6 +22,7 @@ describe('migrate', () => {
       'theme_rules',
       'timer_sessions',
       'timer_state',
+      'timetable_entries',
       'todo_items',
       'todo_lists',
     ])

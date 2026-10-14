@@ -1,7 +1,7 @@
 import { ZodError } from 'zod'
 import { AssetError } from '../assets/pipeline'
 import { FutureDbVersionError } from '../db/migrate'
-import { NotFoundError } from '../db/repos'
+import { ConflictError, NotFoundError } from '../db/repos'
 import { ThemeStoreError } from '../themes/themeStore'
 
 /**
@@ -12,6 +12,7 @@ export function toErrorCode(err: unknown): string {
   if (err instanceof ThemeStoreError) return err.code
   if (err instanceof AssetError) return err.code
   if (err instanceof NotFoundError) return 'not_found'
+  if (err instanceof ConflictError) return 'conflict'
   if (err instanceof FutureDbVersionError) return 'future_db_version'
   return 'internal'
 }

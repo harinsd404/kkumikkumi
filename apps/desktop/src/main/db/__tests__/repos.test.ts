@@ -1,7 +1,9 @@
 import {
   DEFAULT_POMODORO,
+  DEFAULT_TIMETABLE,
   type CalendarEvent,
   type Memo,
+  type TimetableEntry,
   type Settings,
   type ThemeRule,
   type TimerState,
@@ -12,7 +14,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { openDb, type Db } from '../connection'
 import { migrate } from '../migrate'
 import { migrations } from '../migrations'
-import { createRepos, NotFoundError, type Repos } from '../repos'
+import { ConflictError, createRepos, NotFoundError, type Repos } from '../repos'
 
 const U = (n: number) => `00000000-0000-7000-8000-${String(n).padStart(12, '0')}`
 
@@ -259,6 +261,58 @@ describe('MemoRepo', () => {
   it('너무 긴 본문은 저장하지 않는다', () => {
     expect(() => repos.memos.insert(memo(1, { body: 'a'.repeat(20001) }))).toThrow()
     expect(repos.memos.list()).toEqual([])
+  })
+})
+
+describe('TimetableRepo / 시간표 설정', () => {
+  const entry = (n: number, slot: TimetableEntry['slot']): TimetableEntry => ({
+    id: U(400 + n),
+    slot,
+    subject: `과목${n}`,
+    room: '',
+    color: null,
+    createdAt: n,
+    updatedAt: n,
+  })
+
+  it('교시 칸과 시간 항목을 저장/복원한다', () => {
+    const a = repos.timetable.insert(entry(1, { kind: 'period', day: 0, period: 2 }))
+    const b = repos.timetable.insert(
+      entry(2, { kind: 'time', day: 4, start: '09:00', end: '10:30' }),
+    )
+    expect(repos.timetable.list()).toEqual([a, b])
+    expect(repos.timetable.get(b.id)).toEqual(b)
+  })
+
+  it('같은 요일·교시 칸은 하나만(ConflictError), 자기 자신으로 고치기는 허용', () => {
+    const a = repos.timetable.insert(entry(1, { kind: 'period', day: 1, period: 1 }))
+    expect(() => repos.timetable.insert(entry(2, { kind: 'period', day: 1, period: 1 }))).toThrow(
+      ConflictError,
+    )
+    expect(repos.timetable.update({ ...a, subject: '수학', updatedAt: 5 }).subject).toBe('수학')
+    // 시간 항목은 겹쳐도 된다
+    repos.timetable.insert(entry(3, { kind: 'time', day: 1, start: '09:00', end: '10:00' }))
+    repos.timetable.insert(entry(4, { kind: 'time', day: 1, start: '09:00', end: '10:00' }))
+    expect(repos.timetable.list()).toHaveLength(3)
+  })
+
+  it('뒤 교시 지우기, 없는 항목은 NotFoundError, 잘못된 시각 거부', () => {
+    repos.timetable.insert(entry(1, { kind: 'period', day: 0, period: 7 }))
+    repos.timetable.insert(entry(2, { kind: 'period', day: 0, period: 8 }))
+    repos.timetable.insert(entry(3, { kind: 'time', day: 0, start: '20:00', end: '21:00' }))
+    expect(repos.timetable.deletePeriodsAfter(7)).toBe(1)
+    expect(repos.timetable.list()).toHaveLength(2)
+    expect(() => repos.timetable.delete(U(499))).toThrow(NotFoundError)
+    expect(() =>
+      repos.timetable.insert(entry(5, { kind: 'time', day: 0, start: '10:00', end: '09:00' })),
+    ).toThrow()
+  })
+
+  it('설정: 없으면 기본값, 저장/복원', () => {
+    expect(repos.settings.timetable()).toEqual(DEFAULT_TIMETABLE)
+    const s = { ...DEFAULT_TIMETABLE, mode: 'time' as const, showSat: true }
+    repos.settings.saveTimetable(s)
+    expect(repos.settings.timetable()).toEqual(s)
   })
 })
 

@@ -12,3 +12,11 @@ export class NotFoundError extends Error {
     this.name = 'NotFoundError'
   }
 }
+
+/** 고유 제약 충돌(예: 이미 채워진 시간표 칸) */
+export class ConflictError extends Error {
+  constructor(readonly entity: string) {
+    super(`${entity} 충돌`)
+    this.name = 'ConflictError'
+  }
+}

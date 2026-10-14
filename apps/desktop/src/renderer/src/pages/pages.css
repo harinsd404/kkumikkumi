@@ -930,3 +930,236 @@
   gap: 12px;
   flex: 1;
 }
+
+/* ── 시간표 ── */
+.pg-tt {
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+.tt-main {
+  min-width: 0;
+}
+.tt-table {
+  display: grid;
+  grid-auto-rows: minmax(52px, 1fr);
+  grid-template-rows: auto;
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.tt-dayhead {
+  padding: 4px 0;
+  border-radius: 10px;
+  color: var(--t-sub);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+.tt-dayhead.is-today {
+  background: var(--t-control);
+  color: inherit;
+}
+.tt-rowhead {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  font-size: 13px;
+}
+.tt-rowhead span {
+  color: var(--t-sub);
+  font-size: 12px;
+}
+.tt-cell,
+.tt-block {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--t-surface);
+  color: #3a2f2a;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.tt-cell:not(.is-filled):hover {
+  outline: 1.5px dashed var(--t-sub);
+}
+.tt-cell.is-selected,
+.tt-block.is-selected {
+  outline: 2.5px solid var(--t-text);
+  outline-offset: 1px;
+}
+.tt-cell.is-now,
+.tt-block.is-now {
+  box-shadow: 0 0 0 3px var(--t-accent);
+}
+.tt-cell:focus-visible,
+.tt-block:focus-visible {
+  outline: 2px solid var(--t-accent);
+}
+.tt-subject,
+.tt-room {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tt-subject {
+  font-size: 15px;
+  font-weight: 700;
+}
+.tt-room {
+  font-size: 12px;
+  opacity: 0.75;
+}
+.tt-time {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+.tt-time-head,
+.tt-time-body {
+  display: grid;
+  gap: 0 4px;
+}
+.tt-time-head,
+.tt-scroll {
+  overflow-y: hidden;
+  scrollbar-gutter: stable;
+}
+.tt-time-head {
+  padding-bottom: 6px;
+}
+.tt-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.tt-time-body {
+  position: relative;
+  padding-top: 8px;
+  box-sizing: content-box;
+}
+.tt-hours {
+  position: relative;
+}
+.tt-hours span {
+  position: absolute;
+  right: 8px;
+  color: var(--t-sub);
+  font-size: 11px;
+  transform: translateY(-50%);
+}
+.tt-col {
+  position: relative;
+  border-left: 1px solid var(--t-control);
+  background-image: linear-gradient(to bottom, var(--t-control) 1px, transparent 1px);
+  cursor: cell;
+}
+.tt-col.is-today {
+  background-color: color-mix(in srgb, var(--t-surface) 60%, transparent);
+}
+.tt-block {
+  position: absolute;
+  justify-content: flex-start;
+  padding: 4px 6px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.tt-block .tt-subject {
+  font-size: 13px;
+}
+.tt-block .tt-room {
+  font-size: 11px;
+}
+.tt-nowline {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: var(--t-accent);
+  pointer-events: none;
+}
+.tt-side {
+  overflow-y: auto;
+}
+.tt-editor,
+.tt-periods,
+.tt-help {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.tt-sub {
+  margin: -6px 0 0;
+  color: var(--t-sub);
+  font-size: 13px;
+}
+.tt-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tt-swatch {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.tt-swatch.is-auto {
+  width: auto;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: #3a2f2a;
+  font: inherit;
+  font-size: 12px;
+}
+.tt-swatch[aria-checked='true'] {
+  outline: 2.5px solid var(--t-text);
+  outline-offset: 2px;
+}
+.tt-error {
+  margin: 0;
+  color: #c0392b;
+  font-size: 13px;
+}
+.tt-period-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tt-period-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tt-period-list li.is-bad .pg-input {
+  border-bottom-color: #c0392b;
+}
+.tt-period-n {
+  flex: none;
+  width: 44px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.tt-period-list .pg-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+}
+/* 좁은 칸에서 시각이 잘리지 않게 시계 아이콘은 숨긴다(키보드/숫자 입력은 그대로) */
+.tt-period-list .pg-input::-webkit-calendar-picker-indicator {
+  display: none;
+}

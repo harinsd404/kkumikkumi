@@ -9,6 +9,10 @@ import {
   ThemeRuleSchema,
   ThemeSchema,
   TimerStateSchema,
+  TimetableContentSchema,
+  TimetableEntrySchema,
+  TimetableSettingsSchema,
+  TimetableSlotSchema,
   TodoItemSchema,
   TodoListSchema,
   Uuid,
@@ -432,6 +436,73 @@ export function createHandlers(d: HandlerDeps): Handlers {
     },
     'memos.delete': async (i) => {
       repos.memos.delete(IdIn.parse(i).id)
+      return null
+    },
+
+    /* ── 시간표 ── */
+    'timetable.get': async (i) => {
+      NoInput.parse(i)
+      return { settings: repos.settings.timetable(), entries: repos.timetable.list() }
+    },
+    'timetable.settings.update': async (i) => {
+      const { patch } = z
+        .strictObject({
+          patch: z
+            .strictObject({
+              mode: z.enum(['period', 'time']),
+              showSat: z.boolean(),
+              showSun: z.boolean(),
+              periods: z.array(z.unknown()),
+            })
+            .partial(),
+        })
+        .parse(i)
+      const next = TimetableSettingsSchema.parse({ ...repos.settings.timetable(), ...patch })
+      transaction(d.db, () => {
+        repos.timetable.deletePeriodsAfter(next.periods.length)
+        repos.settings.saveTimetable(next)
+      })
+      return { settings: next, entries: repos.timetable.list() }
+    },
+    'timetable.entries.create': async (i) => {
+      const { slot, content } = z
+        .strictObject({ slot: TimetableSlotSchema, content: TimetableContentSchema })
+        .parse(i)
+      if (slot.kind === 'period' && slot.period > repos.settings.timetable().periods.length)
+        throw new NotFoundError('timetable_period')
+      const now = d.now()
+      return repos.timetable.insert({
+        id: d.newId(),
+        slot,
+        ...content,
+        createdAt: now,
+        updatedAt: now,
+      })
+    },
+    'timetable.entries.update': async (i) => {
+      const { id, slot, content } = z
+        .strictObject({
+          id: Uuid,
+          slot: TimetableSlotSchema.optional(),
+          content: TimetableContentSchema.partial().optional(),
+        })
+        .parse(i)
+      const cur = repos.timetable.get(id)
+      if (!cur) throw new NotFoundError('timetable_entry')
+      if (slot?.kind === 'period' && slot.period > repos.settings.timetable().periods.length)
+        throw new NotFoundError('timetable_period')
+      // 빠진 키는 zod가 결과에 넣지 않으므로 현재 값이 남는다
+      return repos.timetable.update(
+        TimetableEntrySchema.parse({
+          ...cur,
+          ...content,
+          slot: slot ?? cur.slot,
+          updatedAt: d.now(),
+        }),
+      )
+    },
+    'timetable.entries.delete': async (i) => {
+      repos.timetable.delete(IdIn.parse(i).id)
       return null
     },
 
