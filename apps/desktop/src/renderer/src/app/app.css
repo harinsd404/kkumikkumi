@@ -887,7 +887,7 @@ form.ki-row {
   margin-top: 14px;
   /* 화면 밖 묶음은 그리지 않는다(미리보기가 많아도 가볍게) */
   content-visibility: auto;
-  contain-intrinsic-size: auto 360px;
+  contain-intrinsic-size: auto 260px;
 }
 .wg-title {
   margin: 0 0 8px;
@@ -895,10 +895,83 @@ form.ki-row {
   font-weight: 700;
   color: var(--ui-sub);
 }
-.wg-items {
+.wg-head {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.wg-count {
+  font-size: 11px;
+  color: var(--ui-sub);
+}
+/* 크기 캐러셀: 한 번에 한 크기, 가로 스냅 */
+.wg-carousel {
+  position: relative;
+}
+.wg-track {
+  display: flex;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  border-radius: 14px;
+}
+.wg-track::-webkit-scrollbar {
+  display: none;
+}
+.wg-track > .wg-item {
+  flex: 0 0 100%;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  justify-content: center;
+}
+.wg-arrow {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-top: -13px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.92);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.15);
+  color: var(--ui-text);
+  cursor: pointer;
+}
+.wg-arrow span {
+  width: 5px;
+  height: 9px;
+}
+.wg-arrow.is-prev {
+  left: 4px;
+}
+.wg-arrow.is-next {
+  right: 4px;
+}
+.wg-arrow:disabled {
+  visibility: hidden;
+}
+.wg-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.wg-dot {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ui-line-strong);
+  cursor: pointer;
+}
+.wg-dot[aria-current='true'] {
+  background: var(--ui-text);
 }
 .wg-item {
   display: flex;

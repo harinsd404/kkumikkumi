@@ -1,17 +1,22 @@
 import { blockCells, newBlock, type GridBlock, type Theme } from '@kkumikkumi/schema'
-import { useMemo } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { BlockView } from '../board/BlockView'
 import { BoardProvider, type BoardContextValue, type BoardData } from '../board/BoardContext'
+import chevronLeftUrl from '../board/icons/chevron-left.svg'
+import chevronRightUrl from '../board/icons/chevron-right.svg'
 import { blockBox } from '../board/layout'
+import { maskCss } from '../board/style'
 
 export type WidgetKind = { type: GridBlock['type']; size: GridBlock['size'] }
 
 /** 갤러리 목록: 종류별로 고를 수 있는 크기와 짧은 이름 */
-const GALLERY: readonly {
+interface GalleryGroup {
   type: GridBlock['type']
   label: string
   sizes: readonly { size: GridBlock['size']; label: string }[]
-}[] = [
+}
+
+const GALLERY: readonly GalleryGroup[] = [
   {
     type: 'calendar',
     label: '캘린더',
@@ -68,8 +73,8 @@ const GALLERY: readonly {
 ]
 
 /** 미리보기 상자의 최대 크기(화면 px) */
-const MAX_W = 244
-const MAX_H = 170
+const MAX_W = 212
+const MAX_H = 160
 
 interface PreviewEnv {
   theme: Theme
@@ -145,38 +150,7 @@ export function WidgetGallery({
     <div className="wg">
       <p className="wg-hint">누르면 빈 자리에 넣고, 보드로 끌어 놓으면 그 자리에 넣어요.</p>
       {GALLERY.map((g) => (
-        <section key={g.type} className="wg-group" aria-label={g.label}>
-          <h3 className="wg-title">{g.label}</h3>
-          <div className="wg-items">
-            {g.sizes.map((s) => {
-              const cells = blockCells(g.type, s.size)!
-              const kind = { type: g.type, size: s.size }
-              return (
-                <button
-                  key={s.size}
-                  type="button"
-                  className="wg-item"
-                  aria-label={`${g.label} ${s.label} (${cells.w}×${cells.h}) 추가`}
-                  onPointerDown={(e) => {
-                    if (e.button === 0) onPick(kind, { clientX: e.clientX, clientY: e.clientY })
-                  }}
-                  onKeyDown={(e) => {
-                    // 키보드: Enter/Space로 빈 자리에 추가(끌기 없이)
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      onPick(kind, null)
-                    }
-                  }}
-                >
-                  <WidgetPreview kind={kind} env={env} />
-                  <span className="wg-caption">
-                    {s.label} <span className="wg-cells">{`${cells.w}×${cells.h}`}</span>
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </section>
+        <SizeCarousel key={g.type} group={g} env={env} onPick={onPick} />
       ))}
       <section className="wg-group" aria-label="꾸미기">
         <h3 className="wg-title">꾸미기</h3>
@@ -192,5 +166,117 @@ export function WidgetGallery({
         </div>
       </section>
     </div>
+  )
+}
+
+type Pick = (kind: WidgetKind, start: { clientX: number; clientY: number } | null) => void
+
+/**
+ * 한 종류의 크기들을 좌우로 넘겨 보는 캐러셀. 트랙패드 가로 스크롤(스냅), 양옆 화살표, 아래 점으로 넘긴다.
+ * 위젯을 누르거나 끄는 동작은 그대로(누르기 = 추가, 끌기 = 보드에 놓기).
+ */
+function SizeCarousel({
+  group: g,
+  env,
+  onPick,
+}: {
+  group: GalleryGroup
+  env: PreviewEnv
+  onPick: Pick
+}) {
+  const track = useRef<HTMLDivElement>(null)
+  const [index, setIndex] = useState(0)
+  const n = g.sizes.length
+  const go = (i: number) => {
+    const el = track.current
+    if (!el) return
+    const to = Math.min(Math.max(i, 0), n - 1)
+    el.scrollTo({ left: to * el.clientWidth, behavior: 'smooth' })
+  }
+  return (
+    <section className="wg-group" aria-label={g.label}>
+      <div className="wg-head">
+        <h3 className="wg-title">{g.label}</h3>
+        {n > 1 && (
+          <span className="wg-count" aria-live="polite">
+            {g.sizes[index]!.label} · {index + 1}/{n}
+          </span>
+        )}
+      </div>
+      <div className="wg-carousel">
+        <div
+          ref={track}
+          className="wg-track"
+          onScroll={(e) => {
+            const el = e.currentTarget
+            setIndex(Math.round(el.scrollLeft / Math.max(el.clientWidth, 1)))
+          }}
+        >
+          {g.sizes.map((s) => {
+            const cells = blockCells(g.type, s.size)!
+            const kind = { type: g.type, size: s.size }
+            return (
+              <button
+                key={s.size}
+                type="button"
+                className="wg-item"
+                aria-label={`${g.label} ${s.label} (${cells.w}×${cells.h}) 추가`}
+                onPointerDown={(e) => {
+                  if (e.button === 0) onPick(kind, { clientX: e.clientX, clientY: e.clientY })
+                }}
+                onKeyDown={(e) => {
+                  // 키보드: Enter/Space로 빈 자리에 추가(끌기 없이)
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onPick(kind, null)
+                  }
+                }}
+              >
+                <WidgetPreview kind={kind} env={env} />
+                <span className="wg-caption">
+                  {s.label} <span className="wg-cells">{`${cells.w}×${cells.h}`}</span>
+                </span>
+              </button>
+            )
+          })}
+        </div>
+        {n > 1 && (
+          <>
+            <button
+              type="button"
+              className="wg-arrow is-prev"
+              aria-label={`${g.label} 이전 크기`}
+              disabled={index === 0}
+              onClick={() => go(index - 1)}
+            >
+              <span style={maskCss(chevronLeftUrl, 'currentColor')} />
+            </button>
+            <button
+              type="button"
+              className="wg-arrow is-next"
+              aria-label={`${g.label} 다음 크기`}
+              disabled={index === n - 1}
+              onClick={() => go(index + 1)}
+            >
+              <span style={maskCss(chevronRightUrl, 'currentColor')} />
+            </button>
+          </>
+        )}
+      </div>
+      {n > 1 && (
+        <div className="wg-dots">
+          {g.sizes.map((s, i) => (
+            <button
+              key={s.size}
+              type="button"
+              className="wg-dot"
+              aria-label={`${g.label} ${s.label} 보기`}
+              aria-current={i === index}
+              onClick={() => go(i)}
+            />
+          ))}
+        </div>
+      )}
+    </section>
   )
 }
