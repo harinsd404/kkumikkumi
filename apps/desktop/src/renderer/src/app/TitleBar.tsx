@@ -5,7 +5,7 @@ import type { SaveStatus } from '../editor/state/autosave'
 
 export interface EditTools {
   onAddBlock(
-    type: 'calendar' | 'todo' | 'timer' | 'image' | 'memo',
+    type: 'calendar' | 'todo' | 'timer' | 'image' | 'memo' | 'timetable',
     size: 'S' | 'M' | 'L' | 'W',
   ): void
   onAddDecor(kind: 'image' | 'sticker'): void
@@ -45,6 +45,9 @@ const BLOCK_MENU = [
   { type: 'memo', size: 'S', label: '메모 · 작게 (2×2)' },
   { type: 'memo', size: 'M', label: '메모 · 길게 (2×3)' },
   { type: 'memo', size: 'L', label: '메모 · 크게 (4×3)' },
+  { type: 'timetable', size: 'S', label: '시간표 · 오늘 (2×2)' },
+  { type: 'timetable', size: 'M', label: '시간표 · 오늘 길게 (2×3)' },
+  { type: 'timetable', size: 'L', label: '시간표 · 한 주 (4×3)' },
   { type: 'image', size: 'S', label: '이미지 · 가로 (2×1)' },
   { type: 'image', size: 'M', label: '이미지 · 정사각 (2×2)' },
   { type: 'image', size: 'L', label: '이미지 · 크게 (4×3)' },

@@ -5,11 +5,18 @@ import { CalendarBlock } from './blocks/CalendarBlock'
 import { ImageBlock } from './blocks/ImageBlock'
 import { MemoBlock } from './blocks/MemoBlock'
 import { TimerBlock } from './blocks/TimerBlock'
+import { TimetableBlock } from './blocks/TimetableBlock'
 import { TodoBlock } from './blocks/TodoBlock'
 import type { Box } from './layout'
 import { cardCss } from './style'
 
-const PAGE_LABEL = { todo: '할 일', calendar: '캘린더', timer: '타이머', memo: '메모' } as const
+const PAGE_LABEL = {
+  todo: '할 일',
+  calendar: '캘린더',
+  timer: '타이머',
+  memo: '메모',
+  timetable: '시간표',
+} as const
 
 /** 블록 안에서 자기 동작이 있는 요소(누르면 세부 페이지를 열지 않는다) */
 const INTERACTIVE = 'button, input, select, textarea, a, label, [role="button"], [data-no-open]'
@@ -55,6 +62,7 @@ export function BlockView({ block, box }: { block: GridBlock; box: Box }) {
       {block.type === 'timer' && <TimerBlock block={block} box={box} />}
       {block.type === 'image' && <ImageBlock block={block} />}
       {block.type === 'memo' && <MemoBlock block={block} />}
+      {block.type === 'timetable' && <TimetableBlock block={block} />}
     </section>
   )
 }

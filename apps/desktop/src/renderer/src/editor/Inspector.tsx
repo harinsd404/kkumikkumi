@@ -44,6 +44,7 @@ const TYPE_LABEL: Record<GridBlock['type'], string> = {
   timer: '타이머',
   image: '이미지',
   memo: '메모',
+  timetable: '시간표',
 }
 const SHADOWS = [
   { value: 'none', label: '없음' },
@@ -651,6 +652,14 @@ function BlockProps({
           ) : (
             <p className="ki-note">메모를 불러오지 못했어요</p>
           )}
+        </Section>
+      )
+    case 'timetable':
+      return (
+        <Section title="시간표">
+          <p className="ki-note">
+            과목과 교시 시각은 시간표 페이지에서 고쳐요. S·M은 오늘 수업, L은 한 주를 보여 줘요.
+          </p>
         </Section>
       )
     case 'image':

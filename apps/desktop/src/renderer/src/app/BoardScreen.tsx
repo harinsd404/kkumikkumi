@@ -73,6 +73,7 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
         todo: () => setPage('todo'),
         calendar: () => setPage('calendar'),
         timer: () => setPage('timer'),
+        timetable: () => setPage('timetable'),
         memo: (b) => {
           setMemoOpen(b.type === 'memo' ? b.props.memoId : null)
           setPage('memo')
@@ -82,8 +83,12 @@ export function BoardScreen({ initialTheme }: { initialTheme: Theme }) {
     [user.actions, memoToggle],
   )
   const boardData = useMemo(
-    () => (memos.memos ? { ...user.data, memos: memos.memos } : user.data),
-    [user.data, memos.memos],
+    () => ({
+      ...user.data,
+      ...(memos.memos ? { memos: memos.memos } : {}),
+      ...(timetable.data ? { timetable: timetable.data } : {}),
+    }),
+    [user.data, memos.memos, timetable.data],
   )
   const navigate = useCallback((p: AppPage) => {
     setMemoOpen(null)

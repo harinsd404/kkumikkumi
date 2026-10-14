@@ -9,6 +9,7 @@ import type {
   TodoItem,
   TodoList,
 } from '@kkumikkumi/schema'
+import type { TimetableData } from '../../../shared/api'
 import type { TimerCommand } from '../../../shared/timer'
 import type { CalendarRangeQuery } from './calendar'
 
@@ -30,6 +31,8 @@ export interface BoardData {
   pomodoro?: PomodoroSettings
   /** 메모(고정 먼저, 최근 수정 순) */
   memos?: readonly Memo[]
+  /** 시간표(설정 + 항목) */
+  timetable?: TimetableData
   /** 사용자 데이터가 바뀔 때마다 증가(캘린더 블록이 다시 조회하는 신호) */
   version?: number
 }
@@ -46,7 +49,7 @@ export type TodoPatch = {
 export type EditorTarget = { date: string; time?: string } | { event: CalendarEvent }
 
 /** 세부 페이지가 있는 블록 타입 */
-export type PageType = 'todo' | 'calendar' | 'timer' | 'memo'
+export type PageType = 'todo' | 'calendar' | 'timer' | 'memo' | 'timetable'
 
 /**
  * 블록이 사용자 데이터를 바꾸는 통로. 앱이 IPC로 구현해 주입한다(보드는 electron에 의존하지 않음).

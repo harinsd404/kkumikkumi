@@ -24,6 +24,7 @@ export const CELL = { w: CANVAS.width / CANVAS.cols, h: CANVAS.height / CANVAS.r
  * - timer:    S=2x1, M=2x2
  * - image:    S=2x1, M=2x2, L=4x3, W=8x1
  * - memo:     S=2x2, M=2x3, L=4x3 (2026-10-13 추가, todo와 같은 크기표)
+ * - timetable: S=2x2, M=2x3 (오늘), L=4x3 (주간) (2026-10-14 추가)
  */
 export const BLOCK_SIZES = {
   calendar: { M: { w: 2, h: 2 }, L: { w: 4, h: 3 } },
@@ -31,6 +32,7 @@ export const BLOCK_SIZES = {
   timer: { S: { w: 2, h: 1 }, M: { w: 2, h: 2 } },
   image: { S: { w: 2, h: 1 }, M: { w: 2, h: 2 }, L: { w: 4, h: 3 }, W: { w: 8, h: 1 } },
   memo: { S: { w: 2, h: 2 }, M: { w: 2, h: 3 }, L: { w: 4, h: 3 } },
+  timetable: { S: { w: 2, h: 2 }, M: { w: 2, h: 3 }, L: { w: 4, h: 3 } },
 } as const satisfies Record<
   string,
   Partial<Record<'S' | 'M' | 'L' | 'W', { w: number; h: number }>>
@@ -157,6 +159,12 @@ export const BlockSchema = z.discriminatedUnion('type', [
       // 사용자 데이터(메모) 참조. 가져오기 후 끊어짐 → 가져올 때 null로 치환
       memoId: Uuid.nullable(),
     }),
+  }),
+  z.strictObject({
+    ...blockBase,
+    type: z.literal('timetable'),
+    // 시간표는 하나뿐이라 블록 설정이 없다(사용자 데이터 참조 없음)
+    props: z.strictObject({}),
   }),
 ])
 

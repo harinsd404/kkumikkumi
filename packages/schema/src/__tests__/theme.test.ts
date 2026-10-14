@@ -68,6 +68,18 @@ describe('ThemeSchema', () => {
       expectBad(t, '쓸 수 없음')
     })
 
+    it('시간표 블록: props는 빈 객체만, 크기는 S/M/L', () => {
+      const t = baseTheme()
+      const i = t.blocks.findIndex((b: { type: string }) => b.type === 'todo')
+      t.blocks[i] = { ...t.blocks[i], type: 'timetable', props: {} }
+      expectOk(t)
+      t.blocks[i].props = { entries: [] }
+      expectBad(t)
+      t.blocks[i].props = {}
+      t.blocks[i].size = 'W'
+      expectBad(t, '쓸 수 없음')
+    })
+
     it('배너(W)는 image 전용', () => {
       const t = baseTheme()
       t.blocks[2].size = 'W'

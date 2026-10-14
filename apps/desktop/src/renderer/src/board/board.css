@@ -535,3 +535,154 @@ button.kc-chip {
   font-size: 17.5px;
   opacity: 0.6;
 }
+
+/* ── 시간표 ── */
+.ktt {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: 100%;
+  padding: 25px;
+  overflow: hidden;
+}
+.ktt-empty {
+  margin: 0;
+  font-size: 17.5px;
+  opacity: 0.6;
+}
+.ktt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  /* 넘치는 줄은 아래로 흐리게 사라지게 */
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  list-style: none;
+}
+.ktt-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 6px 6px;
+  border-radius: 14px;
+}
+.ktt-row.is-now {
+  box-shadow: inset 0 0 0 2.5px var(--ktt-accent);
+}
+.ktt-row.is-past {
+  opacity: 0.45;
+}
+.ktt-when {
+  flex: none;
+  width: 56px;
+  color: var(--ktt-sub);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: right;
+}
+.ktt-bar {
+  flex: none;
+  width: 6px;
+  height: 34px;
+  border-radius: 3px;
+}
+.ktt-what {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ktt-subject,
+.ktt-room {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ktt-subject {
+  font-size: 19px;
+  font-weight: 600;
+}
+.ktt-room {
+  color: var(--ktt-sub);
+  font-size: 14px;
+}
+.ktt-week {
+  display: grid;
+  flex: 1;
+  gap: 6px;
+  min-height: 0;
+}
+.ktt-rowgroup {
+  display: contents;
+}
+.ktt-dayhead {
+  padding: 4px 0;
+  border-radius: 999px;
+  color: var(--ktt-sub);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+}
+.ktt-dayhead.is-today {
+  background: var(--ktt-accent);
+  color: #ffffff;
+}
+.ktt-period {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ktt-sub);
+  font-size: 14px;
+  font-weight: 600;
+}
+.ktt-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #f6f2ea;
+  color: #3a2f2a;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ktt-cell.is-now,
+.ktt-chipitem.is-now {
+  box-shadow: 0 0 0 2.5px var(--ktt-accent);
+}
+.ktt-daylist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  border-radius: 12px;
+  list-style: none;
+}
+.ktt-daylist.is-today {
+  background: #faf6ee;
+}
+.ktt-chipitem {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px;
+  border-radius: 10px;
+  color: #3a2f2a;
+}
+.ktt-time {
+  font-size: 12px;
+  opacity: 0.75;
+}
+.ktt-chipitem .ktt-subject {
+  font-size: 15px;
+}

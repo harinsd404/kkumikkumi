@@ -17,7 +17,7 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
 - 스택: Electron + React + TypeScript(strict), Vite 기반, pnpm 모노레포.
 - 보드는 일반 창이다(바탕화면 레벨 아님). 펫은 별도 창이다.
 - 레이아웃
-  - 그리드 블록: 크기는 S/M/L(+ image 전용 W 배너), 퍼즐처럼 배치. 타입은 calendar, todo, timer, image, memo. 셀 수는 타입별 크기표(packages/schema BLOCK_SIZES, 2026-10-12 시안 기준).
+  - 그리드 블록: 크기는 S/M/L(+ image 전용 W 배너), 퍼즐처럼 배치. 타입은 calendar, todo, timer, image, memo, timetable. 셀 수는 타입별 크기표(packages/schema BLOCK_SIZES, 2026-10-12 시안 기준).
   - 디자인 시안: Figma 파일 mJL2BsO51Ir9l9z4wK1lDI (3:1079 푸딩 아침, 6:2384 프리첼). 시안 1280x800(+타이틀바 36) = 논리 캔버스 1600x1000의 0.8배. 블록 바깥 여백/간격 25(논리 px)는 렌더러에서만 적용.
   - 테마 색은 defaults.palette(text, subText, accent, check, surface, control), 배경은 색 + 내장 무늬(stars/dots). 블록 style의 null 값은 팔레트로 대체.
   - 자유 배치 레이어: 스티커와 이미지. 위치/크기/회전/z-order, back/front 레이어.
@@ -44,7 +44,7 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
 ## 가정 (미확정, 변경 가능)
 
 - 창 비율 전역 고정(16:10).
-- 크기표(2026-10-12 시안 반영): 8x5 그리드(1칸 200px). calendar M=2x2/L=4x3, todo S=2x2/M=2x3/L=4x3, timer S=2x1/M=2x2, image S=2x1/M=2x2/L=4x3/W=8x1, memo S=2x2/M=2x3/L=4x3. 단일 출처는 packages/schema의 BLOCK_SIZES.
+- 크기표(2026-10-12 시안 반영): 8x5 그리드(1칸 200px). calendar M=2x2/L=4x3, todo S=2x2/M=2x3/L=4x3, timer S=2x1/M=2x2, image S=2x1/M=2x2/L=4x3/W=8x1, memo S=2x2/M=2x3/L=4x3, timetable S=2x2/M=2x3/L=4x3. 단일 출처는 packages/schema의 BLOCK_SIZES.
 - 창: 앱이 그리는 타이틀바 36px(titleBarStyle hiddenInset) + 보드 16:10. setAspectRatio(16/10, { height: 36 }).
 - 이미지 블록/스티커 업로드는 PNG/JPG/WebP 허용, 펫 이미지는 PNG만.
 - 펫 이동 방식(작은 창 이동 vs 하단 오버레이)은 M0 스파이크 결과로 결정.
@@ -158,7 +158,7 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
   - 1단계: 서식 해석, IPC(memos.list/create/update/delete), 메모 페이지(목록/검색/고정/삭제, 편집·보기, 서식 버튼, 0.5초 자동 저장 + 닫을 때 저장).
   - 2단계: memo 블록(S 2x2/M 2x3/L 4x3, props.memoId, null이면 안내), 블록 메뉴, 인스펙터에서 메모 고르기/새로 만들기, 블록에서 체크 토글, 빈 곳 클릭으로 그 메모 열기.
 
-- [ ] **시간표 (2026-10-14 사용자 지시)**
+- [x] **시간표 (2026-10-14 사용자 지시)**
   - 시간표 하나. 교시 방식(요일×교시 칸, 교시 시각 설정)과 시간 방식(요일별 자유 시각 항목) 둘 다, 페이지에서 전환. 두 방식의 항목은 따로 저장.
   - 사용자 데이터(timetable_entries, 마이그레이션 005 + settings 'timetable'). 월~금 기본, 토/일은 설정. 교시를 줄이면 뒤 교시 칸은 확인 후 삭제.
   - 자동 색은 과목을 처음 입력한 순서대로(방식마다 따로), 칸마다 직접 색 지정 가능.
