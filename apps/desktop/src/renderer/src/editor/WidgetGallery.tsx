@@ -148,23 +148,21 @@ export function WidgetGallery({
 }) {
   return (
     <div className="wg">
-      <p className="wg-hint">누르면 빈 자리에 넣고, 보드로 끌어 놓으면 그 자리에 넣어요.</p>
+      {/* 사진·스티커는 자주 쓰는 꾸미기라 맨 위에 */}
+      <section className="wg-decor" aria-label="사진·스티커 넣기">
+        <button type="button" className="wg-decor-btn" onClick={() => onAddDecor('image')}>
+          사진 넣기
+          <span>잘라서 채움</span>
+        </button>
+        <button type="button" className="wg-decor-btn" onClick={() => onAddDecor('sticker')}>
+          스티커 넣기
+          <span>투명 PNG 권장</span>
+        </button>
+      </section>
+      <p className="wg-hint">위젯은 누르면 빈 자리에 넣고, 보드로 끌어 놓으면 그 자리에 넣어요.</p>
       {GALLERY.map((g) => (
         <SizeCarousel key={g.type} group={g} env={env} onPick={onPick} />
       ))}
-      <section className="wg-group" aria-label="꾸미기">
-        <h3 className="wg-title">꾸미기</h3>
-        <div className="wg-decor">
-          <button type="button" className="wg-decor-btn" onClick={() => onAddDecor('image')}>
-            사진 넣기
-            <span>잘라서 채움</span>
-          </button>
-          <button type="button" className="wg-decor-btn" onClick={() => onAddDecor('sticker')}>
-            스티커 넣기
-            <span>투명 PNG 권장</span>
-          </button>
-        </div>
-      </section>
     </div>
   )
 }

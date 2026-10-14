@@ -1019,6 +1019,7 @@ form.ki-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+  margin: 8px 0 4px;
 }
 .wg-decor-btn {
   display: flex;
@@ -1039,6 +1040,22 @@ form.ki-row {
   font-size: 11px;
   font-weight: 500;
   color: var(--ui-sub);
+}
+.wg-decor-btn:focus-visible {
+  outline: 2px solid var(--ui-select);
+  outline-offset: 2px;
+}
+/* 인스펙터의 강조 버튼(빈 이미지 블록의 "이미지 고르기") */
+.ki-buttons .ki-primary {
+  flex: 1 1 100%;
+  min-height: 44px;
+  border: 0;
+  background: var(--ui-accent);
+  font-size: 15px;
+  font-weight: 700;
+}
+.ki-buttons .ki-primary:hover {
+  background: color-mix(in srgb, var(--ui-accent) 88%, var(--ui-text));
 }
 /* 끌고 있는 위젯(커서를 따라다님) */
 .wg-drag {

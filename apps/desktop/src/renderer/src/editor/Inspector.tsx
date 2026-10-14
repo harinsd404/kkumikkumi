@@ -704,12 +704,13 @@ function BlockProps({
           <div className="ki-buttons">
             <button
               type="button"
+              className={block.props.assetHash ? undefined : 'ki-primary'}
               onClick={async () => {
                 const a = await pickImage('image')
                 if (a) set({ assetHash: a.hash })
               }}
             >
-              {block.props.assetHash ? '이미지 바꾸기' : '이미지 고르기'}
+              {block.props.assetHash ? '이미지 바꾸기' : '+ 이미지 고르기'}
             </button>
             {block.props.assetHash && (
               <button type="button" onClick={() => set({ assetHash: null })}>
