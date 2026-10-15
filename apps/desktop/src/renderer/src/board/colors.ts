@@ -104,3 +104,37 @@ export function sectionTone(
     ? { label: deepen(palette.check), done: palette.check }
     : { label: palette.accent, done: palette.accent }
 }
+
+/** 명도 대비(WCAG, 1 … 21). 글자는 4.5 이상이면 읽기 쉽다. */
+export function contrastRatio(a: string, b: string): number {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number]
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+/** #rrggbb → [색상 0~360, 채도 0~1, 명도 0~1] (HSV, 색 고르기 창용) */
+export function hexToHsv(hex: string): [number, number, number] {
+  const [r, g, b] = rgbOf(hex).map((v) => v / 255) as [number, number, number]
+  const max = Math.max(r, g, b)
+  const d = max - Math.min(r, g, b)
+  const h =
+    d === 0
+      ? 0
+      : max === r
+        ? ((g - b) / d + (g < b ? 6 : 0)) * 60
+        : max === g
+          ? ((b - r) / d + 2) * 60
+          : ((r - g) / d + 4) * 60
+  return [h, max === 0 ? 0 : d / max, max]
+}
+
+export function hsvToHex(h: number, s: number, v: number): string {
+  const f = (n: number) => {
+    const k = (n + h / 60) % 6
+    return v - v * s * Math.max(0, Math.min(k, 4 - k, 1))
+  }
+  const hex = (x: number) =>
+    Math.round(x * 255)
+      .toString(16)
+      .padStart(2, '0')
+  return `#${hex(f(5))}${hex(f(3))}${hex(f(1))}`
+}

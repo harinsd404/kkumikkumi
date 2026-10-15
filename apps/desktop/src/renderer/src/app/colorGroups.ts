@@ -1,9 +1,10 @@
 import type { Palette } from '@kkumikkumi/schema'
 import type { ThemeSummary } from '../../../shared/api'
 import { themeTones, TONE_ROWS } from '../board/timetable'
+import { BUILTIN_COMBOS } from './keyPalette'
 
 // 색 고르기 팔레트(순수 함수). 어디서 색을 고르든 같은 묶음을 보여 준다(2026-10-14 사용자 지시):
-// 이 테마의 대표색 → 이 테마 강조·체크 색의 톤(한 줄씩) → 다른 테마들의 대표색.
+// 이 테마의 대표색 → 이 테마 강조·체크 색의 톤(한 줄씩) → 다른 테마들의 대표색 → 기본 색 조합.
 
 export interface SwatchGroup {
   label: string
@@ -51,7 +52,12 @@ export function colorGroups(current: ThemeColors, others: readonly ThemeColors[]
     })),
   ]
   const seen = new Set([keyOf(representative(current))])
-  for (const t of others) {
+  const combos = BUILTIN_COMBOS.map((c) => ({
+    name: c.name,
+    palette: c.palette,
+    bgColor: c.background.color,
+  }))
+  for (const t of [...others, ...combos]) {
     const colors = representative(t)
     const key = keyOf(colors)
     if (seen.has(key)) continue

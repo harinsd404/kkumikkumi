@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { EpochMs, HexColor, Uuid } from './theme'
+import { EpochMs, HexColor, Name, PaletteSchema, PatternSchema, Uuid } from './theme'
 
 /* ════════════════════════════════════════════════════════════
  * 사용자 데이터 스키마 (테마와 독립, 내보내기 제외)
@@ -293,6 +293,23 @@ export const SettingsSchema = z.strictObject({
   manualOverride: z.strictObject({ themeId: Uuid, until: EpochMs.nullable() }).nullable(),
 })
 
+/* ───────── 내 색 조합 (테마 만들기 창에서 저장, 테마/내보내기와 무관) ───────── */
+
+export const MAX_COLOR_COMBOS = 30
+
+/** 테마 외형 중 색 부분(팔레트 + 배경 색/무늬) */
+export const LookColorsSchema = z.strictObject({
+  palette: PaletteSchema,
+  background: z.strictObject({ color: HexColor, pattern: PatternSchema.nullable() }),
+})
+
+export const ColorComboSchema = LookColorsSchema.extend({
+  id: Uuid,
+  name: Name,
+  createdAt: EpochMs,
+})
+export const ColorCombosSchema = z.array(ColorComboSchema).max(MAX_COLOR_COMBOS)
+
 /* ───────── 창 상태 (앱 상태: 테마/내보내기와 무관) ───────── */
 
 /** 미니 타이머 창 설정 */
@@ -324,3 +341,5 @@ export type PomodoroPhase = z.infer<typeof PomodoroPhaseSchema>
 export type TimerSession = z.infer<typeof TimerSessionSchema>
 export type ThemeRule = z.infer<typeof ThemeRuleSchema>
 export type Settings = z.infer<typeof SettingsSchema>
+export type LookColors = z.infer<typeof LookColorsSchema>
+export type ColorCombo = z.infer<typeof ColorComboSchema>

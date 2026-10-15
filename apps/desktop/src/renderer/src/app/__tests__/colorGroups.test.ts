@@ -26,9 +26,17 @@ const summary = (id: string, name: string, t: ThemeColors): ThemeSummary => ({
 })
 
 describe('colorGroups', () => {
-  it('이 테마 대표색 → 톤 → 다른 테마 순', () => {
+  it('이 테마 대표색 → 톤 → 다른 테마 → 기본 색 조합 순', () => {
     const g = colorGroups(pudding, otherThemes([summary('c', '코튼캔디', cotton)], 'x'))
-    expect(g.map((x) => x.label)).toEqual(['이 테마', '강조 톤', '체크 톤', '코튼캔디'])
+    expect(g.map((x) => x.label)).toEqual([
+      '이 테마',
+      '강조 톤',
+      '체크 톤',
+      '코튼캔디',
+      '초코나무숲',
+      '오늘의 토마토',
+      '딸기케이크',
+    ])
     expect(g[0]!.colors).toContain('#d9b48a')
     expect(g[0]!.colors).toContain('#fffae7') // 배경색
     expect(g[0]!.colors.slice(-2)).toEqual(['#ffffff', '#000000'])
@@ -44,10 +52,26 @@ describe('colorGroups', () => {
       { id: 'c', ok: false, error: 'invalid_json' },
     ]
     const g = colorGroups(pudding, otherThemes(list, 'cur'))
-    expect(g.map((x) => x.label)).toEqual(['이 테마', '강조 톤', '체크 톤', '솜사탕'])
+    expect(g.map((x) => x.label)).toEqual([
+      '이 테마',
+      '강조 톤',
+      '체크 톤',
+      '솜사탕',
+      '초코나무숲',
+      '오늘의 토마토',
+      '딸기케이크',
+    ])
     // 같은 색 테마는 처음 것만
     const twice = colorGroups(pudding, otherThemes([...list, summary('d', '코튼', cotton)], 'cur'))
-    expect(twice.map((x) => x.label)).toEqual(['이 테마', '강조 톤', '체크 톤', '솜사탕'])
+    expect(twice.map((x) => x.label)).toEqual([
+      '이 테마',
+      '강조 톤',
+      '체크 톤',
+      '솜사탕',
+      '초코나무숲',
+      '오늘의 토마토',
+      '딸기케이크',
+    ])
   })
 
   it('otherThemes: 지금 테마와 읽을 수 없는 테마는 뺀다', () => {

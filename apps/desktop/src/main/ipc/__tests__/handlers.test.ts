@@ -658,3 +658,28 @@ describe('themeRules', () => {
     expect(await codeOf(h['themeRules.create']({ rule: anyRule(env.newId()) }))).toBe('not_found')
   })
 })
+
+describe('colorCombos', () => {
+  const colors = () => {
+    const l = presetLook('cottonCandy')
+    return { palette: l.palette, background: l.background }
+  }
+  it('추가는 앞에, main이 id/시각을 정하고, 지우기', async () => {
+    expect(await h['colorCombos.list'](undefined)).toEqual([])
+    const a = await h['colorCombos.add']({ name: ' 하늘 ', ...colors() })
+    const b = await h['colorCombos.add']({ name: '구름', ...colors() })
+    expect(a).toMatchObject({ name: '하늘', createdAt: env.clock.now })
+    expect((await h['colorCombos.list'](undefined)).map((c) => c.id)).toEqual([b.id, a.id])
+    await h['colorCombos.delete']({ id: a.id })
+    expect((await h['colorCombos.list'](undefined)).map((c) => c.id)).toEqual([b.id])
+  })
+  it('잘못된 색, 모르는 키, 30개 넘게는 거부', async () => {
+    const bad = { ...colors(), palette: { ...colors().palette, text: 'red' } }
+    expect(await codeOf(h['colorCombos.add']({ name: 'x', ...bad }))).toBe('invalid_input')
+    expect(await codeOf(h['colorCombos.add']({ name: 'x', ...colors(), css: 'a' }))).toBe(
+      'invalid_input',
+    )
+    for (let i = 0; i < 30; i++) await h['colorCombos.add']({ name: `c${i}`, ...colors() })
+    expect(await codeOf(h['colorCombos.add']({ name: 'over', ...colors() }))).toBe('conflict')
+  })
+})

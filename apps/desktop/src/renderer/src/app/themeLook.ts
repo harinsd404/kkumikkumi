@@ -1,5 +1,6 @@
 import {
   createTheme,
+  type LookColors,
   type Palette,
   type Theme,
   type ThemeLook,
@@ -78,8 +79,8 @@ export function withColor(look: ThemeLook, key: LookColorKey, color: string): Th
   return { ...look, palette: { ...look.palette, [key]: color } }
 }
 
-/** 시작 색 가져오기: 색과 무늬만(글꼴은 그대로) */
-export const withColorsFrom = (look: ThemeLook, from: ThemeLook): ThemeLook => ({
+/** 시작 색 가져오기: 색과 무늬만(글꼴은 그대로). 테마 외형이나 색 조합 어느 쪽이든 */
+export const withColorsFrom = (look: ThemeLook, from: LookColors): ThemeLook => ({
   ...look,
   palette: { ...from.palette },
   background: {

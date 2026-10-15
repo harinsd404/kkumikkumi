@@ -56,6 +56,9 @@ export const CHANNELS = [
   'themeRules.create',
   'themeRules.update',
   'themeRules.delete',
+  'colorCombos.list',
+  'colorCombos.add',
+  'colorCombos.delete',
 ] as const
 
 export type Channel = (typeof CHANNELS)[number]

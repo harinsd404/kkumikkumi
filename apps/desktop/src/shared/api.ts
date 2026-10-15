@@ -5,6 +5,8 @@ import type {
   ThemeLook,
   ThemeTemplateId,
   CalendarEvent,
+  ColorCombo,
+  LookColors,
   Memo,
   MiniTimerPrefs,
   PomodoroPhase,
@@ -190,6 +192,9 @@ export interface IpcSpec {
   }
   'themeRules.update': { in: { rule: Omit<ThemeRule, 'createdAt' | 'updatedAt'> }; out: ThemeRule }
   'themeRules.delete': { in: Id; out: null }
+  'colorCombos.list': { in: undefined; out: ColorCombo[] }
+  'colorCombos.add': { in: LookColors & { name: string }; out: ColorCombo }
+  'colorCombos.delete': { in: Id; out: null }
 }
 
 // 모든 채널에 스펙이 있는지 컴파일 타임에 확인

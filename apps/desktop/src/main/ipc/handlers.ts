@@ -1,5 +1,6 @@
 import { assetHandlers } from './handlers/assets'
 import { calendarHandlers } from './handlers/calendar'
+import { colorComboHandlers } from './handlers/colorCombos'
 import type { HandlerDeps, Handlers } from './handlers/deps'
 import { memoHandlers } from './handlers/memos'
 import { settingsHandlers } from './handlers/settings'
@@ -23,5 +24,6 @@ export function createHandlers(d: HandlerDeps): Handlers {
     ...memoHandlers(d),
     ...timetableHandlers(d),
     ...themeRuleHandlers(d),
+    ...colorComboHandlers(d),
   }
 }

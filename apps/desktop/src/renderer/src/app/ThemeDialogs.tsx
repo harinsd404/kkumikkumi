@@ -6,6 +6,7 @@ import { makeAssetUrl } from './assetUrl'
 import { ThemeDialog } from './ThemeDialog'
 import { lookOf, lookOfSummary, uniqueLooks } from './themeLook'
 import { ThemeManager } from './ThemeManager'
+import { useColorCombos } from './useColorCombos'
 import type { ThemeActions } from './useThemeActions'
 
 const noAsset = () => null
@@ -26,6 +27,7 @@ export function ThemeDialogs({
   now: Date
 }) {
   const dlg = a.themeDlg
+  const combos = useColorCombos()
   return (
     <>
       {a.manageOpen && (
@@ -59,6 +61,9 @@ export function ThemeDialogs({
           takenNames={a.okThemes
             .filter((s) => dlg.mode === 'create' || s.id !== dlg.theme.id)
             .map((s) => s.name)}
+          combos={combos.list}
+          onSaveCombo={combos.add}
+          onDeleteCombo={combos.remove}
           data={data}
           now={now}
           assetUrl={dlg.mode === 'edit' ? makeAssetUrl(dlg.theme) : noAsset}

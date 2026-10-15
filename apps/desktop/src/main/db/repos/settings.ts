@@ -1,10 +1,12 @@
 import {
+  ColorCombosSchema,
   DEFAULT_MINI_TIMER,
   DEFAULT_POMODORO,
   MiniTimerPrefsSchema,
   PomodoroSettingsSchema,
   SettingsSchema,
   TimetablePrefsSchema,
+  type ColorCombo,
   type MiniTimerPrefs,
   type PomodoroSettings,
   type Settings,
@@ -19,6 +21,7 @@ export class SettingsRepo {
   private readonly pomodoroKv: KvSetting<PomodoroSettings>
   private readonly miniKv: KvSetting<MiniTimerPrefs>
   private readonly timetableKv: KvSetting<TimetablePrefs>
+  private readonly combosKv: KvSetting<ColorCombo[]>
 
   constructor(db: Db) {
     this.app = kvSetting(db, 'app', SettingsSchema)
@@ -26,6 +29,7 @@ export class SettingsRepo {
     this.pomodoroKv = kvSetting(db, 'pomodoro', PomodoroSettingsSchema)
     this.miniKv = kvSetting(db, 'miniTimer', MiniTimerPrefsSchema)
     this.timetableKv = kvSetting(db, 'timetablePrefs', TimetablePrefsSchema)
+    this.combosKv = kvSetting(db, 'colorCombos', ColorCombosSchema)
   }
 
   /** 없으면 null. 손상됐으면 예외(bootstrap이 복구한다). */
@@ -62,5 +66,14 @@ export class SettingsRepo {
 
   saveTimetablePrefs(prefs: TimetablePrefs): TimetablePrefs {
     return this.timetableKv.save(prefs)
+  }
+
+  /** 내 색 조합(없거나 손상됐으면 빈 목록) */
+  colorCombos(): ColorCombo[] {
+    return this.combosKv.readOr([])
+  }
+
+  saveColorCombos(list: ColorCombo[]): ColorCombo[] {
+    return this.combosKv.save(list)
   }
 }
