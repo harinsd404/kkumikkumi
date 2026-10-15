@@ -1,10 +1,18 @@
 import { cp, mkdir, readdir, readFile, rename, rm, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
+  BUILTIN_THEME_IDS,
+  builtinPresetOf,
   createDefaultTheme,
+  createTheme,
   type Palette,
+  type Pattern,
+  THEME_PRESET_IDS,
+  type ThemeLook,
   type ThemePresetId,
+  type ThemeTemplateId,
   Name,
+  presetLook as presetLookFor,
   referencedAssetHashes,
   Sha256,
   ThemeSchema,
@@ -30,6 +38,7 @@ export type ThemeErrorCode =
   | 'id_mismatch'
   | 'missing_asset_file'
   | 'last_theme'
+  | 'builtin_theme'
 
 export class ThemeStoreError extends Error {
   constructor(readonly code: ThemeErrorCode) {
@@ -44,8 +53,12 @@ export type ThemeSummary =
       ok: true
       name: string
       updatedAt: number
+      /** 앱 내장 기본 테마(이름 바꾸기/삭제 불가) */
+      builtin: boolean
       palette: Palette
       bgColor: string | null
+      pattern: Pattern | null
+      fontId: string
     }
   | { id: string; ok: false; error: ThemeErrorCode }
 
@@ -104,8 +117,11 @@ export class ThemeStore {
           ok: true,
           name: t.name,
           updatedAt: t.updatedAt,
+          builtin: builtinPresetOf(id) !== null,
           palette: t.defaults.palette,
           bgColor: t.background.type === 'color' ? t.background.color : null,
+          pattern: t.background.type === 'color' ? t.background.pattern : null,
+          fontId: t.defaults.fontId,
         })
       } catch (err) {
         out.push({
@@ -115,7 +131,14 @@ export class ThemeStore {
         })
       }
     }
-    return out.sort((a, b) => (a.ok && b.ok ? b.updatedAt - a.updatedAt : a.ok ? -1 : 1))
+    // 기본 테마(프리셋 순서) → 내 테마(최근 수정 순) → 읽을 수 없는 테마
+    const rank = (s: ThemeSummary) => {
+      const p = builtinPresetOf(s.id)
+      return p ? THEME_PRESET_IDS.indexOf(p) : s.ok ? THEME_PRESET_IDS.length : 99
+    }
+    return out.sort(
+      (a, b) => rank(a) - rank(b) || (a.ok && b.ok && !a.builtin ? b.updatedAt - a.updatedAt : 0),
+    )
   }
 
   async read(id: string): Promise<Theme> {
@@ -166,18 +189,12 @@ export class ThemeStore {
     return t
   }
 
-  async create(name: string, preset: ThemePresetId = 'pudding'): Promise<Theme> {
-    const now = this.deps.now()
-    const n = Name.parse(name)
-    const t = createDefaultTheme(
-      {
-        theme: this.deps.newId(),
-        blocks: [this.deps.newId(), this.deps.newId(), this.deps.newId()],
-      },
-      now,
-      n,
-      preset,
-    )
+  /** 새 테마: 외형(색/배경/글꼴) + 배치 템플릿 */
+  async create(opts: ThemeLook & { name: string; template: ThemeTemplateId }): Promise<Theme> {
+    const t = createTheme({ theme: this.deps.newId(), newId: this.deps.newId }, this.deps.now(), {
+      ...opts,
+      name: Name.parse(opts.name),
+    })
     await this.writeNew(t)
     return t
   }
@@ -197,6 +214,7 @@ export class ThemeStore {
   }
 
   async rename(id: string, name: string): Promise<Theme> {
+    if (builtinPresetOf(id)) throw new ThemeStoreError('builtin_theme')
     const t = await this.read(id)
     return this.save({ ...t, name: Name.parse(name), updatedAt: this.deps.now() })
   }
@@ -204,6 +222,7 @@ export class ThemeStore {
   /** 마지막 남은 (유효한) 테마는 지우지 않는다. */
   async delete(id: string): Promise<void> {
     const dir = this.dir(id)
+    if (builtinPresetOf(id)) throw new ThemeStoreError('builtin_theme')
     const all = await this.list()
     if (!all.some((s) => s.id === id.toLowerCase())) throw new ThemeStoreError('not_found')
     if (all.filter((s) => s.ok && s.id !== id.toLowerCase()).length === 0)
@@ -264,10 +283,71 @@ export class ThemeStore {
   }
 
   /** 유효한 테마가 하나도 없으면 기본 테마를 만든다. 활성 테마 후보 id를 돌려준다. */
+  /** 기본 테마의 처음 상태(이름/생성 시각은 주어진 값) */
+  private builtinTheme(preset: ThemePresetId, now: number): Theme {
+    return createDefaultTheme(
+      {
+        theme: BUILTIN_THEME_IDS[preset],
+        blocks: [this.deps.newId(), this.deps.newId(), this.deps.newId()],
+      },
+      now,
+      undefined,
+      preset,
+    )
+  }
+
+  /**
+   * 기본 테마가 없으면 만든다. 폴더는 있는데 읽을 수 없으면(손상) 건드리지 않는다.
+   * 돌려주는 값: 쓸 수 있는 첫 기본 테마 ID(없으면 null)
+   */
+  async ensureBuiltins(): Promise<string | null> {
+    let first: string | null = null
+    for (const preset of THEME_PRESET_IDS) {
+      const id = BUILTIN_THEME_IDS[preset]
+      try {
+        await this.read(id)
+      } catch (err) {
+        if (!(err instanceof ThemeStoreError && err.code === 'not_found')) continue
+        try {
+          await stat(this.dir(id))
+          continue // 폴더는 있는데 theme.json이 없다: 사용자 파일일 수 있으니 그대로 둔다
+        } catch {
+          await this.writeNew(this.builtinTheme(preset, this.deps.now()))
+        }
+      }
+      first ??= id
+    }
+    return first
+  }
+
+  /** 기본 테마를 처음 상태로 되돌린다(이전 에셋은 고아가 되어 prune으로 정리). */
+  async resetBuiltin(id: string): Promise<Theme> {
+    const preset = builtinPresetOf(id)
+    if (!preset) throw new ThemeStoreError('not_found')
+    const now = this.deps.now()
+    const fresh = this.builtinTheme(preset, now)
+    try {
+      const old = await this.read(id)
+      fresh.createdAt = old.createdAt
+    } catch {
+      // 손상된 기본 테마도 되돌릴 수 있다(사용자가 직접 고른 동작)
+    }
+    try {
+      await stat(this.dir(id))
+    } catch {
+      await this.writeNew(fresh)
+      return fresh
+    }
+    await writeFileAtomic(join(this.dir(id), THEME_FILE), JSON.stringify(fresh, null, 2))
+    return fresh
+  }
+
   async ensureAtLeastOne(defaultName: string): Promise<string> {
     const first = (await this.list()).find((s) => s.ok)
     if (first) return first.id
-    return (await this.create(defaultName)).id
+    return (
+      await this.create({ ...presetLookFor('pudding'), name: defaultName, template: 'classic' })
+    ).id
   }
 
   /* ── 내부 ── */

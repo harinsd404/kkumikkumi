@@ -1,4 +1,4 @@
-import { THEME_PRESETS, type Palette } from '@kkumikkumi/schema'
+import type { Palette } from '@kkumikkumi/schema'
 import type { ThemeSummary } from '../../../shared/api'
 import { themeTones, TONE_ROWS } from '../board/timetable'
 
@@ -32,17 +32,11 @@ const representative = (t: ThemeColors): string[] => {
 const uniq = (cs: readonly string[]) => [...new Set(cs.map((c) => c.toLowerCase()))]
 const keyOf = (cs: readonly string[]) => [...uniq(cs)].sort().join()
 
-/** 지금 테마 말고 고를 수 있는 테마들: 저장된 다른 테마, 그다음 아직 안 만든 프리셋 */
+/** 지금 테마 말고 저장된 테마들(기본 테마는 항상 저장되어 있다) */
 export function otherThemes(summaries: readonly ThemeSummary[], currentId: string): ThemeColors[] {
-  const saved = summaries.flatMap((s) =>
+  return summaries.flatMap((s) =>
     s.ok && s.id !== currentId ? [{ name: s.name, palette: s.palette, bgColor: s.bgColor }] : [],
   )
-  const presets = Object.values(THEME_PRESETS).map((p) => ({
-    name: p.name,
-    palette: p.palette,
-    bgColor: p.background.color,
-  }))
-  return [...saved, ...presets]
 }
 
 /** 색이 똑같은 테마는 한 번만(지금 테마와 같은 색인 테마는 빼고) */

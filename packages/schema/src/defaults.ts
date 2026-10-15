@@ -56,62 +56,112 @@ export const THEME_PRESET_IDS = [
   'cottonCandy',
 ] as const satisfies readonly ThemePresetId[]
 
-export interface DefaultThemeIds {
-  theme: string
-  /** 블록 3개에 쓸 UUID (배너 이미지, 캘린더, 투두 순) */
-  blocks: readonly [string, string, string]
+/**
+ * 앱 내장 기본 테마의 고정 ID. 앱을 켤 때마다 있는지 확인해 없으면 만든다(이름 바꾸기/삭제 불가).
+ * 가져오기는 ID를 재발급하므로 겹치지 않는다.
+ */
+export const BUILTIN_THEME_IDS = {
+  pudding: '6b756d69-0000-4000-8000-000000000001',
+  cottonCandy: '6b756d69-0000-4000-8000-000000000002',
+} as const satisfies Record<ThemePresetId, string>
+
+export const builtinPresetOf = (id: string): ThemePresetId | null => {
+  const lower = id.toLowerCase()
+  for (const k of THEME_PRESET_IDS) if (BUILTIN_THEME_IDS[k] === lower) return k
+  return null
+}
+
+/* ───────── 새 테마 배치 템플릿 ───────── */
+
+type TemplateBlock = { type: Block['type']; size: Block['size']; col: number; row: number }
+
+/** 새 테마를 만들 때 고르는 배치. 모두 8x5 그리드 안에서 겹치지 않는다(테스트로 확인). */
+export const THEME_TEMPLATES = {
+  classic: {
+    label: '기본',
+    hint: '배너 · 캘린더 · 할 일',
+    blocks: [
+      { type: 'image', size: 'W', col: 0, row: 0 },
+      { type: 'calendar', size: 'L', col: 0, row: 1 },
+      { type: 'todo', size: 'M', col: 4, row: 1 },
+    ],
+  },
+  photoCalendar: {
+    label: '사진 + 캘린더',
+    hint: '큰 사진 · 캘린더',
+    blocks: [
+      { type: 'image', size: 'L', col: 0, row: 1 },
+      { type: 'calendar', size: 'L', col: 4, row: 1 },
+    ],
+  },
+  study: {
+    label: '공부',
+    hint: '시간표 · 할 일 · 타이머',
+    blocks: [
+      { type: 'image', size: 'W', col: 0, row: 0 },
+      { type: 'timetable', size: 'L', col: 0, row: 1 },
+      { type: 'todo', size: 'M', col: 4, row: 1 },
+      { type: 'timer', size: 'M', col: 6, row: 1 },
+    ],
+  },
+  blank: {
+    label: '빈 보드',
+    hint: '직접 채우기',
+    blocks: [],
+  },
+} as const satisfies Record<
+  string,
+  { label: string; hint: string; blocks: readonly TemplateBlock[] }
+>
+
+export type ThemeTemplateId = keyof typeof THEME_TEMPLATES
+export const THEME_TEMPLATE_IDS = [
+  'classic',
+  'photoCalendar',
+  'study',
+  'blank',
+] as const satisfies readonly ThemeTemplateId[]
+
+/** 새 테마에 필요한 외형(색/배경/글꼴)과 배치 */
+export interface ThemeLook {
+  palette: Palette
+  background: { color: string; pattern: Pattern | null }
+  fontId: string
+}
+
+export const presetLook = (preset: ThemePresetId): ThemeLook => {
+  const p = THEME_PRESETS[preset]
+  return {
+    palette: { ...p.palette },
+    background: { color: p.background.color, pattern: { ...p.background.pattern } },
+    fontId: 'pretendard',
+  }
 }
 
 /**
- * 기본 테마(디자인 시안 레이아웃): 배너 이미지 W(8x1), 캘린더 L(4x3), 투두 M(2x3).
- * 에셋 없이 동작하도록 이미지는 빈 플레이스홀더, 펫은 내장. ID와 시각은 주입받아 순수 함수로 유지한다.
+ * 새 테마(순수 함수). ID와 시각은 주입받는다. 이미지 블록은 빈 플레이스홀더, 펫은 내장.
  */
-export function createDefaultTheme(
-  ids: DefaultThemeIds,
+export function createTheme(
+  ids: { theme: string; newId(): string },
   now: number,
-  name?: string,
-  preset: ThemePresetId = 'pudding',
+  opts: ThemeLook & { name: string; template: ThemeTemplateId },
 ): Theme {
-  const p = THEME_PRESETS[preset]
-  const [banner, cal, todo] = ids.blocks
   return {
     schemaVersion: SCHEMA_VERSION,
     id: ids.theme,
-    name: name ?? p.name,
+    name: opts.name,
     createdAt: now,
     updatedAt: now,
     canvas: { ...CANVAS },
-    defaults: { fontId: 'pretendard', palette: { ...p.palette } },
-    background: { type: 'color', color: p.background.color, pattern: { ...p.background.pattern } },
-    blocks: [
-      {
-        id: banner,
-        type: 'image',
-        size: 'W',
-        col: 0,
-        row: 0,
-        style: bannerStyle(),
-        props: { assetHash: null, fit: 'cover', focus: { x: 0.5, y: 0.5, zoom: 1 }, shape: 'rect' },
-      },
-      {
-        id: cal,
-        type: 'calendar',
-        size: 'L',
-        col: 0,
-        row: 1,
-        style: cardStyle(),
-        props: { view: 'month', weekStartsOn: 0 },
-      },
-      {
-        id: todo,
-        type: 'todo',
-        size: 'M',
-        col: 4,
-        row: 1,
-        style: cardStyle(),
-        props: { listId: null, showCompleted: true },
-      },
-    ],
+    defaults: { fontId: opts.fontId, palette: { ...opts.palette } },
+    background: {
+      type: 'color',
+      color: opts.background.color,
+      pattern: opts.background.pattern ? { ...opts.background.pattern } : null,
+    },
+    blocks: THEME_TEMPLATES[opts.template].blocks.map((b) =>
+      newBlock(b.type, b.size, ids.newId(), b.col, b.row),
+    ),
     freeItems: [],
     pet: {
       name: '꾸이',
@@ -122,6 +172,28 @@ export function createDefaultTheme(
     },
     assets: [],
   }
+}
+
+/** 기본 테마(프리셋 색 + 기본 배치). 내장 기본 테마와 테스트에서 쓴다. */
+export function createDefaultTheme(
+  ids: { theme: string; blocks: readonly string[] },
+  now: number,
+  name?: string,
+  preset: ThemePresetId = 'pudding',
+): Theme {
+  let i = 0
+  return createTheme(
+    {
+      theme: ids.theme,
+      newId: () => {
+        const id = ids.blocks[i++]
+        if (!id) throw new Error('블록 ID가 모자람')
+        return id
+      },
+    },
+    now,
+    { ...presetLook(preset), name: name ?? THEME_PRESETS[preset].name, template: 'classic' },
+  )
 }
 
 /** 테마에서 참조하는 모든 에셋 해시 (고아 에셋 정리, 내보내기용) */

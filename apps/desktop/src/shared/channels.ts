@@ -7,6 +7,7 @@ export const CHANNELS = [
   'themes.duplicate',
   'themes.rename',
   'themes.delete',
+  'themes.resetBuiltin',
   'themes.pruneAssets',
   'assets.importFromDialog',
   'assets.importBytes',

@@ -18,13 +18,16 @@ const summary = (id: string, name: string, t: ThemeColors): ThemeSummary => ({
   ok: true,
   name,
   updatedAt: 0,
+  builtin: false,
   palette: t.palette,
   bgColor: t.bgColor,
+  pattern: null,
+  fontId: 'pretendard',
 })
 
 describe('colorGroups', () => {
   it('이 테마 대표색 → 톤 → 다른 테마 순', () => {
-    const g = colorGroups(pudding, otherThemes([], 'x'))
+    const g = colorGroups(pudding, otherThemes([summary('c', '코튼캔디', cotton)], 'x'))
     expect(g.map((x) => x.label)).toEqual(['이 테마', '강조 톤', '체크 톤', '코튼캔디'])
     expect(g[0]!.colors).toContain('#d9b48a')
     expect(g[0]!.colors).toContain('#fffae7') // 배경색
@@ -41,13 +44,19 @@ describe('colorGroups', () => {
       { id: 'c', ok: false, error: 'invalid_json' },
     ]
     const g = colorGroups(pudding, otherThemes(list, 'cur'))
-    // 저장된 "솜사탕"이 먼저 나오고, 같은 색인 코튼캔디 프리셋은 빠진다
     expect(g.map((x) => x.label)).toEqual(['이 테마', '강조 톤', '체크 톤', '솜사탕'])
+    // 같은 색 테마는 처음 것만
+    const twice = colorGroups(pudding, otherThemes([...list, summary('d', '코튼', cotton)], 'cur'))
+    expect(twice.map((x) => x.label)).toEqual(['이 테마', '강조 톤', '체크 톤', '솜사탕'])
   })
 
-  it('otherThemes: 지금 테마는 빼고 저장된 테마 다음에 프리셋', () => {
-    const list = [summary('cur', '지금', pudding), summary('b', '다른', cotton)]
-    expect(otherThemes(list, 'cur').map((t) => t.name)).toEqual(['다른', '푸딩 아침', '코튼캔디'])
+  it('otherThemes: 지금 테마와 읽을 수 없는 테마는 뺀다', () => {
+    const list: ThemeSummary[] = [
+      summary('cur', '지금', pudding),
+      summary('b', '다른', cotton),
+      { id: 'x', ok: false, error: 'invalid_json' },
+    ]
+    expect(otherThemes(list, 'cur').map((t) => t.name)).toEqual(['다른'])
   })
 
   it('색은 소문자로, 한 묶음 안에서 겹치지 않게', () => {

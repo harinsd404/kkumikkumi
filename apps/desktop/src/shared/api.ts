@@ -1,7 +1,9 @@
 import type {
   Asset,
   Palette,
-  ThemePresetId,
+  Pattern,
+  ThemeLook,
+  ThemeTemplateId,
   CalendarEvent,
   Memo,
   MiniTimerPrefs,
@@ -31,10 +33,14 @@ export type ThemeSummary =
       ok: true
       name: string
       updatedAt: number
+      /** 앱 내장 기본 테마(이름 바꾸기/삭제 불가) */
+      builtin: boolean
       /** 다른 테마 색을 고를 때 쓰는 대표색 */
       palette: Palette
-      /** 배경이 색이면 그 색 */
+      /** 배경이 색이면 그 색과 무늬 */
       bgColor: string | null
+      pattern: Pattern | null
+      fontId: string
     }
   | { id: string; ok: false; error: string }
 
@@ -52,11 +58,12 @@ type CalendarInput = Record<string, unknown>
 export interface IpcSpec {
   'themes.list': { in: undefined; out: ThemeSummary[] }
   'themes.get': { in: Id; out: Theme }
-  'themes.create': { in: { name: string; preset?: ThemePresetId }; out: Theme }
+  'themes.create': { in: ThemeLook & { name: string; template: ThemeTemplateId }; out: Theme }
   'themes.save': { in: { theme: Theme }; out: Theme }
   'themes.duplicate': { in: { id: string; name: string }; out: Theme }
   'themes.rename': { in: { id: string; name: string }; out: Theme }
   'themes.delete': { in: Id; out: Settings }
+  'themes.resetBuiltin': { in: Id; out: Theme }
   'themes.pruneAssets': { in: Id; out: { manifest: number; files: number } }
   'assets.importFromDialog': {
     in: { themeId: string; purpose: AssetPurpose }

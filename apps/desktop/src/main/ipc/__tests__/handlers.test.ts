@@ -1,5 +1,5 @@
 import { stat } from 'node:fs/promises'
-import type { Theme } from '@kkumikkumi/schema'
+import { BUILTIN_THEME_IDS, presetLook, type Theme } from '@kkumikkumi/schema'
 import sharp from 'sharp'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ZodError } from 'zod'
@@ -100,26 +100,63 @@ describe('themes', () => {
     expect(await codeOf(h['themes.save']({ theme: bad }))).toBe('invalid_input')
   })
 
-  it('create: 프리셋을 고를 수 있고, 없는 프리셋은 거부', async () => {
-    const t = await h['themes.create']({ name: '코튼캔디', preset: 'cottonCandy' })
+  const look = (name: string) => ({
+    ...presetLook('cottonCandy'),
+    name,
+    template: 'photoCalendar' as const,
+  })
+
+  it('create: 색·배경·글꼴·템플릿으로 만들고 목록에 나온다, 잘못된 값은 거부', async () => {
+    const t = await h['themes.create'](look('솜사탕'))
     expect(t.defaults.palette.accent).toBe('#f4c2df')
+    expect(t.blocks.map((b) => b.type)).toEqual(['image', 'calendar'])
     const list = await h['themes.list'](undefined)
-    expect(list.find((s) => s.id === t.id)).toMatchObject({ ok: true, bgColor: '#daecf6' })
-    expect(await codeOf(h['themes.create']({ name: 'x', preset: 'pretzel' }))).toBe('invalid_input')
+    expect(list.find((s) => s.id === t.id)).toMatchObject({
+      ok: true,
+      builtin: false,
+      bgColor: '#daecf6',
+    })
+    const bad = [
+      { ...look('x'), template: 'pretzel' },
+      { ...look('x'), fontId: 'Bad Font' },
+      { ...look('x'), background: { color: 'red', pattern: null } },
+      { ...look('x'), palette: { ...look('x').palette, accent: 'url(x)' } },
+      { ...look('x'), css: 'a{}' },
+      { ...look(' ') },
+    ]
+    for (const b of bad) expect(await codeOf(h['themes.create'](b as never))).toBe('invalid_input')
   })
 
-  it('delete: 활성 테마를 지우면 다른 테마로 전환하고 규칙/오버라이드 정리', async () => {
-    const first = activeId()
-    const second = await h['themes.create']({ name: '둘째' })
-    await h['themeRules.create']({ rule: anyRule(first) })
-    await h['settings.update']({ patch: { manualOverride: { themeId: first, until: null } } })
-    const s = await h['themes.delete']({ id: first })
-    expect(s).toMatchObject({ activeThemeId: second.id, manualOverride: null })
+  it('첫 실행 활성 테마는 기본 테마(푸딩 아침), 기본 테마는 지우거나 이름을 바꿀 수 없다', async () => {
+    expect(activeId()).toBe(BUILTIN_THEME_IDS.pudding)
+    const list = await h['themes.list'](undefined)
+    expect(list.map((s) => s.ok && [s.name, s.builtin])).toEqual([
+      ['푸딩 아침', true],
+      ['코튼캔디', true],
+    ])
+    expect(await codeOf(h['themes.delete']({ id: activeId() }))).toBe('builtin_theme')
+    expect(await codeOf(h['themes.rename']({ id: activeId(), name: 'x' }))).toBe('builtin_theme')
+  })
+
+  it('resetBuiltin: 기본 테마를 처음 상태로, 내 테마는 not_found', async () => {
+    const id = BUILTIN_THEME_IDS.cottonCandy
+    const t = await h['themes.get']({ id })
+    await h['themes.save']({ theme: { ...t, blocks: [] } })
+    const r = await h['themes.resetBuiltin']({ id })
+    expect(r.blocks).toHaveLength(3)
+    const mine = await h['themes.create'](look('a'))
+    expect(await codeOf(h['themes.resetBuiltin']({ id: mine.id }))).toBe('not_found')
+    expect(await codeOf(h['themes.resetBuiltin']({ id: '../x' }))).toBe('invalid_input')
+  })
+
+  it('delete: 활성 테마를 지우면 첫 테마로 전환하고 규칙/오버라이드 정리', async () => {
+    const mine = await h['themes.create'](look('내 테마'))
+    await h['settings.update']({ patch: { activeThemeId: mine.id } })
+    await h['themeRules.create']({ rule: anyRule(mine.id) })
+    await h['settings.update']({ patch: { manualOverride: { themeId: mine.id, until: null } } })
+    const s = await h['themes.delete']({ id: mine.id })
+    expect(s).toMatchObject({ activeThemeId: BUILTIN_THEME_IDS.pudding, manualOverride: null })
     expect(await h['themeRules.list'](undefined)).toEqual([])
-  })
-
-  it('delete: 마지막 테마는 last_theme', async () => {
-    expect(await codeOf(h['themes.delete']({ id: activeId() }))).toBe('last_theme')
   })
 })
 

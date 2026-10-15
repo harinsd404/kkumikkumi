@@ -2,6 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
+import { BUILTIN_THEME_IDS, presetLook } from '@kkumikkumi/schema'
 import { openDb } from '../db/connection'
 import { makeEnv } from './helpers'
 
@@ -21,8 +22,14 @@ describe('bootstrap', () => {
     const env = await makeEnv(await tmp())
     const { repos, themes } = env.core
     const list = await themes.list()
-    expect(list).toHaveLength(1)
-    expect(repos.settings.get()).toMatchObject({ activeThemeId: list[0]!.id, petEnabled: false })
+    expect(list.map((s) => s.id)).toEqual([
+      BUILTIN_THEME_IDS.pudding,
+      BUILTIN_THEME_IDS.cottonCandy,
+    ])
+    expect(repos.settings.get()).toMatchObject({
+      activeThemeId: BUILTIN_THEME_IDS.pudding,
+      petEnabled: false,
+    })
     expect(repos.todo.lists().map((l) => l.name)).toEqual(['할 일'])
     await env.cleanup()
   })
@@ -33,22 +40,48 @@ describe('bootstrap', () => {
     const settings = a.core.repos.settings.get()
     await a.cleanup()
     const b = await makeEnv(dir)
-    expect(await b.core.themes.list()).toHaveLength(1)
+    expect(await b.core.themes.list()).toHaveLength(2)
     expect(b.core.repos.settings.get()).toEqual(settings)
     expect(b.core.repos.todo.lists()).toHaveLength(1)
     await b.cleanup()
   })
 
-  it('활성 테마 폴더가 사라지면 남은/새 테마로 복구', async () => {
+  it('활성 테마 폴더가 사라지면 기본 테마로 복구', async () => {
     const dir = await tmp()
     const a = await makeEnv(dir)
-    const oldId = a.core.repos.settings.get()!.activeThemeId
+    const mine = await a.core.themes.create({
+      ...presetLook('cottonCandy'),
+      name: '내 테마',
+      template: 'blank',
+    })
+    a.core.repos.settings.save({ ...a.core.repos.settings.get()!, activeThemeId: mine.id })
     await a.cleanup()
-    await rm(join(dir, 'themes', oldId), { recursive: true })
+    await rm(join(dir, 'themes', mine.id), { recursive: true })
     const b = await makeEnv(dir, 1000)
-    const active = b.core.repos.settings.get()!.activeThemeId
-    expect(active).not.toBe(oldId)
-    expect((await b.core.themes.list()).map((s) => s.id)).toEqual([active])
+    expect(b.core.repos.settings.get()!.activeThemeId).toBe(BUILTIN_THEME_IDS.pudding)
+    await b.cleanup()
+  })
+
+  it('기존 사용자: 내 테마는 그대로 두고 기본 테마만 더한다', async () => {
+    const dir = await tmp()
+    const a = await makeEnv(dir)
+    const mine = await a.core.themes.create({
+      ...presetLook('pudding'),
+      name: '푸딩 아침',
+      template: 'classic',
+    })
+    a.core.repos.settings.save({ ...a.core.repos.settings.get()!, activeThemeId: mine.id })
+    await a.cleanup()
+    // 이전 버전처럼 기본 테마 폴더가 없는 상태
+    await rm(join(dir, 'themes', BUILTIN_THEME_IDS.pudding), { recursive: true })
+    await rm(join(dir, 'themes', BUILTIN_THEME_IDS.cottonCandy), { recursive: true })
+    const b = await makeEnv(dir, 1000)
+    expect(b.core.repos.settings.get()!.activeThemeId).toBe(mine.id)
+    expect((await b.core.themes.list()).map((s) => s.id)).toEqual([
+      BUILTIN_THEME_IDS.pudding,
+      BUILTIN_THEME_IDS.cottonCandy,
+      mine.id,
+    ])
     await b.cleanup()
   })
 

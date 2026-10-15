@@ -10,7 +10,11 @@ import {
   ThemeSchema,
   TimerStateSchema,
   Sha256,
-  THEME_PRESET_IDS,
+  THEME_TEMPLATE_IDS,
+  PaletteSchema,
+  PatternSchema,
+  HexColor,
+  FontId,
   DEFAULT_TIMETABLE,
   TIMETABLE_MAX_COUNT,
   TimetableContentSchema,
@@ -156,10 +160,16 @@ export function createHandlers(d: HandlerDeps): Handlers {
     },
     'themes.get': async (i) => themes.read(IdIn.parse(i).id),
     'themes.create': async (i) => {
-      const { name, preset } = z
-        .strictObject({ name: Name, preset: z.enum(THEME_PRESET_IDS).optional() })
+      const opts = z
+        .strictObject({
+          name: Name,
+          palette: PaletteSchema,
+          background: z.strictObject({ color: HexColor, pattern: PatternSchema.nullable() }),
+          fontId: FontId,
+          template: z.enum(THEME_TEMPLATE_IDS),
+        })
         .parse(i)
-      return themes.create(name, preset)
+      return themes.create(opts)
     },
     'themes.save': async (i) => {
       const { theme } = z.strictObject({ theme: ThemeSchema }).parse(i)
@@ -189,6 +199,7 @@ export function createHandlers(d: HandlerDeps): Handlers {
       })
       return next
     },
+    'themes.resetBuiltin': async (i) => themes.resetBuiltin(IdIn.parse(i).id),
     'themes.pruneAssets': async (i) => themes.pruneAssets(IdIn.parse(i).id, graceMs),
 
     /* ── 에셋 ── */

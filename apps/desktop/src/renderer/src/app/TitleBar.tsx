@@ -1,4 +1,3 @@
-import type { ThemePresetId } from '@kkumikkumi/schema'
 import { useEffect, useRef, useState } from 'react'
 import chevronDownUrl from '../board/icons/chevron-down.svg'
 import redoUrl from '../board/icons/redo.svg'
@@ -28,11 +27,12 @@ export interface PageNav {
 /** 타이틀바 테마 메뉴: 저장된 테마 고르기, 프리셋으로 새 테마 만들기 (이름 바꾸기·삭제는 M6) */
 export interface ThemeMenu {
   currentId: string
-  themes: readonly { id: string; name: string }[]
-  presets: readonly { id: ThemePresetId; name: string }[]
+  /** 기본 테마 먼저, 그다음 내 테마 */
+  themes: readonly { id: string; name: string; builtin: boolean; colors: readonly string[] }[]
   onOpen(): void
   onSelect(id: string): void
-  onCreate(preset: ThemePresetId): void
+  onCreate(): void
+  onManage(): void
 }
 
 interface Props {
@@ -177,35 +177,60 @@ function ThemePill({ name, menu }: { name: string | null; menu: ThemeMenu | unde
       </button>
       {open && (
         <div className="tb-menu-list app-theme-list" role="menu" aria-label="테마">
-          <p className="tb-menu-head">테마</p>
-          {menu.themes.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              role="menuitemradio"
-              aria-checked={t.id === menu.currentId}
-              onClick={() => {
-                setOpen(false)
-                if (t.id !== menu.currentId) menu.onSelect(t.id)
-              }}
-            >
-              {t.name}
-            </button>
-          ))}
-          <p className="tb-menu-head">새 테마</p>
-          {menu.presets.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false)
-                menu.onCreate(p.id)
-              }}
-            >
-              + {p.name} 테마로 만들기
-            </button>
-          ))}
+          {(
+            [
+              ['기본 테마', menu.themes.filter((t) => t.builtin)],
+              ['내 테마', menu.themes.filter((t) => !t.builtin)],
+            ] as const
+          ).map(
+            ([head, items]) =>
+              items.length > 0 && (
+                <div key={head} role="group" aria-label={head}>
+                  <p className="tb-menu-head">{head}</p>
+                  {items.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={t.id === menu.currentId}
+                      className="app-theme-item"
+                      onClick={() => {
+                        setOpen(false)
+                        if (t.id !== menu.currentId) menu.onSelect(t.id)
+                      }}
+                    >
+                      <span className="td-dots" aria-hidden>
+                        {t.colors.map((c, i) => (
+                          <span key={i} style={{ background: c }} />
+                        ))}
+                      </span>
+                      {t.name}
+                    </button>
+                  ))}
+                </div>
+              ),
+          )}
+          <hr className="tb-menu-sep" />
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false)
+              menu.onCreate()
+            }}
+          >
+            + 새 테마 만들기…
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false)
+              menu.onManage()
+            }}
+          >
+            테마 관리…
+          </button>
         </div>
       )}
     </div>
