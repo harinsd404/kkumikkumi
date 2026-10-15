@@ -14,11 +14,24 @@ import type { TimerService } from './timer/timerService'
 import { startTimerService, takeMissedTimerDone } from './timer/wiring'
 import { boardWindow, createBoardWindow, registerCloseHandshake } from './window/boardWindow'
 import { applyMiniPrefs, closeMiniTimer, openMiniTimer } from './window/miniWindow'
+import { errorKind, initLog, logError } from './log'
+import { setAppMenu } from './menu'
+
+/** 빌드 때 정하는 데이터 폴더 이름(배포 전 시험 빌드만 다르게, 보통은 빈 문자열 → 내부 식별자) */
+declare const __KKUMI_DATA_DIR__: string
 
 // userData 폴더를 내부 식별자로 고정한다(패키지 이름이나 표시 이름에 의존하지 않도록). ready 전에 설정해야 한다.
 app.setName(APP_DISPLAY_NAME)
-app.setPath('userData', join(app.getPath('appData'), APP_INTERNAL_NAME))
+app.setPath('userData', join(app.getPath('appData'), __KKUMI_DATA_DIR__ || APP_INTERNAL_NAME))
 applyDevUserData()
+// 배포본은 원격 디버깅 포트로 열지 않는다(다른 프로그램이 앱 화면·데이터에 붙는 것 방지). 배포 전 시험 빌드만 허용.
+if (app.isPackaged && !__KKUMI_DATA_DIR__ && app.commandLine.hasSwitch('remote-debugging-port'))
+  app.exit(1)
+initLog(app.getPath('logs'))
+process.on('uncaughtException', (err) => logError('[main] uncaught', errorKind(err)))
+process.on('unhandledRejection', (err) => logError('[main] unhandled rejection', errorKind(err)))
+app.on('render-process-gone', (_e, _wc, d) => logError('[renderer] gone', d.reason))
+app.on('child-process-gone', (_e, d) => logError(`[${d.type}] gone`, d.reason))
 
 let core: AppCore | null = null
 let timer: TimerService | null = null
@@ -40,6 +53,7 @@ app.on('web-contents-created', (_event, contents) => hardenWebContents(contents)
 
 void app.whenReady().then(async () => {
   if (!isPrimary) return
+  setAppMenu()
   try {
     core = await bootstrap({
       userDataDir: app.getPath('userData'),
@@ -49,7 +63,7 @@ void app.whenReady().then(async () => {
       defaultListName: '오늘의 할 일',
     })
   } catch (err) {
-    console.error(`[boot] ${err instanceof Error ? err.name : 'error'}`)
+    logError('[boot]', errorKind(err))
     dialog.showErrorBox(APP_DISPLAY_NAME, '데이터를 여는 중 문제가 생겼습니다. 앱을 종료합니다.')
     app.quit()
     return

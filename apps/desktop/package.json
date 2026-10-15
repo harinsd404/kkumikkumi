@@ -1,6 +1,6 @@
 {
   "name": "@kkumikkumi/desktop",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "꾸미꾸미",
   "main": "./out/main/index.js",
@@ -9,7 +9,8 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.web.json",
-    "test:electron": "ELECTRON_RUN_AS_NODE=1 electron ../../node_modules/vitest/vitest.mjs run src/main"
+    "test:electron": "ELECTRON_RUN_AS_NODE=1 electron ../../node_modules/vitest/vitest.mjs run src/main",
+    "dist": "electron-vite build && electron-builder --mac --arm64"
   },
   "dependencies": {
     "sharp": "0.35.5"
@@ -21,6 +22,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "5.2.0",
     "electron": "44.7.0",
+    "electron-builder": "26.15.3",
     "electron-vite": "5.0.0",
     "galmuri": "2.40.3",
     "pretendard": "1.3.9",

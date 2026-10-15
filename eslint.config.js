@@ -8,7 +8,12 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ['apps/desktop/src/main/**', 'apps/desktop/src/preload/**', '**/*.config.{ts,js}'],
+    files: [
+      'apps/desktop/src/main/**',
+      'apps/desktop/src/preload/**',
+      'apps/desktop/scripts/**',
+      '**/*.config.{ts,js}',
+    ],
     languageOptions: { globals: globals.node },
   },
   {

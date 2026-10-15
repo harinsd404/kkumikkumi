@@ -12,7 +12,8 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:electron": "pnpm --filter @kkumikkumi/desktop test:electron"
+    "test:electron": "pnpm --filter @kkumikkumi/desktop test:electron",
+    "dist": "pnpm --filter @kkumikkumi/desktop dist"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

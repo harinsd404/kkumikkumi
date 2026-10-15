@@ -8,8 +8,16 @@ allowBuilds:
   electron: true
   # postinstall은 바이너리 확인용. 실행은 플랫폼 패키지(@esbuild/darwin-*)가 담당한다.
   esbuild: false
+  # electron-builder의 Windows 설치 프로그램 도구(macOS 배포에는 쓰지 않음)
+  electron-winstaller: false
 
 # sharp는 플랫폼별 optional 패키지(@img/*)를 쓴다. macOS만 설치해 wasm32 폴백(약 9MB)을 피한다.
 supportedArchitectures:
   os: [darwin]
   cpu: [arm64, x64]
+
+# electron-builder 하위 의존성(@peculiar/utils)이 tslib를 선언하지 않아 pnpm의 엄격한 구조에서 못 찾는다.
+packageExtensions:
+  '@peculiar/utils':
+    dependencies:
+      tslib: '^2.8.0'

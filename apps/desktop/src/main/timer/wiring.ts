@@ -7,6 +7,7 @@ import { isFocusing } from '../../shared/timer'
 import type { AppCore } from '../bootstrap'
 import { bus } from '../events'
 import { TimerService } from './timerService'
+import { logError } from '../log'
 
 /** 창이 없을 때 끝난 타이머. renderer가 timer.takeMissedDone으로 한 번 꺼내 간다. */
 let missedTimerDone: TimerDoneInfo | null = null
@@ -78,7 +79,7 @@ export function startTimerService(c: AppCore): TimerService {
         c.repos.timerSessions.insert({ ...s, id: randomUUID() })
       } catch {
         // 기록 실패가 타이머를 멈추게 하지 않는다(로그에 사용자 데이터 없음)
-        console.error('[timer] 기록 저장 실패')
+        logError('[timer] 기록 저장 실패')
       }
     },
   })

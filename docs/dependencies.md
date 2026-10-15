@@ -20,3 +20,4 @@
 | (추가 안 함) better-sqlite3                                                      | -                   | node:sqlite로 대체: Electron 44 prebuild 없음, 네이티브 빌드/서명 부담 | 필요 시 Db 래퍼 뒤에서 교체                    |
 | pretendard 1.3.9                                                                 | desktop (dev, 번들) | 기본 폰트(시안). 공식 woff2를 수정 없이 사용                           | -                                              |
 | galmuri 2.40.3                                                                   | desktop (dev, 번들) | 갈무리11 폰트                                                          | -                                              |
+| electron-builder 26.15.3                                                         | desktop (dev)       | macOS DMG 패키징, ad-hoc 서명, 퓨즈, asarUnpack(sharp)                 | electron-forge(+maker-dmg), 수동 패키징        |

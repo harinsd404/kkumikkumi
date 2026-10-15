@@ -19,6 +19,8 @@ const strictCspInBuild = (): Plugin => ({
 // main/preload를 CommonJS로 번들해야 한다(docs/verified-facts.md 참고).
 export default defineConfig({
   main: {
+    // 배포 전 시험 빌드만 데이터 폴더를 따로 쓴다(KKUMI_SMOKE_DATA_DIR=폴더 이름). 보통 빌드는 빈 문자열.
+    define: { __KKUMI_DATA_DIR__: JSON.stringify(process.env['KKUMI_SMOKE_DATA_DIR'] ?? '') },
     build: {
       // 워크스페이스 스키마 패키지는 .ts 소스를 export하므로 번들에 포함한다. zod도 함께 번들.
       // sharp는 네이티브 모듈이라 외부로 둔다(기본 동작: dependencies는 external).

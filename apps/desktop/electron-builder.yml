@@ -1,0 +1,57 @@
+# 1차 배포(2026-10-15): 나와 지인용, 서명/공증 없이 ad-hoc 서명한 Apple Silicon DMG. docs/release.md 참고.
+# appId/productName/표시 이름은 src/shared/identity.ts와 같아야 한다(테스트로 확인).
+appId: app.kkumikkumi.desktop
+# 앱 안의 파일 이름(.app, Helper 앱, 실행 파일)은 영문으로 둔다. electron-builder는 macOS 파일 이름을 NFD로
+# 만들고 Electron은 NFC 이름으로 Helper 앱을 찾아, 한글 productName이면 시작하자마자 멈춘다(2026-10-15 실측).
+# 사용자에게 보이는 이름(Finder, Dock, Launchpad)은 아래 CFBundleDisplayName과 InfoPlist.strings로 "꾸미꾸미".
+productName: kkumikkumi
+directories:
+  output: dist
+  buildResources: build
+# 빌드 결과(out/)와 package.json만 넣는다. 실행 때 필요한 의존성(sharp)은 dependencies에서 자동으로 들어간다.
+files:
+  - out/**
+  - package.json
+  # arm64 전용 빌드라 x64용 sharp 바이너리는 뺀다
+  - '!**/node_modules/@img/*-x64/**'
+# 언어별 표시 이름(ko: 꾸미꾸미)
+extraResources:
+  - from: build/lproj
+    to: .
+# 앱 메뉴/시스템 문구 언어(나머지 언어 리소스는 넣지 않는다)
+electronLanguages:
+  - ko
+  - en
+# sharp는 네이티브 모듈(.node + libvips dylib)이라 asar 밖에 둔다.
+asarUnpack:
+  - '**/node_modules/sharp/**'
+  - '**/node_modules/@img/**'
+# sharp는 플랫폼별 미리 빌드된 바이너리를 쓰고 SQLite는 node:sqlite(내장)라 다시 빌드할 것이 없다.
+npmRebuild: false
+# 실행 파일 퓨즈: 배포본에서 Node로 실행하기/NODE_OPTIONS/디버거 인자를 막고 asar에서만 앱을 읽는다.
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+mac:
+  target:
+    - target: dmg
+      arch: arm64
+  category: public.app-category.productivity
+  # 앱 아이콘(scripts/make-icon.mjs가 build/logo-source.png에서 만든다)
+  icon: build/icon.png
+  extendInfo:
+    CFBundleDisplayName: 꾸미꾸미
+    LSHasLocalizedDisplayName: true
+  # 개발자 ID 인증서가 없어 ad-hoc 서명만 한다(공증 없음). hardened runtime은 ad-hoc과 함께 쓰면
+  # Electron 프레임워크 라이브러리 검증에 걸려 끈다(electron-builder 문서).
+  identity: '-'
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  notarize: false
+dmg:
+  title: 꾸미꾸미 ${version}
+  artifactName: kkumikkumi-${version}-${arch}.dmg

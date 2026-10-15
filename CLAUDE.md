@@ -9,7 +9,8 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
 ## 이름
 
 - 표시 이름: 꾸미꾸미. 내부 식별자(패키지 스코프 @kkumikkumi/\*, 폴더, 실행 파일명): kkumikkumi.
-- 번들 ID의 도메인 부분은 미정. 이름/번들 ID/아이콘은 한 곳의 상수로 분리해 둔다(M8).
+- 번들 ID의 도메인 부분은 미정(1차 배포는 임시 app.kkumikkumi.desktop). 이름/번들 ID는 src/shared/identity.ts 한 곳, electron-builder.yml과 일치를 테스트로 확인.
+- macOS 앱 파일 이름은 영문(kkumikkumi.app — 한글 productName이면 electron-builder의 NFD 파일 이름 때문에 시작 직후 멈춤), 보이는 이름은 CFBundleDisplayName/InfoPlist.strings로 "꾸미꾸미". 아이콘은 사용자 제공 로고(build/logo-source.png → scripts/make-icon.mjs → build/icon.png).
 - 상표/스토어/도메인 충돌은 아직 확인하지 않았다(사용자가 확인 예정). 기본 펫(마스코트) 이름 "꾸이"는 제안일 뿐 미확정.
 
 ## 확정 결정사항
@@ -205,6 +206,12 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
   - 기본 색 조합(테마 아님, 새 테마 창 "색 조합"과 모든 색 견본에 나온다): 초코나무숲(#D2E8C4, #AC967F), 오늘의 토마토(#F1A597, #D2E8C4), 딸기케이크(#EAB8C1, #CE4E41, #C79364, #F2DEDD). 지정 원색은 그대로 쓰고, 빈 칸은 같은 계열 톤으로 채운다. 접근성용 미세 조정만 허용(글자 대비 7:1, 보조 글자 4.5:1 — 명도만 낮춤), 큰 수정 금지.
   - 대표색으로 만들기(강조·체크 필수, 배경·버튼·무늬 선택, 나머지 자동, 순수 함수 + 테스트), 자유 색 고르기(채도·밝기 사각형 + 색상 띠, 키보드 조작).
   - 내 색 조합: 사용자 데이터(settings 'colorCombos', 최대 30개, 테마/내보내기에 포함하지 않음), IPC colorCombos.list/add/delete(zod 재검증).
+
+- [x] **1차 배포: 펫 제외, 나와 지인용 (2026-10-15 사용자 지시)** — M8 일부. 서명/공증 없이 ad-hoc 서명한 Apple Silicon DMG.
+  - electron-builder(DMG arm64, asarUnpack sharp, 퓨즈: runAsNode/NODE_OPTIONS/inspect 끔·asar 무결성·asar에서만 로드), 영문 파일 이름 + 한글 표시 이름, 사용자 로고 아이콘, 버전 0.1.0, `pnpm dist`.
+  - 배포본 보안: ELECTRON_RENDERER_URL 무시, --remote-debugging-port면 종료(시험 빌드만 허용), 개발 메뉴(다시 불러오기/개발자 도구)는 개발 중에만.
+  - 오류 기록(로그 폴더/main.log, 태그와 오류 종류만), 메뉴 "도움말 → 오류 기록 폴더 열기". 시험 빌드(KKUMI_SMOKE_DATA_DIR)로 실제 데이터 없이 배포본 확인. docs/release.md.
+  - 남은 M8: 개발자 ID 서명·공증, universal/x64, 업데이트 방식, 클린 계정 확인.
 
 - [ ] **M0 펫 프로토타입(스파이크)** — 코드 품질이 아니라 "되는가"를 검증. 수동 확인이 끝나기 전에는 체크하지 않는다.
   - spikes/pet-proto/ 에 독립 Electron 프로젝트. 키 내용/키 코드는 읽지도 로깅하지도 않는다.
