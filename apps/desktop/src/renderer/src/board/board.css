@@ -795,3 +795,121 @@ button.kc-chip {
   background: #f2f2f2;
   font-weight: 700;
 }
+
+/* ── 디데이 ── */
+.kdd {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  height: 100%;
+  padding: 25px;
+  font-weight: 500;
+}
+.kdd-head {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--dd-sub);
+}
+.kdd-empty {
+  margin: auto 0;
+  font-size: 17.5px;
+  opacity: 0.6;
+}
+.kdd-main {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+.kdd-num {
+  flex: none;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: var(--dd-accent);
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+}
+.kdd-num.is-today {
+  background: var(--dd-check);
+}
+.kdd-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.kdd-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 22px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kdd-date {
+  font-size: 15px;
+  color: var(--dd-sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kdd-dot {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.kdd--S {
+  justify-content: center;
+}
+/* M: 큰 숫자를 가운데, 아래에 다음 일정 */
+.kdd--M .kdd-main {
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+}
+.kdd--M .kdd-num {
+  padding: 8px 26px;
+  font-size: 56px;
+}
+.kdd--M .kdd-info {
+  align-items: center;
+  max-width: 100%;
+}
+.kdd--M .kdd-title {
+  max-width: 100%;
+}
+.kdd-next {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 12px 0 0;
+  border-top: 1.5px dashed var(--dd-check);
+  list-style: none;
+  font-size: 15px;
+}
+.kdd-next li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.kdd-next-num {
+  flex: none;
+  min-width: 56px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.kdd-next-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

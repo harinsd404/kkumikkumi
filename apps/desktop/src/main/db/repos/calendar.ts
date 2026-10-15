@@ -49,6 +49,26 @@ export class CalendarRepo {
     return rows.map(toEvent)
   }
 
+  /**
+   * 다가오는(진행 중 포함) 일정: 시각 일정은 끝 >= fromUtc, 종일 일정은 끝 날짜 >= fromDate.
+   * 종류마다 시작이 빠른 순으로 최대 limit개씩. 두 종류를 합친 정렬은 호출 측(지역 날짜 기준)이 한다.
+   */
+  upcoming(q: { fromUtc: number; fromDate: string; limit: number }): CalendarEvent[] {
+    const timed = this.db
+      .prepare(
+        `SELECT * FROM calendar_events WHERE all_day = 0 AND end_utc >= ?
+         ORDER BY start_utc, id LIMIT ?`,
+      )
+      .all(q.fromUtc, q.limit) as Row[]
+    const allDay = this.db
+      .prepare(
+        `SELECT * FROM calendar_events WHERE all_day = 1 AND end_date >= ?
+         ORDER BY start_date, id LIMIT ?`,
+      )
+      .all(q.fromDate, q.limit) as Row[]
+    return [...timed, ...allDay].map(toEvent)
+  }
+
   get(id: string): CalendarEvent | null {
     const r = this.db.prepare('SELECT * FROM calendar_events WHERE id = ?').get(id) as
       Row | undefined

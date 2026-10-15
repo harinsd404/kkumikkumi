@@ -17,7 +17,7 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
 - 스택: Electron + React + TypeScript(strict), Vite 기반, pnpm 모노레포.
 - 보드는 일반 창이다(바탕화면 레벨 아님). 펫은 별도 창이다.
 - 레이아웃
-  - 그리드 블록: 크기는 S/M/L(+ image 전용 W 배너), 퍼즐처럼 배치. 타입은 calendar, todo, timer, image, memo, timetable. 셀 수는 타입별 크기표(packages/schema BLOCK_SIZES, 2026-10-12 시안 기준).
+  - 그리드 블록: 크기는 S/M/L(+ image 전용 W 배너), 퍼즐처럼 배치. 타입은 calendar, todo, timer, image, memo, timetable, dday. 셀 수는 타입별 크기표(packages/schema BLOCK_SIZES, 2026-10-12 시안 기준).
   - 디자인 시안: Figma 파일 mJL2BsO51Ir9l9z4wK1lDI (3:1079 푸딩 아침, 6:2384 코튼캔디). 시안 1280x800(+타이틀바 36) = 논리 캔버스 1600x1000의 0.8배. 블록 바깥 여백/간격 25(논리 px)는 렌더러에서만 적용.
   - 기본 테마(2026-10-14 사용자 지시): 푸딩 아침, 코튼캔디는 앱 내장 테마로 항상 있다(고정 ID, 없으면 시작 시 생성). 이름 바꾸기/삭제 불가, 색·글꼴·배치는 수정 가능하고 "처음 상태로 되돌리기" 제공. 새 테마는 프리셋 복사가 아니라 "새로 만들기" 창(이름, 색, 무늬, 글꼴, 배치 템플릿)으로 만든다.
   - 테마 색은 defaults.palette(text, subText, accent, check, surface, control), 배경은 색 + 내장 무늬(stars/dots). 블록 style의 null 값은 팔레트로 대체.
@@ -45,7 +45,7 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
 ## 가정 (미확정, 변경 가능)
 
 - 창 비율 전역 고정(16:10).
-- 크기표(2026-10-12 시안 반영): 8x5 그리드(1칸 200px). calendar M=2x2/L=4x3, todo S=2x2/M=2x3/L=4x3, timer S=2x1/M=2x2, image S=2x1/M=2x2/L=4x3/W=8x1, memo S=2x2/M=2x3/L=4x3, timetable S=2x2/M=2x3/L=4x3. 단일 출처는 packages/schema의 BLOCK_SIZES.
+- 크기표(2026-10-12 시안 반영): 8x5 그리드(1칸 200px). calendar M=2x2/L=4x3, todo S=2x2/M=2x3/L=4x3, timer S=2x1/M=2x2, image S=2x1/M=2x2/L=4x3/W=8x1, memo S=2x2/M=2x3/L=4x3, timetable S=2x2/M=2x3/L=4x3, dday S=2x1/M=2x2. 단일 출처는 packages/schema의 BLOCK_SIZES.
 - 창: 앱이 그리는 타이틀바 36px(titleBarStyle hiddenInset) + 보드 16:10. setAspectRatio(16/10, { height: 36 }).
 - 이미지 블록/스티커 업로드는 PNG/JPG/WebP 허용, 펫 이미지는 PNG만.
 - 펫 이동 방식(작은 창 이동 vs 하단 오버레이)은 M0 스파이크 결과로 결정.
@@ -60,7 +60,7 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
 ## 보안/프라이버시 규칙
 
 - contextIsolation: true, nodeIntegration: false, sandbox: true, 엄격한 CSP, 외부 URL 탐색/새 창 차단.
-- 가져오기 파일은 신뢰할 수 없는 입력: zip-slip, 엔트리 수/용량/압축비 제한, 확장자 허용 목록, 스키마 검증, 이미지 디코딩 후 재인코딩 + 해시 재계산, 모든 ID 재발급, todo.listId, memo.memoId, timetable.timetableId는 null로 치환, 원시 CSS/HTML 금지, SVG 금지. 전부 성공했을 때만 원자적으로 저장.
+- 가져오기 파일은 신뢰할 수 없는 입력: zip-slip, 엔트리 수/용량/압축비 제한, 확장자 허용 목록, 스키마 검증, 이미지 디코딩 후 재인코딩 + 해시 재계산, 모든 ID 재발급, todo.listId, memo.memoId, timetable.timetableId, dday.eventId는 null로 치환, 원시 CSS/HTML 금지, SVG 금지. 전부 성공했을 때만 원자적으로 저장.
 - 키 입력 내용은 어디에도 기록하지 않는다. 로그에 사용자 데이터(할 일 제목, 일정, 이미지 경로)를 남기지 않는다.
 
 ## 불확실 항목 (구현 전에 공식 문서로 확인)
@@ -192,6 +192,11 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
   - 배치 템플릿(순수 함수, 8x5 안 겹침 테스트): 기본(배너·캘린더·할 일), 사진 + 캘린더, 공부(배너·시간표·할 일·타이머), 빈 보드.
   - 화면: 타이틀바 테마 메뉴(기본 테마 / 내 테마, 새 테마 만들기, 테마 관리), 새 테마/색·글꼴 수정 창(색 가져오기, 공용 팔레트, 무늬, 글꼴, 템플릿, 실제 보드 미리보기), 테마 관리 창(색·글꼴, 복제, 이름, 삭제 확인, 기본 테마 되돌리기 확인). 지금 테마를 고치면 다시 불러와 바로 반영.
 
+- [x] **디데이 위젯 (2026-10-15 사용자 지시)**
+  - dday 블록(S 2x1 한 줄, M 2x2 크게 + 다음 일정 2개). props.eventId: null = 가장 가까운 다가오는 일정(자동), UUID = 고정(지난 뒤에도 시작일 기준 D+N). 가져올 때 null로 치환.
+  - 표기: 시작 전 D-N, 시작일~마지막 날 D-DAY(여러 날이면 진행 중), 끝나면 D+N. 날짜는 로컬 날짜 문자열 달력 산술(순수 함수 + 테스트).
+  - IPC calendar.get(없으면 null), calendar.upcoming(끝나지 않은 일정, 종류마다 시작 순 limit ≤ 50). 위젯 갤러리(데이터 없으면 예시 일정), 인스펙터 일정 고르기, 누르면 캘린더 페이지.
+
 - [ ] **M0 펫 프로토타입(스파이크)** — 코드 품질이 아니라 "되는가"를 검증. 수동 확인이 끝나기 전에는 체크하지 않는다.
   - spikes/pet-proto/ 에 독립 Electron 프로젝트. 키 내용/키 코드는 읽지도 로깅하지도 않는다.
   - 검증: (1) 투명+frameless+항상 위 창에 PNG 표시, 작은 창 setBounds 이동과 FPS/프레임 간격 로그 (2) 클릭 통과 + 펫 위에서만 드래그 (3) 풀스크린/다른 Space/다중 모니터 표시와 Dock 부작용 (4) 타이핑 감지 후보 비교: powerMonitor.getSystemIdleTime(기준선) → CoreGraphics 호출(koffi) → Swift CLI 헬퍼, 전역 훅은 최후 수단 (5) on/off 시 창/폴링/자식 프로세스 완전 종료 (6) app.getAppMetrics()로 idle/걷기 CPU와 메모리 기록 (7) 이동 방식 A(작은 창 이동)와 C(하단 얇은 오버레이)를 스위치로 비교.
@@ -213,7 +218,7 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
 
 - [ ] **M7 내보내기/가져오기**
   - 내보내기: theme.json + assets/ + manifest(앱 버전, schemaVersion)를 zip으로. 저장 전 미리보기(에셋 목록, 펫 포함 여부, 초상/저작물 확인 체크). 고아 에셋 제외, 사용자 데이터/절대 경로 미포함.
-  - 가져오기(전부 main, 임시 폴더에서 처리 후 성공 시에만 원자적 이동): 크기/확장자 확인 → 해제 제한(엔트리 수, 총 용량, 압축비, 중첩 zip 금지) → 경로 검증(zip-slip, 절대 경로, 심볼릭 링크) → theme.json 검증(미래 schemaVersion 거부, 과거는 마이그레이션) → 에셋 재인코딩/해시 치환 → 정규화(ID 재발급, listId/memoId/timetableId null, 폰트 대체, 이름 충돌 처리) → 사용자 확인.
+  - 가져오기(전부 main, 임시 폴더에서 처리 후 성공 시에만 원자적 이동): 크기/확장자 확인 → 해제 제한(엔트리 수, 총 용량, 압축비, 중첩 zip 금지) → 경로 검증(zip-slip, 절대 경로, 심볼릭 링크) → theme.json 검증(미래 schemaVersion 거부, 과거는 마이그레이션) → 에셋 재인코딩/해시 치환 → 정규화(ID 재발급, listId/memoId/timetableId/eventId null, 폰트 대체, 이름 충돌 처리) → 사용자 확인.
   - 악성 입력 픽스처 테스트(zip-slip, zip bomb, 심볼릭 링크, 거대 JSON, 미지의 키, 원시 CSS, SVG, 확장자 위조, 해시 불일치, 중복 ID, 미래 schemaVersion)와 왕복 테스트. docs/security-import.md에 공격-방어 대응표.
 
 - [ ] **M8 패키징/서명/공증**

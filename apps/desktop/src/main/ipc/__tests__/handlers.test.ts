@@ -328,6 +328,36 @@ describe('calendar', () => {
   })
 })
 
+describe('calendar: 디데이용 조회', () => {
+  const allDay = (title: string, startDate: string, endDate = startDate) => ({
+    title,
+    color: '#ff0000',
+    note: '',
+    allDay: true as const,
+    startDate,
+    endDate,
+  })
+  it('get: 있으면 일정, 없으면 null, 잘못된 ID는 거부', async () => {
+    const e = await h['calendar.create']({ event: allDay('시험', '2026-12-01') })
+    expect(await h['calendar.get']({ id: e.id })).toEqual(e)
+    expect(await h['calendar.get']({ id: '00000000-0000-7000-8000-999999999999' })).toBeNull()
+    expect(await codeOf(h['calendar.get']({ id: '../x' }))).toBe('invalid_input')
+  })
+  it('upcoming: 지난 일정은 빼고, limit은 1~50', async () => {
+    await h['calendar.create']({ event: allDay('지난', '2026-01-01') })
+    const next = await h['calendar.create']({ event: allDay('다음', '2026-12-01') })
+    const r = await h['calendar.upcoming']({ fromUtc: 0, fromDate: '2026-10-15', limit: 5 })
+    expect(r.map((e) => e.id)).toEqual([next.id])
+    for (const limit of [0, 51, 1.5])
+      expect(
+        await codeOf(h['calendar.upcoming']({ fromUtc: 0, fromDate: '2026-10-15', limit })),
+      ).toBe('invalid_input')
+    expect(
+      await codeOf(h['calendar.upcoming']({ fromUtc: 0, fromDate: '2026-1-1', limit: 5 })),
+    ).toBe('invalid_input')
+  })
+})
+
 describe('timer', () => {
   it('명령으로만 상태를 바꾸고 저장한다', async () => {
     expect((await h['timer.get'](undefined)).status).toBe('idle')

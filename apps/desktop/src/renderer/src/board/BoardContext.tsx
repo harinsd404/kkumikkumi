@@ -65,6 +65,10 @@ export interface BoardActions {
   calendar: {
     range(q: CalendarRangeQuery): Promise<CalendarEvent[]>
     dueTodos(fromDate: string, toDate: string): Promise<TodoItem[]>
+    /** 일정 하나. 없으면 null, 불러오지 못하면 undefined */
+    get(id: string): Promise<CalendarEvent | null | undefined>
+    /** today(로컬 날짜) 이후 끝나지 않은 일정, 시작 순 최대 limit개 */
+    upcoming(today: string, limit: number): Promise<CalendarEvent[]>
     /** 일정 입력 창 열기(보드 밖 앱 레이어) */
     openEditor(target: EditorTarget): void
   }

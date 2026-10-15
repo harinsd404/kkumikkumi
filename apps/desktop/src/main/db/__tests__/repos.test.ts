@@ -155,6 +155,25 @@ describe('CalendarRepo', () => {
     ).toEqual([U(2), U(4), U(5)])
   })
 
+  it('upcoming: 끝나지 않은 일정만, 종류마다 시작 순으로 limit개씩', () => {
+    repos.calendar.insert(timed(1, 50, 99)) // 끝남 → 제외
+    repos.calendar.insert(timed(2, 90, 100)) // 끝 = 기준 → 포함(오늘 일정)
+    repos.calendar.insert(timed(3, 300, 400))
+    repos.calendar.insert(timed(4, 200, 200))
+    repos.calendar.insert(allDay(5, '2026-10-01', '2026-10-09')) // 끝남 → 제외
+    repos.calendar.insert(allDay(6, '2026-10-08', '2026-10-10')) // 진행 중
+    repos.calendar.insert(allDay(7, '2026-12-25', '2026-12-25'))
+    const q = { fromUtc: 100, fromDate: '2026-10-10' }
+    expect(repos.calendar.upcoming({ ...q, limit: 10 }).map((e) => e.id)).toEqual([
+      U(2),
+      U(4),
+      U(3),
+      U(6),
+      U(7),
+    ])
+    expect(repos.calendar.upcoming({ ...q, limit: 1 }).map((e) => e.id)).toEqual([U(2), U(6)])
+  })
+
   it('시각 일정을 종일 일정으로 바꿀 수 있다', () => {
     repos.calendar.insert(timed(1, 10, 20))
     repos.calendar.update(allDay(1, '2026-10-10', '2026-10-10'))

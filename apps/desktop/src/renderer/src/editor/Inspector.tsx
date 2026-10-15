@@ -1,6 +1,7 @@
 import {
   ALLOWED_SIZES,
   BLOCK_SIZES,
+  type CalendarEvent,
   type FreeItem,
   type GridBlock,
   type Memo,
@@ -8,8 +9,10 @@ import {
   type Timetable,
   type TodoList,
 } from '@kkumikkumi/schema'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { colorGroups, type SwatchGroup, type ThemeColors } from '../app/colorGroups'
+import { localDate } from '../board/calendar'
+import { ddayDateLabel, ddayOf } from '../board/dday'
 import { FONTS } from '../board/fonts'
 import { memoTitle } from '../board/memoFormat'
 import { ColorField, NumberField, Row, Section, Segmented, Slider } from './fields'
@@ -29,6 +32,13 @@ interface Props {
   timetables?: TimetablePick | undefined
   /** 색 고르기에 함께 보여 줄 다른 테마들 */
   otherThemes?: readonly ThemeColors[] | undefined
+  /** 일정 조회(디데이 블록에서 일정 고르기). 없으면 일정 선택을 숨긴다. */
+  events?: EventPickApi | undefined
+}
+
+export interface EventPickApi {
+  get(id: string): Promise<CalendarEvent | null | undefined>
+  upcoming(today: string, limit: number): Promise<CalendarEvent[]>
 }
 
 export interface TimetablePick {
@@ -57,6 +67,7 @@ const TYPE_LABEL: Record<GridBlock['type'], string> = {
   image: '이미지',
   memo: '메모',
   timetable: '시간표',
+  dday: '디데이',
 }
 const SHADOWS = [
   { value: 'none', label: '없음' },
@@ -84,6 +95,7 @@ export function Inspector({
   memos,
   timetables,
   otherThemes,
+  events,
 }: Props) {
   const [open, setOpen] = useState(true)
   const t = ed.theme
@@ -233,6 +245,7 @@ export function Inspector({
                 todoLists={todoLists}
                 memos={memos}
                 timetables={timetables}
+                events={events}
               />
               <Section title="스타일">
                 <ColorField
@@ -592,6 +605,7 @@ function BlockProps({
   todoLists,
   memos,
   timetables,
+  events,
 }: {
   ed: EditorApi
   block: GridBlock
@@ -599,6 +613,7 @@ function BlockProps({
   todoLists: Props['todoLists']
   memos: Props['memos']
   timetables: Props['timetables']
+  events: Props['events']
 }) {
   const set = (patch: Record<string, unknown>, key?: string) =>
     ed.dispatch(
@@ -695,6 +710,24 @@ function BlockProps({
           <p className="ki-note">
             과목과 교시 시각은 시간표 페이지에서 고쳐요. S·M은 오늘 수업, L은 한 주를 보여 줘요.
             따라가는 블록은 사용 모드에서 이름을 눌러 고른 시간표를 바꿀 수 있어요.
+          </p>
+        </Section>
+      )
+    case 'dday':
+      return (
+        <Section title="디데이">
+          {events ? (
+            <DdayFields
+              api={events}
+              eventId={block.props.eventId}
+              onSelect={(eventId) => set({ eventId })}
+            />
+          ) : (
+            <p className="ki-note">일정을 불러오지 못했어요</p>
+          )}
+          <p className="ki-note">
+            자동은 오늘 이후 가장 가까운 일정을 보여 주고, 지나면 다음 일정으로 넘어가요. 고정한
+            일정은 지난 뒤에도 D+로 계속 세요. 일정은 캘린더에서 만들어요.
           </p>
         </Section>
       )
@@ -798,6 +831,66 @@ function TimetableFields({
         </select>
       </Row>
       {missing && <p className="ki-note">고정했던 시간표가 지워져서 고른 시간표를 보여 줘요.</p>}
+    </>
+  )
+}
+
+/** 디데이 블록이 보여 줄 일정: 자동(가장 가까운 일정) 또는 다가오는 일정 중 하나로 고정 */
+function DdayFields({
+  api,
+  eventId,
+  onSelect,
+}: {
+  api: EventPickApi
+  eventId: string | null
+  onSelect(eventId: string | null): void
+}) {
+  const [today] = useState(() => localDate(Date.now()))
+  const [loaded, setLoaded] = useState<{
+    key: string
+    list: CalendarEvent[]
+    pinned: CalendarEvent | null | undefined
+  } | null>(null)
+  const key = `${eventId ?? ''}|${today}`
+  useEffect(() => {
+    let alive = true
+    void Promise.all([api.upcoming(today, 50), eventId ? api.get(eventId) : null]).then(
+      ([list, pinned]) => {
+        if (alive) setLoaded({ key, list, pinned })
+      },
+    )
+    return () => {
+      alive = false
+    }
+  }, [api, eventId, today, key])
+  const cur = loaded?.key === key ? loaded : null
+  // 고정한 일정이 지났으면 목록에 없으니 맨 위에 따로 넣는다
+  const options =
+    cur?.pinned && !cur.list.some((e) => e.id === cur.pinned!.id)
+      ? [cur.pinned, ...cur.list]
+      : (cur?.list ?? [])
+  const missing = eventId !== null && cur !== null && cur.pinned === null
+  return (
+    <>
+      <Row label="보여 줄 일정">
+        <select
+          className="ki-select"
+          value={missing ? '' : (eventId ?? '')}
+          onChange={(e) => onSelect(e.target.value || null)}
+        >
+          <option value="">가장 가까운 일정 (자동)</option>
+          {eventId && !cur && <option value={eventId}>불러오는 중…</option>}
+          {options.map((e) => (
+            <option key={e.id} value={e.id}>
+              {`${ddayOf(e, today).label} · ${e.title} · ${ddayDateLabel(e)}`}
+            </option>
+          ))}
+        </select>
+      </Row>
+      {cur && cur.list.length === 0 && !cur.pinned && (
+        <p className="ki-note">다가오는 일정이 없어요.</p>
+      )}
+      {missing && <p className="ki-note">고정했던 일정이 지워졌어요. 다른 일정을 골라 주세요.</p>}
     </>
   )
 }

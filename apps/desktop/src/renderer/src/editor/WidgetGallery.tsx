@@ -61,6 +61,14 @@ const GALLERY: readonly GalleryGroup[] = [
     ],
   },
   {
+    type: 'dday',
+    label: '디데이',
+    sizes: [
+      { size: 'S', label: '한 줄' },
+      { size: 'M', label: '크게' },
+    ],
+  },
+  {
     type: 'image',
     label: '이미지',
     sizes: [

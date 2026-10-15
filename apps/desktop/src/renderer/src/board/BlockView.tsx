@@ -3,6 +3,7 @@ import { useRef, type KeyboardEvent, type MouseEvent, type PointerEvent } from '
 import { useBoard } from './BoardContext'
 import { CalendarBlock } from './blocks/CalendarBlock'
 import { ImageBlock } from './blocks/ImageBlock'
+import { DdayBlock } from './blocks/DdayBlock'
 import { MemoBlock } from './blocks/MemoBlock'
 import { TimerBlock } from './blocks/TimerBlock'
 import { TimetableBlock } from './blocks/TimetableBlock'
@@ -18,12 +19,17 @@ const PAGE_LABEL = {
   timetable: '시간표',
 } as const
 
+/** 블록 → 누르면 열 세부 페이지(디데이는 캘린더) */
+const pageOf = (type: GridBlock['type']) =>
+  type === 'image' ? null : type === 'dday' ? 'calendar' : type
+
 /** 블록 안에서 자기 동작이 있는 요소(누르면 세부 페이지를 열지 않는다) */
 const INTERACTIVE = 'button, input, select, textarea, a, label, [role="button"], [data-no-open]'
 
 export function BlockView({ block, box }: { block: GridBlock; box: Box }) {
   const { theme, mode, actions } = useBoard()
-  const opener = mode === 'use' && block.type !== 'image' ? actions?.pages?.[block.type] : undefined
+  const page = pageOf(block.type)
+  const opener = mode === 'use' && page ? actions?.pages?.[page] : undefined
   const openPage = opener && (() => opener(block))
   const down = useRef<{ x: number; y: number } | null>(null)
 
@@ -46,7 +52,7 @@ export function BlockView({ block, box }: { block: GridBlock; box: Box }) {
       }
     },
     tabIndex: 0,
-    'aria-label': `${PAGE_LABEL[block.type as keyof typeof PAGE_LABEL]} — 눌러서 크게 보기`,
+    'aria-label': `${PAGE_LABEL[page!]} — 눌러서 크게 보기`,
   }
 
   return (
@@ -63,6 +69,7 @@ export function BlockView({ block, box }: { block: GridBlock; box: Box }) {
       {block.type === 'image' && <ImageBlock block={block} />}
       {block.type === 'memo' && <MemoBlock block={block} />}
       {block.type === 'timetable' && <TimetableBlock block={block} />}
+      {block.type === 'dday' && <DdayBlock block={block} />}
     </section>
   )
 }

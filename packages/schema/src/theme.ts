@@ -33,6 +33,7 @@ export const BLOCK_SIZES = {
   image: { S: { w: 2, h: 1 }, M: { w: 2, h: 2 }, L: { w: 4, h: 3 }, W: { w: 8, h: 1 } },
   memo: { S: { w: 2, h: 2 }, M: { w: 2, h: 3 }, L: { w: 4, h: 3 } },
   timetable: { S: { w: 2, h: 2 }, M: { w: 2, h: 3 }, L: { w: 4, h: 3 } },
+  dday: { S: { w: 2, h: 1 }, M: { w: 2, h: 2 } },
 } as const satisfies Record<
   string,
   Partial<Record<'S' | 'M' | 'L' | 'W', { w: number; h: number }>>
@@ -167,6 +168,14 @@ export const BlockSchema = z.discriminatedUnion('type', [
       // 사용자 데이터(시간표) 참조. null = 고른 시간표 따라가기. 가져올 때 null로 치환.
       // 시간표가 하나뿐이던 때 저장한 블록({})은 null로 읽는다.
       timetableId: Uuid.nullable().default(null),
+    }),
+  }),
+  z.strictObject({
+    ...blockBase,
+    type: z.literal('dday'),
+    props: z.strictObject({
+      // 사용자 데이터(일정) 참조. null = 가장 가까운 다가오는 일정(자동). 가져올 때 null로 치환
+      eventId: Uuid.nullable(),
     }),
   }),
 ])

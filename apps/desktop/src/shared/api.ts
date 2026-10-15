@@ -121,6 +121,13 @@ export interface IpcSpec {
   'calendar.create': { in: { event: CalendarInput }; out: CalendarEvent }
   'calendar.update': { in: { event: CalendarInput & Id }; out: CalendarEvent }
   'calendar.delete': { in: Id; out: null }
+  /** 일정 하나(없으면 null: 디데이 블록이 "지워진 일정"을 보여 준다) */
+  'calendar.get': { in: Id; out: CalendarEvent | null }
+  /** 다가오는(진행 중 포함) 일정. 종류(시각/종일)마다 최대 limit개, 합친 정렬은 renderer가 */
+  'calendar.upcoming': {
+    in: { fromUtc: number; fromDate: string; limit: number }
+    out: CalendarEvent[]
+  }
   'timer.get': { in: undefined; out: TimerState }
   /** 타이머 상태는 main이 소유한다. renderer는 명령만 보낸다. */
   'timer.command': { in: TimerCommand; out: TimerState }

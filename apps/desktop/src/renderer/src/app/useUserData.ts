@@ -8,7 +8,8 @@ import type {
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { IpcResult, TimerDoneInfo } from '../../../shared/api'
 import type { BoardActions, BoardData, EditorTarget, TodoData } from '../board/BoardContext'
-import type { EventInput } from '../board/calendar'
+import { localDayStart, type EventInput } from '../board/calendar'
+import { sortUpcoming } from '../board/dday'
 
 // 사용자 데이터(투두/일정/타이머)를 IPC로 읽고 쓰는 훅. 테마(에디터 상태)와는 독립.
 // 투두는 바뀔 때마다 전체를 다시 읽는다(로컬 SQLite라 충분히 빠르고 상태가 어긋나지 않는다).
@@ -141,6 +142,21 @@ export function useUserData(onError: (text: string) => void): UserData {
         dueTodos: async (fromDate, toDate) =>
           (await run(window.kkumi.invoke('todo.items.dueBetween', { fromDate, toDate }), false)) ??
           [],
+        get: async (id) => {
+          const r = await window.kkumi.invoke('calendar.get', { id })
+          return r.ok ? r.value : undefined
+        },
+        upcoming: async (today, limit) => {
+          const r = await run(
+            window.kkumi.invoke('calendar.upcoming', {
+              fromUtc: localDayStart(today),
+              fromDate: today,
+              limit,
+            }),
+            false,
+          )
+          return sortUpcoming(r ?? []).slice(0, limit)
+        },
         openEditor: setEditing,
       },
       timer: {

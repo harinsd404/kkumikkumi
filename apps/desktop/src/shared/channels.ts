@@ -28,6 +28,8 @@ export const CHANNELS = [
   'calendar.create',
   'calendar.update',
   'calendar.delete',
+  'calendar.get',
+  'calendar.upcoming',
   'timer.get',
   'timer.command',
   'timer.takeMissedDone',

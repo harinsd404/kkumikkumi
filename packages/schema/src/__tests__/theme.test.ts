@@ -85,6 +85,26 @@ describe('ThemeSchema', () => {
       expectBad(t, '쓸 수 없음')
     })
 
+    it('디데이 블록: eventId(null 또는 UUID)만, 크기는 S/M', () => {
+      const t = baseTheme()
+      const i = t.blocks.findIndex((b: { type: string }) => b.type === 'todo')
+      t.blocks[i] = { ...t.blocks[i], type: 'dday', size: 'M', props: { eventId: null } }
+      expectOk(t)
+      t.blocks[i].props = { eventId: U(900) }
+      expectOk(t)
+      t.blocks[i].props = {}
+      expectBad(t)
+      t.blocks[i].props = { eventId: 'x' }
+      expectBad(t)
+      t.blocks[i].props = { eventId: null, title: '시험' }
+      expectBad(t)
+      t.blocks[i].props = { eventId: null }
+      t.blocks[i].size = 'S'
+      expectOk(t)
+      t.blocks[i].size = 'L'
+      expectBad(t, '쓸 수 없음')
+    })
+
     it('배너(W)는 image 전용', () => {
       const t = baseTheme()
       t.blocks[2].size = 'W'

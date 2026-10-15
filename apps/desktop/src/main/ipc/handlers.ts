@@ -409,6 +409,17 @@ export function createHandlers(d: HandlerDeps): Handlers {
       })
       return repos.calendar.update(e)
     },
+    'calendar.get': async (i) => repos.calendar.get(IdIn.parse(i).id),
+    'calendar.upcoming': async (i) =>
+      repos.calendar.upcoming(
+        z
+          .strictObject({
+            fromUtc: EpochMs,
+            fromDate: DateStr,
+            limit: z.number().int().min(1).max(50),
+          })
+          .parse(i),
+      ),
     'calendar.delete': async (i) => {
       repos.calendar.delete(IdIn.parse(i).id)
       return null

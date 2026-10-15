@@ -570,6 +570,7 @@ export function BoardScreen({
                 memos={memos}
                 timetables={timetable.data}
                 otherThemes={others}
+                events={user.actions.calendar}
               />
             )}
           </aside>
