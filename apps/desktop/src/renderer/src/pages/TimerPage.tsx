@@ -15,6 +15,7 @@ import {
 } from '../../../shared/timer'
 import { localDate, localDayStart, timeLabel, addDays, weekOf } from '../board/calendar'
 import { useSecondClock } from '../board/useSecondClock'
+import { dateParts, monthDay, weekdayLabel } from './dateText'
 import { focusByDay, formatDuration, lastDays, summarize } from './timerStats'
 import './pages.css'
 
@@ -36,7 +37,6 @@ const MIN = 60_000
 const PRESETS = [5, 10, 15, 25, 45, 60]
 const RING_R = 120
 const RING_C = 2 * Math.PI * RING_R
-const DOW = ['일', '월', '화', '수', '목', '금', '토']
 
 /** 타이머 세부 페이지: 큰 타이머(일반/뽀모도로) + 기록과 통계 */
 export function TimerPage(p: Props) {
@@ -187,7 +187,6 @@ function PlainTimer({ t, command }: { t: TimerState; command(c: TimerCommand): v
                 role="radio"
                 aria-checked={mode === m}
                 className="pg-pill"
-                aria-selected={mode === m}
                 onClick={() => setMode(m)}
               >
                 {m === 'focus' ? '집중' : '휴식'}
@@ -201,7 +200,6 @@ function PlainTimer({ t, command }: { t: TimerState; command(c: TimerCommand): v
                 type="button"
                 role="radio"
                 aria-checked={min === m}
-                aria-selected={min === m}
                 className="pg-pill"
                 onClick={() => setMin(m)}
               >
@@ -350,7 +348,7 @@ function Stats({
 }) {
   const today = localDate(now.getTime())
   const days = lastDays(today, 7)
-  const [y, m, d] = today.split('-').map(Number) as [number, number, number]
+  const [y, m, d] = dateParts(today)
   const weekDays = weekOf(y, m - 1, d, weekStartsOn).map((c) => c.date)
   const from = localDayStart(weekDays[0]! < days[0]! ? weekDays[0]! : days[0]!)
   const to = localDayStart(addDays(today, 1))
@@ -389,12 +387,11 @@ function Stats({
       <div className="tp-bars" role="img" aria-label="최근 7일 집중 시간">
         {days.map((day) => {
           const ms = byDay.get(day) ?? 0
-          const [yy, mm, dd] = day.split('-').map(Number) as [number, number, number]
           return (
-            <div key={day} className="tp-bar" title={`${mm}/${dd} ${formatDuration(ms)}`}>
+            <div key={day} className="tp-bar" title={`${monthDay(day)} ${formatDuration(ms)}`}>
               <span className="tp-bar-fill" style={{ height: `${(ms / max) * 100}%` }} />
               <span className={`tp-bar-label ${day === today ? 'is-today' : ''}`}>
-                {DOW[new Date(Date.UTC(yy, mm - 1, dd)).getUTCDay()]}
+                {weekdayLabel(day)}
               </span>
             </div>
           )
@@ -408,9 +405,7 @@ function Stats({
           {list.slice(0, 20).map((s) => (
             <li key={s.id}>
               <span className="tp-log-time">
-                {localDate(s.endedAt) === today
-                  ? ''
-                  : `${Number(localDate(s.endedAt).slice(5, 7))}/${Number(localDate(s.endedAt).slice(8))} `}
+                {localDate(s.endedAt) === today ? '' : `${monthDay(localDate(s.endedAt))} `}
                 {timeLabel(s.startedAt)}–{timeLabel(s.endedAt)}
               </span>
               <span className="tp-log-kind">{s.kind === 'focus' ? '집중' : '휴식'}</span>

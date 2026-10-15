@@ -33,7 +33,7 @@ export function MemoBlock({ block }: { block: MemoBlockT }) {
   return (
     <div className={`kmm kmm--${block.size}`} style={vars}>
       {empty !== null ? (
-        <p className="kmm-empty">{empty}</p>
+        <p className="kb-empty">{empty}</p>
       ) : (
         <MemoView
           body={memo!.body}

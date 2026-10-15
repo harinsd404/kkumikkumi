@@ -1,6 +1,7 @@
 import type { Asset } from '@kkumikkumi/schema'
 import { useEffect, useState } from 'react'
 import { assetFileUrl } from './assetUrl'
+import { ModalBackdrop } from './Modal'
 
 const ERRORS: Record<string, string> = {
   nothing_left: '전부 지워져요. 지우는 정도를 낮춰 주세요',
@@ -51,17 +52,11 @@ export function CutoutDialog({
     }
   }, [themeId, original.hash, strength])
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onCancel()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onCancel])
-
   const ready = result !== null && result.strength === strength && !error
   const failed = error !== null && error.strength === strength
 
   return (
-    <div className="dlg-backdrop" onPointerDown={(e) => e.target === e.currentTarget && onCancel()}>
+    <ModalBackdrop onClose={onCancel}>
       <div className="dlg cut" role="dialog" aria-modal="true" aria-labelledby="cut-title">
         <h2 id="cut-title" className="cut-title">
           흰 배경을 지울까요?
@@ -124,6 +119,6 @@ export function CutoutDialog({
           </button>
         </div>
       </div>
-    </div>
+    </ModalBackdrop>
   )
 }

@@ -1,4 +1,4 @@
-import { CANVAS, blockRect, type FreeItem, type Theme } from '@kkumikkumi/schema'
+import { CANVAS, blockRect, type Theme } from '@kkumikkumi/schema'
 import {
   useLayoutEffect,
   useMemo,
@@ -17,7 +17,7 @@ import {
 } from './BoardContext'
 import { BlockView } from './BlockView'
 import { FreeItemView } from './FreeItemView'
-import { blockBox, fitScale } from './layout'
+import { blockBox, fitScale, freeLayers } from './layout'
 import './board.css'
 
 export interface BoardProps {
@@ -32,7 +32,6 @@ export interface BoardProps {
 }
 
 const EMPTY: BoardData = {}
-const byZ = (a: FreeItem, b: FreeItem) => a.z - b.z
 
 /**
  * 보드 렌더러(순수 React, electron 의존 없음).
@@ -71,8 +70,7 @@ export function Board({
     height: CANVAS.height,
     transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
   }
-  const back = theme.freeItems.filter((f) => f.layer === 'back').sort(byZ)
-  const front = theme.freeItems.filter((f) => f.layer === 'front').sort(byZ)
+  const { back, front } = freeLayers(theme.freeItems)
 
   return (
     <BoardProvider value={ctx}>

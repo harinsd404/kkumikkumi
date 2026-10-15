@@ -114,19 +114,23 @@ export function useEditor(initial: Theme, deps: EditorDeps): EditorApi {
       ? selection
       : null
 
-  return {
-    theme,
-    selection: live,
-    select: setSelection,
-    dispatch,
-    endGesture: () => set(seal(hist.current)),
-    undo: () => set(undo(hist.current)),
-    redo: () => set(redo(hist.current)),
-    canUndo: canUndo(h),
-    canRedo: canRedo(h),
-    status,
-    notice,
-    showNotice: setNotice,
-    flush: () => autosaver.flush(),
-  }
+  // 내용이 같으면 같은 객체(분 단위 시계 등으로 다시 그려질 때 [ed] 의존 콜백이 매번 바뀌지 않도록)
+  return useMemo<EditorApi>(
+    () => ({
+      theme,
+      selection: live,
+      select: setSelection,
+      dispatch,
+      endGesture: () => set(seal(hist.current)),
+      undo: () => set(undo(hist.current)),
+      redo: () => set(redo(hist.current)),
+      canUndo: canUndo(h),
+      canRedo: canRedo(h),
+      status,
+      notice,
+      showNotice: setNotice,
+      flush: () => autosaver.flush(),
+    }),
+    [theme, live, dispatch, set, h, status, notice, autosaver],
+  )
 }

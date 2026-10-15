@@ -1,13 +1,13 @@
 import { cp, mkdir, readdir, readFile, rename, rm, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
+  ASSET_EXT_BY_MIME,
   BUILTIN_THEME_IDS,
   builtinPresetOf,
   createDefaultTheme,
   createTheme,
-  type Palette,
-  type Pattern,
   THEME_PRESET_IDS,
+  THEME_PRESETS,
   type ThemeLook,
   type ThemePresetId,
   type ThemeTemplateId,
@@ -21,24 +21,14 @@ import {
   type Asset,
   type Theme,
 } from '@kkumikkumi/schema'
+import type { ThemeErrorCode, ThemeSummary } from '../../shared/api'
+import { ASSET_FILE_RE } from '../assets/assetUrl'
 import { fsyncDir, TMP_MARKER, writeFileAtomic } from '../fsutil'
 
 export interface StoreDeps {
   now(): number
   newId(): string
 }
-
-export type ThemeErrorCode =
-  | 'not_found'
-  | 'invalid_id'
-  | 'invalid_json'
-  | 'invalid_schema'
-  | 'future_version'
-  | 'unsupported_version'
-  | 'id_mismatch'
-  | 'missing_asset_file'
-  | 'last_theme'
-  | 'builtin_theme'
 
 export class ThemeStoreError extends Error {
   constructor(readonly code: ThemeErrorCode) {
@@ -47,31 +37,11 @@ export class ThemeStoreError extends Error {
   }
 }
 
-export type ThemeSummary =
-  | {
-      id: string
-      ok: true
-      name: string
-      updatedAt: number
-      /** 앱 내장 기본 테마(이름 바꾸기/삭제 불가) */
-      builtin: boolean
-      palette: Palette
-      bgColor: string | null
-      pattern: Pattern | null
-      fontId: string
-    }
-  | { id: string; ok: false; error: ThemeErrorCode }
-
 const THEME_FILE = 'theme.json'
 const ASSETS_DIR = 'assets'
-const EXT: Record<Asset['mime'], string> = {
-  'image/png': 'png',
-  'image/jpeg': 'jpg',
-  'image/webp': 'webp',
-}
-const ASSET_FILE_RE = /^([0-9a-f]{64})\.(png|jpg|webp)$/
 
-export const assetFileName = (a: Pick<Asset, 'hash' | 'mime'>): string => `${a.hash}.${EXT[a.mime]}`
+export const assetFileName = (a: Pick<Asset, 'hash' | 'mime'>): string =>
+  `${a.hash}.${ASSET_EXT_BY_MIME[a.mime]}`
 
 /**
  * 테마 폴더 저장소: <root>/<themeId>/theme.json + assets/<hash>.<ext>
@@ -83,6 +53,21 @@ export class ThemeStore {
     private readonly root: string,
     private readonly deps: StoreDeps,
   ) {}
+
+  /** 테마별 쓰기 순서 보장: 읽고-고쳐-쓰기(정리, 이름 바꾸기, 되돌리기)가 서로의 저장을 덮어쓰지 않도록 */
+  private readonly locks = new Map<string, Promise<unknown>>()
+
+  private locked<T>(id: string, fn: () => Promise<T>): Promise<T> {
+    const key = id.toLowerCase()
+    const prev = this.locks.get(key) ?? Promise.resolve()
+    const run = prev.then(fn, fn)
+    const tail = run.catch(() => undefined)
+    this.locks.set(key, tail)
+    void tail.then(() => {
+      if (this.locks.get(key) === tail) this.locks.delete(key)
+    })
+    return run
+  }
 
   /* ── 경로 (ID/해시를 검증한 뒤에만 경로를 만든다) ── */
 
@@ -173,11 +158,20 @@ export class ThemeStore {
 
   /* ── 쓰기 ── */
 
-  /** 검증 후 원자적으로 저장. 매니페스트의 에셋 파일이 실제로 있어야 한다. */
-  async save(theme: Theme): Promise<Theme> {
+  /**
+   * 검증 후 원자적으로 저장. 매니페스트의 에셋 파일이 실제로 있어야 한다.
+   * 기본 테마는 이름을 바꿀 수 없다.
+   */
+  save(theme: Theme): Promise<Theme> {
+    return this.locked(theme.id, () => this.saveUnlocked(theme))
+  }
+
+  private async saveUnlocked(theme: Theme): Promise<Theme> {
     const parsed = ThemeSchema.safeParse(theme)
     if (!parsed.success) throw new ThemeStoreError('invalid_schema')
     const t = parsed.data
+    const preset = builtinPresetOf(t.id)
+    if (preset && t.name !== THEME_PRESETS[preset].name) throw new ThemeStoreError('builtin_theme')
     const dir = this.dir(t.id)
     try {
       await stat(join(dir, THEME_FILE))
@@ -215,8 +209,10 @@ export class ThemeStore {
 
   async rename(id: string, name: string): Promise<Theme> {
     if (builtinPresetOf(id)) throw new ThemeStoreError('builtin_theme')
-    const t = await this.read(id)
-    return this.save({ ...t, name: Name.parse(name), updatedAt: this.deps.now() })
+    return this.locked(id, async () => {
+      const t = await this.read(id)
+      return this.saveUnlocked({ ...t, name: Name.parse(name), updatedAt: this.deps.now() })
+    })
   }
 
   /** 마지막 남은 (유효한) 테마는 지우지 않는다. */
@@ -251,14 +247,21 @@ export class ThemeStore {
    * 2) 매니페스트에 없는 파일과 남은 임시 파일을 삭제. 단, graceMs 안에 수정된 파일은 남긴다
    *    (방금 가져왔지만 아직 테마에 저장되지 않은 에셋 보호)
    */
-  async pruneAssets(id: string, graceMs: number): Promise<{ manifest: number; files: number }> {
+  pruneAssets(id: string, graceMs: number): Promise<{ manifest: number; files: number }> {
+    return this.locked(id, () => this.pruneUnlocked(id, graceMs))
+  }
+
+  private async pruneUnlocked(
+    id: string,
+    graceMs: number,
+  ): Promise<{ manifest: number; files: number }> {
     const t = await this.read(id)
     const used = referencedAssetHashes(t)
     const kept = t.assets.filter((a) => used.has(a.hash))
     let manifest = 0
     if (kept.length !== t.assets.length) {
       manifest = t.assets.length - kept.length
-      await this.save({ ...t, assets: kept })
+      await this.saveUnlocked({ ...t, assets: kept })
     }
     const keepNames = new Set(kept.map(assetFileName))
     const dir = this.assetsDir(id)
@@ -282,7 +285,6 @@ export class ThemeStore {
     return { manifest, files }
   }
 
-  /** 유효한 테마가 하나도 없으면 기본 테마를 만든다. 활성 테마 후보 id를 돌려준다. */
   /** 기본 테마의 처음 상태(이름/생성 시각은 주어진 값) */
   private builtinTheme(preset: ThemePresetId, now: number): Theme {
     return createDefaultTheme(
@@ -324,6 +326,10 @@ export class ThemeStore {
   async resetBuiltin(id: string): Promise<Theme> {
     const preset = builtinPresetOf(id)
     if (!preset) throw new ThemeStoreError('not_found')
+    return this.locked(id, () => this.resetUnlocked(id, preset))
+  }
+
+  private async resetUnlocked(id: string, preset: ThemePresetId): Promise<Theme> {
     const now = this.deps.now()
     const fresh = this.builtinTheme(preset, now)
     try {
@@ -342,6 +348,7 @@ export class ThemeStore {
     return fresh
   }
 
+  /** 유효한 테마가 하나도 없으면 기본 테마를 만든다. 활성 테마 후보 id를 돌려준다. */
   async ensureAtLeastOne(defaultName: string): Promise<string> {
     const first = (await this.list()).find((s) => s.ok)
     if (first) return first.id

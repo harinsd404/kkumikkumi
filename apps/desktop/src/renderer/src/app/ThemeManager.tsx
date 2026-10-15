@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { ThemeSummary } from '../../../shared/api'
 import { Dots } from './ThemeDialog'
 import { lookOfSummary } from './themeLook'
+import { ModalBackdrop } from './Modal'
 
 type OkSummary = Extract<ThemeSummary, { ok: true }>
 
@@ -36,17 +37,13 @@ export function ThemeManager({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || busy) return
-      if (renaming || confirm) {
-        setRenaming(null)
-        setConfirm(null)
-      } else onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose, busy, renaming, confirm])
+  /** Escape/바깥 누르기: 이름 바꾸기나 확인 중이면 그것만 취소 */
+  const dismiss = () => {
+    if (renaming || confirm) {
+      setRenaming(null)
+      setConfirm(null)
+    } else onClose()
+  }
 
   const ok = list.filter((s): s is OkSummary => s.ok)
   const builtins = ok.filter((s) => s.builtin)
@@ -87,7 +84,7 @@ export function ThemeManager({
             autoFocus
             onChange={(e) => setRenaming({ id: s.id, text: e.target.value })}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') void commitRename()
+              if (e.key === 'Enter' && !e.nativeEvent.isComposing) void commitRename()
               if (e.key === 'Escape') {
                 e.stopPropagation()
                 setRenaming(null)
@@ -173,10 +170,7 @@ export function ThemeManager({
   }
 
   return (
-    <div
-      className="dlg-backdrop"
-      onPointerDown={(e) => e.target === e.currentTarget && !busy && onClose()}
-    >
+    <ModalBackdrop onClose={dismiss} busy={busy}>
       <div className="dlg tm" role="dialog" aria-modal="true" aria-labelledby="tm-title">
         <h2 id="tm-title" className="td-title">
           테마 관리
@@ -214,6 +208,6 @@ export function ThemeManager({
           </button>
         </div>
       </div>
-    </div>
+    </ModalBackdrop>
   )
 }

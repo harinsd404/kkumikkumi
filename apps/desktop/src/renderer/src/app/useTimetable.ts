@@ -15,6 +15,11 @@ const ERROR_TEXT: Record<string, string> = {
   not_found: '없는 시간표나 칸이에요',
 }
 
+async function fetchData(): Promise<TimetableData | null> {
+  const r = await window.kkumi.invoke('timetable.get')
+  return r.ok ? r.value : null
+}
+
 export interface TimetableStore {
   data: TimetableData | undefined
   /** 만든 항목(실패하면 null) */
@@ -44,15 +49,12 @@ export function useTimetable(onError: (text: string) => void): TimetableStore {
   const [data, setData] = useState<TimetableData | undefined>()
 
   const reload = useCallback(async () => {
-    const r = await window.kkumi.invoke('timetable.get')
-    if (r.ok) setData(r.value)
+    const v = await fetchData()
+    if (v) setData(v)
   }, [])
 
   useEffect(() => {
-    void (async () => {
-      const r = await window.kkumi.invoke('timetable.get')
-      if (r.ok) setData(r.value)
-    })()
+    void fetchData().then((v) => v && setData(v))
   }, [])
 
   const fail = useCallback(

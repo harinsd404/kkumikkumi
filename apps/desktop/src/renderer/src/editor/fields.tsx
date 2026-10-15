@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import type { SwatchGroup } from '../app/colorGroups'
 import { Swatches } from '../app/Swatches'
+import { FONTS } from '../board/fonts'
 
 // 인스펙터 입력 컴포넌트(작고 단순하게). 색은 HexColor(#rrggbb / #rrggbbaa)만 받는다.
 const HEX = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/
@@ -104,22 +105,36 @@ export function Slider(props: {
   )
 }
 
+/**
+ * 숫자 칸. 입력 중에는 글자 그대로 두고 Enter나 포커스가 빠질 때 반영한다
+ * (값마다 바로 반영하면 범위 보정 때문에 "120"을 칠 수 없다).
+ */
 export function NumberField(props: {
   label: string
   value: number
   onChange(v: number): void
   step?: number
 }) {
+  const shown = String(Math.round(props.value * 10) / 10)
+  const [draft, setDraft] = useState<string | null>(null)
+  const commit = () => {
+    if (draft === null) return
+    const v = Number(draft)
+    if (draft.trim() !== '' && Number.isFinite(v)) props.onChange(v)
+    setDraft(null)
+  }
   return (
     <Row label={props.label}>
       <input
         type="number"
         className="ki-num"
         step={props.step ?? 1}
-        value={Math.round(props.value * 10) / 10}
-        onChange={(e) => {
-          const v = Number(e.target.value)
-          if (Number.isFinite(v)) props.onChange(v)
+        value={draft ?? shown}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') commit()
+          if (e.key === 'Escape') setDraft(null)
         }}
       />
     </Row>
@@ -151,5 +166,25 @@ export function Segmented<T extends string | number>(props: {
         ))}
       </span>
     </div>
+  )
+}
+
+const fontOptions = Object.entries(FONTS).map(([id, f]) => ({ id, label: f.label }))
+
+/** 번들 글꼴 고르기. emptyLabel이 있으면 맨 위에 '' 선택지(테마 기본 등) */
+export function FontSelect(props: {
+  value: string
+  onChange(fontId: string): void
+  emptyLabel?: string
+}) {
+  return (
+    <select value={props.value} onChange={(e) => props.onChange(e.target.value)}>
+      {props.emptyLabel !== undefined && <option value="">{props.emptyLabel}</option>}
+      {fontOptions.map((f) => (
+        <option key={f.id} value={f.id}>
+          {f.label}
+        </option>
+      ))}
+    </select>
   )
 }

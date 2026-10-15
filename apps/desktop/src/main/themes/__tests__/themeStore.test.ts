@@ -133,6 +133,10 @@ describe('ThemeStore', () => {
     await store.create(opts('a'))
     expect(await code(store.rename(BUILTIN_THEME_IDS.pudding, 'x'))).toBe('builtin_theme')
     expect(await code(store.delete(BUILTIN_THEME_IDS.cottonCandy))).toBe('builtin_theme')
+    // save로 이름을 바꾸는 우회도 거부, 이름이 그대로면 저장된다
+    const t = await store.read(BUILTIN_THEME_IDS.pudding)
+    expect(await code(store.save({ ...t, name: 'x' }))).toBe('builtin_theme')
+    expect(await code(store.save({ ...t, updatedAt: t.updatedAt + 1 }))).toBe('resolved')
   })
 
   it('resetBuiltin: 처음 상태로(생성 시각은 유지), 손상된 것도 되돌린다, 내 테마는 거부', async () => {
@@ -261,5 +265,18 @@ describe('ThemeStore', () => {
     expect(await store.pruneAssets(t.id, 10_000)).toEqual({ manifest: 1, files: 2 })
     expect((await readdir(dir)).sort()).toEqual([assetFileName(used), recentOrphan, stray].sort())
     expect((await store.read(t.id)).assets).toEqual([used])
+  })
+
+  it('pruneAssets와 동시에 들어온 save는 덮어써지지 않는다(테마별 쓰기 순서)', async () => {
+    const t = await store.create(opts('a'))
+    const unused = asset('d')
+    await store.writeAsset(t.id, unused, new Uint8Array([1]))
+    await store.save({ ...t, assets: [unused] })
+    const edited = { ...t, assets: [unused], blocks: [], updatedAt: t.updatedAt + 1 }
+    await Promise.all([store.pruneAssets(t.id, 10_000), store.save(edited)])
+    const after = await store.read(t.id)
+    expect(after.blocks).toEqual([])
+    // prune가 먼저 잡혔으므로 save가 나중에 반영된다
+    expect(after.updatedAt).toBe(t.updatedAt + 1)
   })
 })

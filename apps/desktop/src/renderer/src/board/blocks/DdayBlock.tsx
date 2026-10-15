@@ -1,13 +1,13 @@
 import type { CalendarEvent, GridBlock } from '@kkumikkumi/schema'
-import { useEffect, useState, type CSSProperties } from 'react'
 import { useBoard, type BoardActions } from '../BoardContext'
 import { addDays, localDate } from '../calendar'
 import { ddayDateLabel, ddayOf } from '../dday'
+import { paletteVars } from '../style'
+import { useKeyedAsync } from '../useKeyedAsync'
 
 type DdayBlockT = Extract<GridBlock, { type: 'dday' }>
 
 interface Loaded {
-  key: string
   /** 보여 줄 일정. null = 없음(자동: 다가오는 일정 없음 / 고정: 지워짐), undefined = 불러오지 못함 */
   main: CalendarEvent | null | undefined
   next: CalendarEvent[]
@@ -28,48 +28,38 @@ function sample(today: string): Loaded {
     endDate: addDays(today, days),
   })
   return {
-    key: 'sample',
     main: ev('s1', '기말고사', 12, '#f4c2df'),
     next: [ev('s2', '수학여행', 30, '#c4e0f0'), ev('s3', '방학', 61, '#f6ebb5')],
   }
 }
 
-/**
- * 고정 일정이면 그 일정, 아니면 가장 가까운 다가오는 일정. M은 다음 일정 2개도.
- * 날짜가 바뀌거나(today) 사용자 데이터가 바뀌면(version) 다시 불러온다.
- */
+/** 고정 일정이면 그 일정, 아니면 가장 가까운 다가오는 일정. M은 다음 일정 2개도. */
+async function loadDday(
+  cal: BoardActions['calendar'],
+  eventId: string | null,
+  today: string,
+): Promise<Loaded> {
+  if (eventId) {
+    const [main, list] = await Promise.all([cal.get(eventId), cal.upcoming(today, 3)])
+    return { main, next: list.filter((e) => e.id !== eventId).slice(0, 2) }
+  }
+  const list = await cal.upcoming(today, 3)
+  return { main: list[0] ?? null, next: list.slice(1, 3) }
+}
+
+/** 날짜가 바뀌거나(today) 사용자 데이터가 바뀌면(version) 다시 불러온다. 데이터 통로가 없으면 예시. */
 function useDday(
   eventId: string | null,
   actions: BoardActions | undefined,
   version: number,
   today: string,
 ): Loaded | null {
-  const [state, setState] = useState<Loaded | null>(null)
-  const key = `${eventId ?? 'auto'}|${today}|${version}`
-  useEffect(() => {
-    if (!actions) return
-    let alive = true
-    const cal = actions.calendar
-    void (async () => {
-      let main: CalendarEvent | null | undefined
-      let next: CalendarEvent[]
-      if (eventId) {
-        const [one, list] = await Promise.all([cal.get(eventId), cal.upcoming(today, 3)])
-        main = one
-        next = list.filter((e) => e.id !== eventId).slice(0, 2)
-      } else {
-        const list = await cal.upcoming(today, 3)
-        main = list[0] ?? null
-        next = list.slice(1, 3)
-      }
-      if (alive) setState({ key, main, next })
-    })()
-    return () => {
-      alive = false
-    }
-  }, [actions, eventId, today, key])
+  const loaded = useKeyedAsync(
+    `${eventId ?? 'auto'}|${today}|${version}`,
+    actions ? () => loadDday(actions.calendar, eventId, today) : null,
+  )
   if (!actions) return sample(today)
-  return state?.key === key ? state : null
+  return loaded ?? null
 }
 
 /** 디데이: 일정까지 남은 날(D-N), 오늘(D-DAY), 지난 날(D+N). S는 한 줄, M은 크게 + 다음 일정 2개. */
@@ -79,12 +69,7 @@ export function DdayBlock({ block }: { block: DdayBlockT }) {
   const today = localDate(now.getTime())
   const eventId = block.props.eventId
   const d = useDday(eventId, actions, data.version ?? 0, today)
-  const vars = {
-    '--dd-accent': p.accent,
-    '--dd-check': p.check,
-    '--dd-sub': p.subText,
-    color: p.text,
-  } as CSSProperties
+  const vars = { ...paletteVars(p), color: p.text }
   const big = block.size === 'M'
 
   let empty: string | null = null
@@ -103,7 +88,7 @@ export function DdayBlock({ block }: { block: DdayBlockT }) {
     <div className={`kdd kdd--${block.size}`} style={vars}>
       {big && <p className="kdd-head">{eventId ? '디데이' : '다가오는 일정'}</p>}
       {empty !== null ? (
-        <p className="kdd-empty">{empty}</p>
+        <p className="kb-empty kb-empty--center">{empty}</p>
       ) : (
         main &&
         dd && (

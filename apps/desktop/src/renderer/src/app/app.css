@@ -25,6 +25,8 @@ body {
   --ui-line-soft: color-mix(in srgb, var(--ui-accent) 22%, #ffffff);
   --ui-line-strong: color-mix(in srgb, var(--ui-accent) 55%, #ffffff);
   --ui-faint: color-mix(in srgb, var(--ui-sub) 65%, #ffffff);
+  /* 위험(삭제)·오류 글자 */
+  --ui-danger: #c0392b;
   /* 편집 중 고른 것 표시: 강조색을 글자색 쪽으로 진하게 */
   --ui-select: color-mix(in srgb, var(--ui-accent) 60%, var(--ui-text));
 }
@@ -232,7 +234,7 @@ body {
 }
 .tb-status.is-invalid,
 .tb-status.is-error {
-  color: #c0392b;
+  color: var(--ui-danger);
 }
 .tb-menu {
   position: relative;
@@ -366,7 +368,7 @@ body {
   background: rgba(58, 155, 92, 0.12);
 }
 .ke-ghost.is-invalid {
-  border-color: #c0392b;
+  border-color: var(--ui-danger);
   background: rgba(192, 57, 43, 0.12);
 }
 .ke-dragging {
@@ -555,7 +557,7 @@ body {
   margin-top: 12px;
 }
 .ki-actions .is-danger {
-  color: #c0392b;
+  color: var(--ui-danger);
 }
 .ki kbd {
   margin-left: 4px;
@@ -661,7 +663,7 @@ body {
 }
 .dlg-error {
   margin: 0;
-  color: #c0392b;
+  color: var(--ui-danger);
   font-size: 13px;
 }
 .dlg-actions {
@@ -687,7 +689,7 @@ body {
 }
 .dlg-actions .is-danger {
   background: transparent;
-  color: #c0392b;
+  color: var(--ui-danger);
 }
 .dlg-actions button:disabled {
   opacity: 0.5;
@@ -764,7 +766,7 @@ form.ki-row {
   width: 56px;
 }
 .ki-buttons .is-danger {
-  color: #c0392b;
+  color: var(--ui-danger);
 }
 
 /* ── 화면 전환 탭(타이틀바 왼쪽) / 세부 페이지 영역 ── */
@@ -1110,13 +1112,11 @@ form.ki-row {
   padding: 10px;
   border-radius: 12px;
   background: repeating-conic-gradient(#e9e9ee 0% 25%, #ffffff 0% 50%) 50% / 16px 16px;
+  overflow: hidden;
   transition: opacity 0.15s;
 }
 .cut-check.is-busy {
   opacity: 0.55;
-}
-.cut-check {
-  overflow: hidden;
 }
 .cut-check img {
   display: block;
@@ -1129,7 +1129,7 @@ form.ki-row {
   margin: 0;
   padding: 0 8px;
   font-size: 13px;
-  color: #c0392b;
+  color: var(--ui-danger);
 }
 .cut-slider {
   display: flex;
@@ -1440,7 +1440,7 @@ form.ki-row {
 .tm-actions .is-danger,
 .tm-confirm .is-danger {
   background: #fde8e6;
-  color: #c0392b;
+  color: var(--ui-danger);
 }
 .tm-actions button:disabled,
 .tm-confirm button:disabled {

@@ -59,6 +59,18 @@ describe('autosave', () => {
     expect(saved).toEqual([7])
   })
 
+  it('dispose는 대기 중인 변경을 버리지 않고 바로 저장한다', async () => {
+    const { a, saved } = setup()
+    a.schedule(4)
+    await vi.advanceTimersByTimeAsync(100)
+    a.dispose()
+    await vi.advanceTimersByTimeAsync(20) // 디바운스(800)를 기다리지 않는다
+    expect(saved).toEqual([4])
+    a.dispose()
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(saved).toEqual([4])
+  })
+
   it('검증 실패면 저장하지 않고 invalid', async () => {
     const { a, saved, statuses } = setup({ validate: (v) => (v < 0 ? '음수' : null) })
     a.schedule(-1)

@@ -237,11 +237,23 @@ export const PetSchema = z.strictObject({
 
 export const AssetSchema = z.strictObject({
   hash: Sha256,
-  mime: z.enum(['image/png', 'image/jpeg', 'image/webp']), // SVG 제외
+  // 에셋 파이프라인이 PNG/JPEG로만 저장한다(WebP 입력도 변환). SVG 제외.
+  mime: z.enum(['image/png', 'image/jpeg']),
   width: z.number().int().min(1).max(LIMITS.maxAssetPx),
   height: z.number().int().min(1).max(LIMITS.maxAssetPx),
   bytes: z.number().int().min(1).max(LIMITS.maxAssetBytes),
 })
+
+/** 저장 형식 → 파일 확장자(assets/<hash>.<ext>) */
+export const ASSET_EXT_BY_MIME = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+} as const satisfies Record<Asset['mime'], string>
+export type AssetExt = (typeof ASSET_EXT_BY_MIME)[Asset['mime']]
+/** 파일 확장자 → 저장 형식(ASSET_EXT_BY_MIME의 역) */
+export const ASSET_MIME_BY_EXT = Object.fromEntries(
+  Object.entries(ASSET_EXT_BY_MIME).map(([mime, ext]) => [ext, mime]),
+) as { [M in Asset['mime'] as (typeof ASSET_EXT_BY_MIME)[M]]: M }
 
 /** 내장 배경 무늬 (앱에 들어 있는 SVG를 마스크로 그리고 color로 칠한다. 테마 파일에는 id만 저장) */
 export const PatternSchema = z.strictObject({

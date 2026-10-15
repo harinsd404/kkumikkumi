@@ -24,6 +24,7 @@ export interface Autosaver<T> {
   schedule(value: T): void
   /** 대기 중인 변경을 즉시 저장하고 끝날 때까지 기다린다 */
   flush(): Promise<void>
+  /** 타이머를 멈춘다. 대기 중인 변경은 버리지 않고 바로 저장을 시작한다(기다리지 않음). */
   dispose(): void
 }
 
@@ -82,7 +83,8 @@ export function createAutosaver<T>(d: AutosaveDeps<T>): Autosaver<T> {
       if (latest) await start()
     },
     dispose() {
-      if (timer !== null) d.clearTimer(timer)
+      if (latest) void start()
+      else if (timer !== null) d.clearTimer(timer)
       timer = null
     },
   }

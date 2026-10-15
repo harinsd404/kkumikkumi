@@ -10,9 +10,9 @@ import {
   type Asset,
   type FreeItem,
   type GridBlock,
-  type GridItem,
   type Theme,
 } from '@kkumikkumi/schema'
+import { gridItems } from '../../board/layout'
 import { clampPosition, MIN_ITEM_SIZE } from './geometry'
 
 /**
@@ -70,12 +70,6 @@ export type ReduceResult = { ok: true; theme: Theme } | { ok: false; error: Redu
 
 const ok = (theme: Theme): ReduceResult => ({ ok: true, theme })
 const fail = (error: ReduceError): ReduceResult => ({ ok: false, error })
-
-const gridItems = (blocks: readonly GridBlock[]): GridItem[] =>
-  blocks.flatMap((b) => {
-    const r = blockRect(b)
-    return r ? [{ id: b.id, ...r }] : []
-  })
 
 const mapBlock = (t: Theme, id: string, f: (b: GridBlock) => GridBlock): Theme => ({
   ...t,

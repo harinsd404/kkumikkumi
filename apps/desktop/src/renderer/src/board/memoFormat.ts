@@ -30,11 +30,10 @@ const ORDERED = /^( *)(\d{1,4})[.)] (.*)$/
 
 const indentOf = (spaces: string) => Math.min(MAX_INDENT, Math.floor(spaces.length / 2))
 
-export const splitLines = (body: string): string[] =>
-  body.split('\n').map((l) => l.replace(/\r$/, ''))
+const splitLines = (body: string): string[] => body.split('\n').map((l) => l.replace(/\r$/, ''))
 
 /** 한 줄 → 구조 */
-export function parseLine(raw: string, line: number): MemoLine {
+function parseLine(raw: string, line: number): MemoLine {
   if (raw.trim() === '') return { kind: 'blank', line }
   let m = HEADING.exec(raw)
   if (m) return { kind: 'heading', level: m[1]!.length as 1 | 2, spans: parseInline(m[2]!), line }

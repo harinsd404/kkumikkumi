@@ -1,5 +1,6 @@
 import type { GridBlock } from '@kkumikkumi/schema'
 import { useRef, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react'
+import { WIDGET_LABEL } from './blockLabels'
 import { useBoard } from './BoardContext'
 import { CalendarBlock } from './blocks/CalendarBlock'
 import { ImageBlock } from './blocks/ImageBlock'
@@ -10,14 +11,6 @@ import { TimetableBlock } from './blocks/TimetableBlock'
 import { TodoBlock } from './blocks/TodoBlock'
 import type { Box } from './layout'
 import { cardCss } from './style'
-
-const PAGE_LABEL = {
-  todo: '할 일',
-  calendar: '캘린더',
-  timer: '타이머',
-  memo: '메모',
-  timetable: '시간표',
-} as const
 
 /** 블록 → 누르면 열 세부 페이지(디데이는 캘린더) */
 const pageOf = (type: GridBlock['type']) =>
@@ -52,7 +45,7 @@ export function BlockView({ block, box }: { block: GridBlock; box: Box }) {
       }
     },
     tabIndex: 0,
-    'aria-label': `${PAGE_LABEL[page!]} — 눌러서 크게 보기`,
+    'aria-label': `${WIDGET_LABEL[page!]} — 눌러서 크게 보기`,
   }
 
   return (
@@ -63,9 +56,9 @@ export function BlockView({ block, box }: { block: GridBlock; box: Box }) {
       style={{ ...box, ...cardCss(block.style, theme.defaults) }}
       {...link}
     >
-      {block.type === 'calendar' && <CalendarBlock block={block} box={box} />}
+      {block.type === 'calendar' && <CalendarBlock block={block} />}
       {block.type === 'todo' && <TodoBlock block={block} />}
-      {block.type === 'timer' && <TimerBlock block={block} box={box} />}
+      {block.type === 'timer' && <TimerBlock block={block} />}
       {block.type === 'image' && <ImageBlock block={block} />}
       {block.type === 'memo' && <MemoBlock block={block} />}
       {block.type === 'timetable' && <TimetableBlock block={block} />}

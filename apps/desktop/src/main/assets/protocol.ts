@@ -1,7 +1,8 @@
 import { readFile } from 'node:fs/promises'
+import { ASSET_MIME_BY_EXT } from '@kkumikkumi/schema'
 import { protocol } from 'electron'
 import type { ThemeStore } from '../themes/themeStore'
-import { ASSET_SCHEME, MIME_BY_EXT, parseAssetUrl } from './assetUrl'
+import { ASSET_SCHEME, parseAssetUrl } from './assetUrl'
 
 /** app ready 전에 호출해야 한다. CSP는 우회하지 않는다(bypassCSP 없음). */
 export function registerAssetScheme(): void {
@@ -15,7 +16,7 @@ export function handleAssetProtocol(themes: ThemeStore): void {
   protocol.handle(ASSET_SCHEME, async (request) => {
     const parsed = parseAssetUrl(request.url)
     if (!parsed || request.method !== 'GET') return new Response(null, { status: 404 })
-    const mime = MIME_BY_EXT[parsed.ext]
+    const mime = ASSET_MIME_BY_EXT[parsed.ext]
     try {
       const data = await readFile(themes.assetPath(parsed.themeId, { hash: parsed.hash, mime }))
       return new Response(new Uint8Array(data), {

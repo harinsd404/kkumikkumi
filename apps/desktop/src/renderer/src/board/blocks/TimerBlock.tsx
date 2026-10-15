@@ -3,7 +3,6 @@ import { useState } from 'react'
 import { phaseText } from '../../../../shared/pomodoro'
 import { DEFAULT_TIMER, formatClock, remainingMs, type TimerMode } from '../../../../shared/timer'
 import { useBoard } from '../BoardContext'
-import type { Box } from '../layout'
 import { useSecondClock } from '../useSecondClock'
 
 type TimerBlockT = Extract<GridBlock, { type: 'timer' }>
@@ -15,7 +14,7 @@ const RING_C = 2 * Math.PI * 44
  * 타이머 블록. 상태는 main이 가진 하나의 타이머(여러 블록이 같은 타이머를 보여 준다).
  * S(2x1): 시간 + 시작/일시정지 + 초기화. M(2x2): 시간(숫자/링) + 집중/휴식 + 프리셋 + 버튼.
  */
-export function TimerBlock({ block }: { block: TimerBlockT; box: Box }) {
+export function TimerBlock({ block }: { block: TimerBlockT }) {
   const { theme, data, actions: all, mode: boardMode } = useBoard()
   const actions = boardMode === 'use' ? all : undefined
   const p = theme.defaults.palette
@@ -28,7 +27,9 @@ export function TimerBlock({ block }: { block: TimerBlockT; box: Box }) {
   const [pick, setPick] = useState<number | null>(null)
   const [pickMode, setPickMode] = useState<TimerMode | null>(null)
   const lastMin = Math.round(t.durationMs / MIN)
-  const selMin = pick ?? (presets.includes(lastMin) ? lastMin : (presets[0] ?? 25))
+  // 고른 프리셋이 인스펙터에서 지워졌으면 고르지 않은 것으로 본다
+  const picked = pick !== null && presets.includes(pick) ? pick : null
+  const selMin = picked ?? (presets.includes(lastMin) ? lastMin : (presets[0] ?? 25))
   const selMode = pickMode ?? t.mode
 
   const idle = t.status === 'idle'

@@ -11,95 +11,56 @@ import {
   type TimetablePrefs,
 } from '@kkumikkumi/schema'
 import type { Db } from '../connection'
-import type { Row } from './rows'
-
-const KEY = 'app'
-const POMODORO_KEY = 'pomodoro'
-const MINI_KEY = 'miniTimer'
-const TIMETABLE_KEY = 'timetablePrefs'
+import { kvSetting, type KvSetting } from './kv'
 
 /** 설정은 JSON 한 행으로 저장하고 읽을 때 SettingsSchema로 검증한다. */
 export class SettingsRepo {
-  constructor(private readonly db: Db) {}
+  private readonly app: KvSetting<Settings>
+  private readonly pomodoroKv: KvSetting<PomodoroSettings>
+  private readonly miniKv: KvSetting<MiniTimerPrefs>
+  private readonly timetableKv: KvSetting<TimetablePrefs>
 
+  constructor(db: Db) {
+    this.app = kvSetting(db, 'app', SettingsSchema)
+    // 뽀모도로/미니 타이머/시간표 설정은 앱 설정과 따로 저장해 서로의 스키마 변경에 묶이지 않게 한다.
+    this.pomodoroKv = kvSetting(db, 'pomodoro', PomodoroSettingsSchema)
+    this.miniKv = kvSetting(db, 'miniTimer', MiniTimerPrefsSchema)
+    this.timetableKv = kvSetting(db, 'timetablePrefs', TimetablePrefsSchema)
+  }
+
+  /** 없으면 null. 손상됐으면 예외(bootstrap이 복구한다). */
   get(): Settings | null {
-    const r = this.db.prepare('SELECT value FROM settings WHERE key = ?').get(KEY) as
-      Row | undefined
-    return r ? SettingsSchema.parse(JSON.parse(String(r['value']))) : null
+    return this.app.read() ?? null
   }
 
   save(settings: Settings): Settings {
-    const s = SettingsSchema.parse(settings)
-    this.db
-      .prepare(
-        'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
-      )
-      .run(KEY, JSON.stringify(s))
-    return s
+    return this.app.save(settings)
   }
 
-  /** 뽀모도로 설정(없거나 손상됐으면 기본값). 앱 설정과 따로 저장해 서로의 스키마 변경에 묶이지 않게 한다. */
+  /** 뽀모도로 설정(없거나 손상됐으면 기본값) */
   pomodoro(): PomodoroSettings {
-    const r = this.db.prepare('SELECT value FROM settings WHERE key = ?').get(POMODORO_KEY) as
-      Row | undefined
-    if (!r) return DEFAULT_POMODORO
-    const p = PomodoroSettingsSchema.safeParse(safeJson(String(r['value'])))
-    return p.success ? p.data : DEFAULT_POMODORO
+    return this.pomodoroKv.readOr(DEFAULT_POMODORO)
   }
 
   savePomodoro(settings: PomodoroSettings): PomodoroSettings {
-    const s = PomodoroSettingsSchema.parse(settings)
-    this.db
-      .prepare(
-        'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
-      )
-      .run(POMODORO_KEY, JSON.stringify(s))
-    return s
+    return this.pomodoroKv.save(settings)
   }
 
   /** 미니 타이머 창 설정(없거나 손상됐으면 기본값) */
   miniTimer(): MiniTimerPrefs {
-    const r = this.db.prepare('SELECT value FROM settings WHERE key = ?').get(MINI_KEY) as
-      Row | undefined
-    if (!r) return DEFAULT_MINI_TIMER
-    const p = MiniTimerPrefsSchema.safeParse(safeJson(String(r['value'])))
-    return p.success ? p.data : DEFAULT_MINI_TIMER
+    return this.miniKv.readOr(DEFAULT_MINI_TIMER)
   }
 
   saveMiniTimer(prefs: MiniTimerPrefs): MiniTimerPrefs {
-    const s = MiniTimerPrefsSchema.parse(prefs)
-    this.db
-      .prepare(
-        'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
-      )
-      .run(MINI_KEY, JSON.stringify(s))
-    return s
+    return this.miniKv.save(prefs)
   }
 
   /** 시간표 전역 설정(없거나 손상됐으면 고른 시간표 없음 → 첫 시간표) */
   timetablePrefs(): TimetablePrefs {
-    const r = this.db.prepare('SELECT value FROM settings WHERE key = ?').get(TIMETABLE_KEY) as
-      Row | undefined
-    if (!r) return { activeId: null }
-    const p = TimetablePrefsSchema.safeParse(safeJson(String(r['value'])))
-    return p.success ? p.data : { activeId: null }
+    return this.timetableKv.readOr({ activeId: null })
   }
 
   saveTimetablePrefs(prefs: TimetablePrefs): TimetablePrefs {
-    const s = TimetablePrefsSchema.parse(prefs)
-    this.db
-      .prepare(
-        'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
-      )
-      .run(TIMETABLE_KEY, JSON.stringify(s))
-    return s
-  }
-}
-
-const safeJson = (s: string): unknown => {
-  try {
-    return JSON.parse(s)
-  } catch {
-    return null
+    return this.timetableKv.save(prefs)
   }
 }

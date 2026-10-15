@@ -1,7 +1,8 @@
 import type { GridBlock } from '@kkumikkumi/schema'
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { TimetableData } from '../../../../shared/api'
 import { useBoard } from '../BoardContext'
+import { paletteVars } from '../style'
 import {
   autoColors,
   cellEntry,
@@ -29,13 +30,13 @@ type TimetableBlockT = Extract<GridBlock, { type: 'timetable' }>
 export function TimetableBlock({ block }: { block: TimetableBlockT }) {
   const { theme, data, now } = useBoard()
   const p = theme.defaults.palette
-  const vars = { '--ktt-accent': p.accent, '--ktt-sub': p.subText } as CSSProperties
+  const vars = paletteVars(p)
   const all = data.timetable
   const tt = all && pickTimetable(all, block.props.timetableId)
   if (!all || !tt)
     return (
       <div className={`ktt ktt--${block.size}`} style={vars}>
-        {all && <p className="ktt-empty">시간표가 없어요</p>}
+        {all && <p className="kb-empty">시간표가 없어요</p>}
       </div>
     )
   const tones = themeTones(p)
@@ -165,7 +166,7 @@ function Today({
         {name}
       </div>
       {items.length === 0 ? (
-        <p className="ktt-empty">오늘은 수업이 없어요</p>
+        <p className="kb-empty">오늘은 수업이 없어요</p>
       ) : (
         <ul className="ktt-list" ref={list} onScroll={(e) => markScrolled(e.currentTarget)}>
           {items.map((i) => {

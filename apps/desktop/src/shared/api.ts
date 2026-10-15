@@ -25,7 +25,20 @@ import type {
 import type { Channel } from './channels'
 import type { TimerCommand, TimerMode } from './timer'
 
-// renderer ↔ main 계약(타입만). 입력 검증 스키마는 main/ipc/handlers.ts에 있고 main이 항상 재검증한다.
+// renderer ↔ main 계약(타입만). 입력 검증 스키마는 main/ipc/handlers/에 있고 main이 항상 재검증한다.
+
+/** 테마를 읽거나 쓰지 못한 이유(main의 ThemeStoreError 코드) */
+export type ThemeErrorCode =
+  | 'not_found'
+  | 'invalid_id'
+  | 'invalid_json'
+  | 'invalid_schema'
+  | 'future_version'
+  | 'unsupported_version'
+  | 'id_mismatch'
+  | 'missing_asset_file'
+  | 'last_theme'
+  | 'builtin_theme'
 
 export type ThemeSummary =
   | {
@@ -42,7 +55,7 @@ export type ThemeSummary =
       pattern: Pattern | null
       fontId: string
     }
-  | { id: string; ok: false; error: string }
+  | { id: string; ok: false; error: ThemeErrorCode }
 
 export type AssetPurpose = 'image' | 'pet'
 export interface ImportedAsset {

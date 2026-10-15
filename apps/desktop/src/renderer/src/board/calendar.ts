@@ -68,21 +68,28 @@ export interface CalendarRangeQuery {
   toDate: string
 }
 
-const parse = (date: string) => {
+/** 'YYYY-MM-DD' → 연, 월(0~11), 일 */
+export const parseDate = (date: string) => {
   const [y, m, d] = date.split('-').map(Number) as [number, number, number]
   return { y, m0: m - 1, d }
 }
 
+/** 'YYYY-MM-DD' → 월(1~12), 일 */
+export const monthDay = (date: string) => {
+  const { m0, d } = parseDate(date)
+  return { m: m0 + 1, d }
+}
+
 /** DateStr에 n일 더하기(달력 산술이라 DST 무관) */
 export function addDays(date: string, n: number): string {
-  const { y, m0, d } = parse(date)
+  const { y, m0, d } = parseDate(date)
   const t = new Date(Date.UTC(y, m0, d + n))
   return iso(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate())
 }
 
 /** 로컬 날짜의 자정(ms) */
 export function localDayStart(date: string): number {
-  const { y, m0, d } = parse(date)
+  const { y, m0, d } = parseDate(date)
   return new Date(y, m0, d).getTime()
 }
 
@@ -144,7 +151,7 @@ export const timeLabel = (ms: number) => {
 
 /** 로컬 날짜 + 'HH:mm' → ms. DST로 없는 시각(봄 01:30 등)은 Date 규칙대로 앞으로 밀린다. */
 export function localDateTime(date: string, time: string): number {
-  const { y, m0, d } = parse(date)
+  const { y, m0, d } = parseDate(date)
   const [h, mi] = time.split(':').map(Number) as [number, number]
   return new Date(y, m0, d, h, mi).getTime()
 }

@@ -1,10 +1,12 @@
 import type { GridBlock, Palette, TodoItem } from '@kkumikkumi/schema'
-import { useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import checkUrl from '../icons/check.svg'
 import plusUrl from '../icons/plus.svg'
 import { useBoard, type BoardActions } from '../BoardContext'
-import { addDays, localDate } from '../calendar'
+import { addDays, localDate, monthDay } from '../calendar'
 import { sectionTone } from '../colors'
+import { usePointerTrack } from '../pointerTrack'
+import { paletteVars } from '../style'
 import {
   dueForSection,
   groupTodos,
@@ -16,10 +18,6 @@ import {
 } from '../todo'
 
 type TodoBlockT = Extract<GridBlock, { type: 'todo' }>
-
-/** 입력칸 밑줄 색: 평소 subText, 포커스 시 accent */
-const inputLine = (p: Palette) =>
-  ({ '--kt-line': p.subText, '--kt-line-focus': p.accent }) as CSSProperties
 
 /**
  * 시안(Figma 15:2832 / 15:2781)의 투두 카드. 섹션: 오늘의 할 일 / 내일 해야할 일 / 보관함.
@@ -80,6 +78,7 @@ function Section({
   const [adding, setAdding] = useState(false)
   const [drag, setDrag] = useState<{ id: string; overIndex: number } | null>(null)
   const listRef = useRef<HTMLUListElement>(null)
+  const track = usePointerTrack()
   const editable = !!actions && !!listId
 
   const commitAdd = async (title: string) => {
@@ -108,9 +107,6 @@ function Section({
       setDrag({ id, overIndex: over })
     }
     const onUp = () => {
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
-      window.removeEventListener('pointercancel', onUp)
       setDrag(null)
       if (!moved || !actions || !listId) return
       const before = items[over]
@@ -123,9 +119,7 @@ function Section({
             : null
       if (ids && ids.join() !== allIds.join()) void actions.todo.reorder(listId, ids)
     }
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
-    window.addEventListener('pointercancel', onUp)
+    track(onMove, onUp)
   }
 
   return (
@@ -148,7 +142,7 @@ function Section({
       {adding && (
         <input
           className="kt-input"
-          style={inputLine(p)}
+          style={paletteVars(p)}
           autoFocus
           placeholder="할 일을 입력하고 Enter"
           aria-label="새 할 일"
@@ -162,7 +156,7 @@ function Section({
         />
       )}
       {items.length === 0 && !adding ? (
-        <p className="kt-empty" style={{ color: p.subText }}>
+        <p className="kb-empty kb-empty--opaque" style={{ color: p.subText }}>
           할 일이 없어요
         </p>
       ) : (
@@ -189,7 +183,10 @@ function Section({
   )
 }
 
-const shortDate = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`
+const shortDate = (date: string) => {
+  const { m, d } = monthDay(date)
+  return `${m}/${d}`
+}
 
 function Item({
   item: i,
@@ -249,7 +246,7 @@ function Item({
         {editing ? (
           <input
             className="kt-input kt-input--inline"
-            style={inputLine(p)}
+            style={paletteVars(p)}
             autoFocus
             defaultValue={i.title}
             maxLength={200}

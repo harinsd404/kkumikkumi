@@ -1,20 +1,15 @@
-import { ipcMain, type IpcMainInvokeEvent } from 'electron'
+import { ipcMain } from 'electron'
 import type { IpcResult } from '../../shared/api'
 import { CHANNELS } from '../../shared/channels'
-import { isAppUrl } from '../security'
+import { isTrustedFrame } from '../security'
 import { toErrorCode } from './errors'
 import type { Handlers } from './handlers'
-
-/** 우리 앱 페이지(메인 프레임)에서 온 호출만 처리한다. */
-function isTrustedSender(event: IpcMainInvokeEvent): boolean {
-  const frame = event.senderFrame
-  return frame !== null && frame.parent === null && isAppUrl(frame.url)
-}
 
 export function registerIpc(handlers: Handlers): void {
   for (const channel of CHANNELS) {
     ipcMain.handle(channel, async (event, input: unknown): Promise<IpcResult<unknown>> => {
-      if (!isTrustedSender(event)) return { ok: false, error: { code: 'forbidden' } }
+      // 우리 앱 페이지(메인 프레임)에서 온 호출만 처리한다.
+      if (!isTrustedFrame(event.senderFrame)) return { ok: false, error: { code: 'forbidden' } }
       try {
         return { ok: true, value: await handlers[channel](input) }
       } catch (err) {
@@ -26,8 +21,4 @@ export function registerIpc(handlers: Handlers): void {
       }
     })
   }
-}
-
-export function unregisterIpc(): void {
-  for (const channel of CHANNELS) ipcMain.removeHandler(channel)
 }

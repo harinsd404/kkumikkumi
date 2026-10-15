@@ -4,9 +4,10 @@ import redoUrl from '../board/icons/redo.svg'
 import undoUrl from '../board/icons/undo.svg'
 import { maskCss } from '../board/style'
 import type { SaveStatus } from '../editor/state/autosave'
+import { ColorDots } from './ThemeDialog'
 
 /** 편집 중 타이틀바 도구(위젯·꾸미기 추가는 편집 패널의 갤러리에서) */
-export interface EditTools {
+interface EditTools {
   onUndo(): void
   onRedo(): void
   canUndo: boolean
@@ -199,11 +200,7 @@ function ThemePill({ name, menu }: { name: string | null; menu: ThemeMenu | unde
                         if (t.id !== menu.currentId) menu.onSelect(t.id)
                       }}
                     >
-                      <span className="td-dots" aria-hidden>
-                        {t.colors.map((c, i) => (
-                          <span key={i} style={{ background: c }} />
-                        ))}
-                      </span>
+                      <ColorDots colors={t.colors} />
                       {t.name}
                     </button>
                   ))}

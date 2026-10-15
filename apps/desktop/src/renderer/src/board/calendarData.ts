@@ -16,16 +16,15 @@ export function useDayData(
 ) {
   const first = days[0]
   const last = days[days.length - 1]
-  const [state, setState] = useState<{ key: string; events: CalendarEvent[]; todos: TodoItem[] }>()
+  const [state, setState] = useState<{ events: CalendarEvent[]; todos: TodoItem[] }>()
   useEffect(() => {
     if (!actions || !first || !last) return
     let alive = true
-    const key = `${first}~${last}`
     void Promise.all([
       actions.calendar.range(rangeForDays(first, last)),
       actions.calendar.dueTodos(first, last),
     ]).then(([events, todos]) => {
-      if (alive) setState({ key, events, todos })
+      if (alive) setState({ events, todos })
     })
     return () => {
       alive = false

@@ -21,7 +21,7 @@ export function focusByDay(sessions: readonly SessionLike[], days: readonly stri
   return out
 }
 
-export interface TimerSummary {
+interface TimerSummary {
   todayMs: number
   weekMs: number
   /** 오늘 끝까지 마친 집중 횟수 */

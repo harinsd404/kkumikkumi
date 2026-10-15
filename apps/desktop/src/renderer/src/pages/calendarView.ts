@@ -3,8 +3,13 @@ import {
   localDate,
   localDateTime,
   localDayStart,
+  monthGrid,
+  weekOf,
   type EventInput,
 } from '../board/calendar'
+import { daysBetween } from '../board/dday'
+import { fromMin } from '../board/timetable'
+import { dateParts, monthDayKo, weekdayLabel } from './dateText'
 
 // 캘린더 세부 페이지의 날짜 이동, 일정 옮기기, 시간 칸 배치(순수 함수).
 // 시각은 모두 "지금 시스템 타임존의 벽시계" 기준이다. DST가 바뀌는 날은 하루가 23/25시간이 될 수 있다.
@@ -13,20 +18,36 @@ export type CalView = 'month' | 'week' | 'day'
 export const MINUTES_PER_DAY = 24 * 60
 export const SNAP_MIN = 15
 
-const parse = (date: string) => date.split('-').map(Number) as [number, number, number]
-
 /** a → b 사이의 날짜 수(달력 기준, DST 무관) */
-export function dayDiff(a: string, b: string): number {
-  const [ay, am, ad] = parse(a)
-  const [by, bm, bd] = parse(b)
-  return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86_400_000)
+export const dayDiff = daysBetween
+
+/** 페이지 제목: "2026년 10월" / "10월 13일 (화)" / "10월 12일 – 18일" */
+export function titleFor(view: CalView, anchor: string, days: readonly string[]): string {
+  const [y, m] = dateParts(anchor)
+  if (view === 'month') return `${y}년 ${m}월`
+  if (view === 'day') return `${monthDayKo(anchor)} (${weekdayLabel(anchor)})`
+  const first = days[0]!
+  const last = days[days.length - 1]!
+  return dateParts(first)[1] === dateParts(last)[1]
+    ? `${monthDayKo(first)} – ${dateParts(last)[2]}일`
+    : `${monthDayKo(first)} – ${monthDayKo(last)}`
+}
+
+/** 보기에 나오는 날짜들(월 보기는 앞뒤 달을 포함한 4~6주) */
+export function visibleDays(view: CalView, anchor: string, weekStartsOn: 0 | 1): string[] {
+  const [y, m, d] = dateParts(anchor)
+  if (view === 'day') return [anchor]
+  if (view === 'week') return weekOf(y, m - 1, d, weekStartsOn).map((c) => c.date)
+  return monthGrid(y, m - 1, weekStartsOn)
+    .flat()
+    .map((c) => c.date)
 }
 
 /** 같은 날 몇 일 뒤/앞(월말은 그 달 마지막 날로 맞춤) */
 export function shiftAnchor(date: string, view: CalView, delta: number): string {
   if (view === 'day') return addDays(date, delta)
   if (view === 'week') return addDays(date, delta * 7)
-  const [y, m, d] = parse(date)
+  const [y, m, d] = dateParts(date)
   const last = new Date(Date.UTC(y, m - 1 + delta + 1, 0)).getUTCDate()
   const t = new Date(Date.UTC(y, m - 1 + delta, Math.min(d, last)))
   return t.toISOString().slice(0, 10)
@@ -39,10 +60,7 @@ export function minuteOfDay(ms: number): number {
 }
 
 /** 분 → 'HH:mm' (24:00 이상은 23:59로) */
-export function minutesToTime(min: number): string {
-  const m = Math.max(0, Math.min(MINUTES_PER_DAY - 1, Math.round(min)))
-  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
-}
+export const minutesToTime = fromMin
 
 export const snapMinutes = (min: number, step = SNAP_MIN) => Math.round(min / step) * step
 
@@ -58,7 +76,7 @@ export function addMinutesToTime(date: string, time: string, add: number) {
 }
 
 /** 저장된 일정에서 입력 형태만 남긴다(id/createdAt 등 제외) */
-export function toInput(e: EventInput): EventInput {
+function toInput(e: EventInput): EventInput {
   return e.allDay
     ? {
         allDay: true,
@@ -106,11 +124,40 @@ export function moveTimedEvent(
   minute: number,
 ): EventInput {
   const base = toInput(e) as Extract<EventInput, { allDay: false }>
-  const startUtc = localDateTime(date, minutesToTime(minute))
+  // 하루 밖의 분(음수 = 전날, 1440 이상 = 다음 날)은 날짜를 넘겨 맞춘다
+  const days = Math.floor(minute / MINUTES_PER_DAY)
+  const startUtc = localDateTime(
+    addDays(date, days),
+    minutesToTime(minute - days * MINUTES_PER_DAY),
+  )
   return { ...base, startUtc, endUtc: startUtc + (base.endUtc - base.startUtc) }
 }
 
-export interface TimedSlot<E> {
+/** 끌어서 놓을 자리: 날짜 칸(월 보기, 종일 줄) / 시간 칸의 분(전날로 넘어가면 음수) */
+export type DropTarget =
+  { kind: 'day'; date: string } | { kind: 'time'; date: string; minute: number }
+
+/**
+ * 놓은 자리에 맞춘 새 일정. 바뀌지 않으면 null.
+ * originDate: 끌기 시작한 칸의 날짜(여러 날 일정은 잡은 칸 기준으로 옮긴다)
+ */
+export function dropResult(d: {
+  event: EventInput
+  originDate: string
+  target: DropTarget | null
+}): EventInput | null {
+  const t = d.target
+  if (!t) return null
+  if (t.kind === 'day') {
+    const n = dayDiff(d.originDate, t.date)
+    return n === 0 ? null : shiftEventDays(d.event, n)
+  }
+  if (d.event.allDay) return null // 종일 일정은 시간 칸에 놓지 않는다
+  const next = moveTimedEvent(d.event, t.date, t.minute)
+  return !next.allDay && next.startUtc === d.event.startUtc ? null : next
+}
+
+interface TimedSlot<E> {
   event: E
   /** 그 날 안에서의 벽시계 분(끝이 다음 날이면 1440) */
   startMin: number

@@ -3,12 +3,15 @@ import { localDateTime, timeLabel, localDate, type EventInput } from '../../boar
 import {
   addMinutesToTime,
   dayDiff,
+  dropResult,
   layoutDay,
   minutesToTime,
   moveTimedEvent,
   shiftAnchor,
   shiftEventDays,
   snapMinutes,
+  titleFor,
+  visibleDays,
 } from '../calendarView'
 
 declare const process: { env: Record<string, string | undefined> }
@@ -91,6 +94,19 @@ describe('일정 옮기기 (America/New_York, DST)', () => {
     expect(moved).not.toHaveProperty('id')
   })
 
+  it('하루 밖의 분은 날짜를 넘긴다(여러 날 일정의 둘째 날을 잡고 옮길 때)', () => {
+    const e = { ...timed('2026-10-12', '22:00', '23:00'), id: 'x', createdAt: 1 }
+    const back = moveTimedEvent(e, '2026-10-14', -105) as Extract<EventInput, { allDay: false }>
+    expect(localDate(back.startUtc)).toBe('2026-10-13')
+    expect(timeLabel(back.startUtc)).toBe('22:15')
+    const fwd = moveTimedEvent(e, '2026-10-14', 24 * 60 + 30) as Extract<
+      EventInput,
+      { allDay: false }
+    >
+    expect(localDate(fwd.startUtc)).toBe('2026-10-15')
+    expect(timeLabel(fwd.startUtc)).toBe('00:30')
+  })
+
   it('서머타임 시작일 배치는 벽시계 분 기준(01:00~04:00 → 60~240)', () => {
     const e = timed('2026-03-08', '01:00', '04:00')
     expect(e.endUtc - e.startUtc).toBe(2 * H) // 실제로는 2시간
@@ -134,5 +150,81 @@ describe('하루 시간 칸 배치', () => {
     ])
     // 자정에 딱 끝나는 일정은 다음 날에 보이지 않는다
     expect(layoutDay([timed(D, '22:00', '23:00')], '2026-10-13')).toEqual([])
+  })
+})
+
+describe('보기 날짜와 제목', () => {
+  it('visibleDays: 일 / 주(시작 요일) / 월(앞뒤 달 포함)', () => {
+    expect(visibleDays('day', '2026-10-15', 0)).toEqual(['2026-10-15'])
+    const week = visibleDays('week', '2026-10-15', 1)
+    expect([week[0], week[6], week.length]).toEqual(['2026-10-12', '2026-10-18', 7])
+    const month = visibleDays('month', '2026-10-15', 0)
+    expect([month[0], month.at(-1), month.length]).toEqual(['2026-09-27', '2026-10-31', 35])
+  })
+  it('titleFor', () => {
+    expect(titleFor('month', '2026-10-15', [])).toBe('2026년 10월')
+    expect(titleFor('day', '2026-10-15', ['2026-10-15'])).toBe('10월 15일 (목)')
+    expect(titleFor('week', '2026-10-15', visibleDays('week', '2026-10-15', 0))).toBe(
+      '10월 11일 – 17일',
+    )
+    expect(titleFor('week', '2026-10-01', visibleDays('week', '2026-10-01', 1))).toBe(
+      '9월 28일 – 10월 4일',
+    )
+  })
+})
+
+describe('끌어 놓기 결과', () => {
+  withTz('Asia/Seoul')
+  const ev = { ...timed('2026-10-12', '09:00', '10:00'), id: 'x', createdAt: 1 }
+  const allDay: EventInput = {
+    ...base,
+    allDay: true,
+    startDate: '2026-10-12',
+    endDate: '2026-10-13',
+  }
+
+  it('놓을 자리가 없거나 같은 날짜 칸이면 null', () => {
+    expect(dropResult({ event: ev, originDate: '2026-10-12', target: null })).toBeNull()
+    const same = { kind: 'day', date: '2026-10-12' } as const
+    expect(dropResult({ event: ev, originDate: '2026-10-12', target: same })).toBeNull()
+  })
+
+  it('날짜 칸: 잡은 칸 기준으로 며칠 옮긴다(여러 날 일정의 둘째 날을 잡은 경우)', () => {
+    const r = dropResult({
+      event: allDay,
+      originDate: '2026-10-13',
+      target: { kind: 'day', date: '2026-10-15' },
+    })
+    expect(r).toMatchObject({ startDate: '2026-10-14', endDate: '2026-10-15' })
+    const t = dropResult({
+      event: ev,
+      originDate: '2026-10-12',
+      target: { kind: 'day', date: '2026-10-10' },
+    }) as Extract<EventInput, { allDay: false }>
+    expect([localDate(t.startUtc), timeLabel(t.startUtc)]).toEqual(['2026-10-10', '09:00'])
+  })
+
+  it('시간 칸: 종일 일정은 놓지 않고, 시작이 그대로면 null', () => {
+    const time = (date: string, minute: number) => ({ kind: 'time', date, minute }) as const
+    expect(
+      dropResult({ event: allDay, originDate: '2026-10-12', target: time('2026-10-12', 600) }),
+    ).toBeNull()
+    expect(
+      dropResult({ event: ev, originDate: '2026-10-12', target: time('2026-10-12', 540) }),
+    ).toBeNull()
+    const moved = dropResult({
+      event: ev,
+      originDate: '2026-10-12',
+      target: time('2026-10-13', 14 * 60 + 15),
+    }) as Extract<EventInput, { allDay: false }>
+    expect([localDate(moved.startUtc), timeLabel(moved.startUtc)]).toEqual(['2026-10-13', '14:15'])
+    expect(moved.endUtc - moved.startUtc).toBe(H)
+    // 음수 분 = 전날
+    const back = dropResult({
+      event: ev,
+      originDate: '2026-10-12',
+      target: time('2026-10-13', -60),
+    }) as Extract<EventInput, { allDay: false }>
+    expect([localDate(back.startUtc), timeLabel(back.startUtc)]).toEqual(['2026-10-12', '23:00'])
   })
 })

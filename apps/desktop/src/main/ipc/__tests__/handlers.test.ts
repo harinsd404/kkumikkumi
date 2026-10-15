@@ -90,8 +90,10 @@ describe('themes', () => {
   it('save는 updatedAt을 main 시각으로 덮어쓴다', async () => {
     const t = await h['themes.get']({ id: activeId() })
     env.clock.now += 1000
-    const saved = await h['themes.save']({ theme: { ...t, name: '바뀜', updatedAt: 1 } })
-    expect(saved).toMatchObject({ name: '바뀜', updatedAt: env.clock.now })
+    const saved = await h['themes.save']({ theme: { ...t, updatedAt: 1 } })
+    expect(saved).toMatchObject({ name: t.name, updatedAt: env.clock.now })
+    // 기본 테마는 save로도 이름을 바꿀 수 없다
+    expect(await codeOf(h['themes.save']({ theme: { ...t, name: '바뀜' } }))).toBe('builtin_theme')
   })
 
   it('save: 스키마 위반(겹침)은 거부', async () => {
@@ -284,6 +286,14 @@ describe('todo', () => {
     expect(items.map((i) => i.title)).toEqual(['물 마시기', '산책'])
     const due = await h['todo.items.dueBetween']({ fromDate: '2026-10-01', toDate: '2026-10-31' })
     expect(due.map((i) => i.id)).toEqual([b.id])
+  })
+
+  it('없는 목록으로 옮기면 not_found(내부 오류 아님)', async () => {
+    const a = await h['todo.items.create']({ listId: null, title: 'a' })
+    const missing = '00000000-0000-4000-8000-0000000000ff'
+    expect(await codeOf(h['todo.items.update']({ id: a.id, patch: { listId: missing } }))).toBe(
+      'not_found',
+    )
   })
 
   it('reorder: 중복 id 거부', async () => {

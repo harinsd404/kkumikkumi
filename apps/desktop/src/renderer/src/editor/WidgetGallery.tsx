@@ -1,5 +1,6 @@
 import { blockCells, newBlock, type GridBlock, type Theme } from '@kkumikkumi/schema'
 import { useMemo, useRef, useState } from 'react'
+import { WIDGET_LABEL } from '../board/blockLabels'
 import { BlockView } from '../board/BlockView'
 import { BoardProvider, type BoardContextValue, type BoardData } from '../board/BoardContext'
 import chevronLeftUrl from '../board/icons/chevron-left.svg'
@@ -19,7 +20,7 @@ interface GalleryGroup {
 const GALLERY: readonly GalleryGroup[] = [
   {
     type: 'calendar',
-    label: '캘린더',
+    label: WIDGET_LABEL.calendar,
     sizes: [
       { size: 'M', label: '미니' },
       { size: 'L', label: '월간' },
@@ -27,7 +28,7 @@ const GALLERY: readonly GalleryGroup[] = [
   },
   {
     type: 'todo',
-    label: '할 일',
+    label: WIDGET_LABEL.todo,
     sizes: [
       { size: 'S', label: '작게' },
       { size: 'M', label: '길게' },
@@ -36,7 +37,7 @@ const GALLERY: readonly GalleryGroup[] = [
   },
   {
     type: 'timer',
-    label: '타이머',
+    label: WIDGET_LABEL.timer,
     sizes: [
       { size: 'S', label: '작게' },
       { size: 'M', label: '크게' },
@@ -44,7 +45,7 @@ const GALLERY: readonly GalleryGroup[] = [
   },
   {
     type: 'memo',
-    label: '메모',
+    label: WIDGET_LABEL.memo,
     sizes: [
       { size: 'S', label: '작게' },
       { size: 'M', label: '길게' },
@@ -53,7 +54,7 @@ const GALLERY: readonly GalleryGroup[] = [
   },
   {
     type: 'timetable',
-    label: '시간표',
+    label: WIDGET_LABEL.timetable,
     sizes: [
       { size: 'S', label: '오늘' },
       { size: 'M', label: '오늘 길게' },
@@ -62,7 +63,7 @@ const GALLERY: readonly GalleryGroup[] = [
   },
   {
     type: 'dday',
-    label: '디데이',
+    label: WIDGET_LABEL.dday,
     sizes: [
       { size: 'S', label: '한 줄' },
       { size: 'M', label: '크게' },
@@ -70,7 +71,7 @@ const GALLERY: readonly GalleryGroup[] = [
   },
   {
     type: 'image',
-    label: '이미지',
+    label: WIDGET_LABEL.image,
     sizes: [
       { size: 'S', label: '가로' },
       { size: 'M', label: '정사각' },

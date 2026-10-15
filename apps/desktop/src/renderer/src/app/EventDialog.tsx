@@ -13,6 +13,7 @@ import { addMinutesToTime } from '../pages/calendarView'
 import { colorGroups, type ThemeColors } from './colorGroups'
 import { Swatches } from './Swatches'
 import { themeVars } from './themeVars'
+import { ModalBackdrop } from './Modal'
 
 interface Props {
   target: EditorTarget
@@ -68,14 +69,10 @@ export function EventDialog({
   const titleRef = useRef<HTMLInputElement>(null)
   const id = useId()
 
+  // 처음 열 때만 제목에 포커스(다시 그려질 때 다른 칸의 포커스를 뺏지 않도록)
   useEffect(() => {
     titleRef.current?.focus()
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [])
 
   const set = (patch: Partial<EventForm>) => {
     setError(null)
@@ -97,7 +94,7 @@ export function EventDialog({
   }
 
   return (
-    <div className="dlg-backdrop" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
+    <ModalBackdrop onClose={onClose}>
       <form
         className="dlg"
         style={themeVars(theme)}
@@ -221,6 +218,6 @@ export function EventDialog({
           </button>
         </div>
       </form>
-    </div>
+    </ModalBackdrop>
   )
 }

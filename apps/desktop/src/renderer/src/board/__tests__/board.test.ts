@@ -1,11 +1,17 @@
-import type { GridBlock, Palette, Theme } from '@kkumikkumi/schema'
+import {
+  newBlock,
+  type FreeItem,
+  type GridBlock,
+  type Palette,
+  type Theme,
+} from '@kkumikkumi/schema'
 import { describe, expect, it } from 'vitest'
 import { makeAssetUrl } from '../../app/assetUrl'
-import { monthGrid, shiftMonth, weekdayLabels, weekOf } from '../calendar'
+import { monthDay, monthGrid, parseDate, shiftMonth, weekdayLabels, weekOf } from '../calendar'
 import { DEFAULT_FONT_ID, fontStack, resolveFontId } from '../fonts'
-import { BOARD_GAP, BOARD_PADDING, blockBox, fitScale } from '../layout'
+import { BOARD_GAP, BOARD_PADDING, blockBox, fitScale, freeLayers, gridItems } from '../layout'
 import { patternRows } from '../pattern'
-import { cardCss, decorCss, imageCss, SHADOWS } from '../style'
+import { cardCss, decorCss, imageCss, paletteVars, SHADOWS } from '../style'
 
 const palette: Palette = {
   text: '#111111',
@@ -38,6 +44,16 @@ describe('layout', () => {
     expect(wide.offsetX).toBe(200)
     expect(fitScale(0, 0).scale).toBe(0)
   })
+  it('gridItems: 블록 → 칸 사각형, 크기표에 없는 블록은 뺀다', () => {
+    const blocks = [newBlock('todo', 'M', 'a', 1, 2), newBlock('calendar', 'S', 'b', 0, 0)]
+    expect(gridItems(blocks)).toEqual([{ id: 'a', col: 1, row: 2, w: 2, h: 3 }])
+  })
+  it('freeLayers: 레이어별로 나누고 z 순서대로', () => {
+    const f = (id: string, layer: 'back' | 'front', z: number) => ({ id, layer, z }) as FreeItem
+    const { back, front } = freeLayers([f('a', 'front', 2), f('b', 'back', 5), f('c', 'front', 1)])
+    expect(back.map((i) => i.id)).toEqual(['b'])
+    expect(front.map((i) => i.id)).toEqual(['c', 'a'])
+  })
 })
 
 describe('calendar', () => {
@@ -66,6 +82,10 @@ describe('calendar', () => {
     expect(weekOf(2026, 9, 12, 0).map((c) => c.day)).toEqual([11, 12, 13, 14, 15, 16, 17])
     expect(shiftMonth(2026, 11, 1)).toEqual({ year: 2027, month0: 0 })
     expect(shiftMonth(2026, 0, -1)).toEqual({ year: 2025, month0: 11 })
+  })
+  it('날짜 문자열 → 연/월/일', () => {
+    expect(parseDate('2026-03-08')).toEqual({ y: 2026, m0: 2, d: 8 })
+    expect(monthDay('2026-12-31')).toEqual({ m: 12, d: 31 })
   })
 })
 
@@ -119,6 +139,13 @@ describe('style', () => {
       background: '#ffffff',
       color: '#000000',
       border: '1px solid #ff0000',
+    })
+  })
+  it('paletteVars: 블록 CSS 변수', () => {
+    expect(paletteVars(palette)).toEqual({
+      '--kb-accent': '#333333',
+      '--kb-check': '#444444',
+      '--kb-sub': '#222222',
     })
   })
   it('테두리 두께 0이면 none', () => {

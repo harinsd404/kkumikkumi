@@ -7,14 +7,15 @@ import { useDayData } from '../calendarData'
 import {
   addDays,
   localDate,
+  monthDay,
   monthGrid,
+  parseDate,
   shiftMonth,
   timeLabel,
   weekdayLabels,
   weekOf,
   type DayCell,
 } from '../calendar'
-import type { Box } from '../layout'
 import { maskCss } from '../style'
 
 type CalendarBlockT = Extract<GridBlock, { type: 'calendar' }>
@@ -24,7 +25,7 @@ type CalendarBlockT = Extract<GridBlock, { type: 'calendar' }>
  * 날짜를 누르면 일정 추가, 일정을 누르면 고치기(사용 모드). 마감일 있는 투두는 읽기 전용으로 함께 보인다.
  * 달 이동은 보기 상태라 편집 모드에서도 허용.
  */
-export function CalendarBlock({ block }: { block: CalendarBlockT; box: Box }) {
+export function CalendarBlock({ block }: { block: CalendarBlockT }) {
   const { theme, now, actions, mode, data } = useBoard()
   const p = theme.defaults.palette
   const { weekStartsOn } = block.props
@@ -34,15 +35,9 @@ export function CalendarBlock({ block }: { block: CalendarBlockT; box: Box }) {
   const [view, setView] = useState({ year: now.getFullYear(), month0: now.getMonth() })
   const [weekAnchor, setWeekAnchor] = useState(today)
 
+  const anchor = parseDate(weekAnchor)
   const rows: DayCell[][] = week
-    ? [
-        weekOf(
-          Number(weekAnchor.slice(0, 4)),
-          Number(weekAnchor.slice(5, 7)) - 1,
-          Number(weekAnchor.slice(8, 10)),
-          weekStartsOn,
-        ),
-      ]
+    ? [weekOf(anchor.y, anchor.m0, anchor.d, weekStartsOn)]
     : monthGrid(view.year, view.month0, weekStartsOn)
   const days = rows.flat().map((c) => c.date)
   const dd = useDayData(days, actions, data.version ?? 0)
@@ -140,11 +135,9 @@ export function CalendarBlock({ block }: { block: CalendarBlockT; box: Box }) {
 }
 
 const weekTitle = (days: readonly string[]) => {
-  const a = days[0]!
-  const b = days[days.length - 1]!
-  const m = (d: string) => Number(d.slice(5, 7))
-  const d = (s: string) => Number(s.slice(8, 10))
-  return m(a) === m(b) ? `${m(a)}월 ${d(a)}–${d(b)}일` : `${m(a)}월 ${d(a)}일 – ${m(b)}월 ${d(b)}일`
+  const a = monthDay(days[0]!)
+  const b = monthDay(days[days.length - 1]!)
+  return a.m === b.m ? `${a.m}월 ${a.d}–${b.d}일` : `${a.m}월 ${a.d}일 – ${b.m}월 ${b.d}일`
 }
 
 /** 날짜 칸: 사용 모드면 눌러서 일정 추가(키보드 Enter/Space 포함) */
@@ -163,7 +156,8 @@ function DayButton({
   onOpen: BoardActions['calendar']['openEditor'] | undefined
   children: React.ReactNode
 }) {
-  const label = `${Number(date.slice(5, 7))}월 ${Number(date.slice(8, 10))}일${count ? `, 일정 ${count}개` : ''}`
+  const { m, d } = monthDay(date)
+  const label = `${m}월 ${d}일${count ? `, 일정 ${count}개` : ''}`
   if (!onOpen)
     return (
       <div className={className} style={style}>

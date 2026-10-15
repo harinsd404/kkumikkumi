@@ -43,6 +43,18 @@
 .kb-missing {
   outline: 2px dashed rgba(0, 0, 0, 0.25);
 }
+/* 블록 빈 상태 문구(공통). --opaque: 흐리지 않음(투두는 subText 색), --center: 세로 가운데(디데이) */
+.kb-empty {
+  margin: 0;
+  font-size: 17.5px;
+  opacity: 0.6;
+}
+.kb-empty--opaque {
+  opacity: 1;
+}
+.kb-empty--center {
+  margin: auto 0;
+}
 .kb-host img {
   user-select: none;
   -webkit-user-drag: none;
@@ -200,10 +212,6 @@
   width: 25px;
   height: 25px;
 }
-.kt-empty {
-  margin: 0;
-  font-size: 17.5px;
-}
 .kt-list {
   display: flex;
   flex-direction: column;
@@ -274,7 +282,7 @@
   width: 100%;
   padding: 4px 2px;
   border: 0;
-  border-bottom: 1.5px solid var(--kt-line);
+  border-bottom: 1.5px solid var(--kb-sub);
   border-radius: 0;
   background: transparent;
   color: inherit;
@@ -283,7 +291,7 @@
   outline: none;
 }
 .kt-input:focus {
-  border-color: var(--kt-line-focus);
+  border-color: var(--kb-accent);
 }
 .kt-input--inline {
   flex: 1;
@@ -530,11 +538,6 @@ button.kc-chip {
   scrollbar-width: none;
   font-weight: 500;
 }
-.kmm-empty {
-  margin: 0;
-  font-size: 17.5px;
-  opacity: 0.6;
-}
 
 /* ── 시간표 ── */
 .ktt {
@@ -544,11 +547,6 @@ button.kc-chip {
   height: 100%;
   padding: 25px;
   overflow: hidden;
-}
-.ktt-empty {
-  margin: 0;
-  font-size: 17.5px;
-  opacity: 0.6;
 }
 .ktt-list[data-scrolled='true'] {
   mask-image: linear-gradient(
@@ -580,7 +578,7 @@ button.kc-chip {
   border-radius: 14px;
 }
 .ktt-row.is-now {
-  box-shadow: inset 0 0 0 2.5px var(--ktt-accent);
+  box-shadow: inset 0 0 0 2.5px var(--kb-accent);
 }
 .ktt-row.is-past {
   opacity: 0.45;
@@ -588,7 +586,7 @@ button.kc-chip {
 .ktt-when {
   flex: none;
   width: 56px;
-  color: var(--ktt-sub);
+  color: var(--kb-sub);
   font-size: 15px;
   font-weight: 600;
   text-align: right;
@@ -615,7 +613,7 @@ button.kc-chip {
   font-weight: 600;
 }
 .ktt-room {
-  color: var(--ktt-sub);
+  color: var(--kb-sub);
   font-size: 14px;
 }
 .ktt-week {
@@ -630,20 +628,20 @@ button.kc-chip {
 .ktt-dayhead {
   padding: 4px 0;
   border-radius: 999px;
-  color: var(--ktt-sub);
+  color: var(--kb-sub);
   font-size: 15px;
   font-weight: 700;
   text-align: center;
 }
 .ktt-dayhead.is-today {
-  background: var(--ktt-accent);
+  background: var(--kb-accent);
   color: #ffffff;
 }
 .ktt-period {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--ktt-sub);
+  color: var(--kb-sub);
   font-size: 14px;
   font-weight: 600;
 }
@@ -664,7 +662,7 @@ button.kc-chip {
 }
 .ktt-cell.is-now,
 .ktt-chipitem.is-now {
-  box-shadow: 0 0 0 2.5px var(--ktt-accent);
+  box-shadow: 0 0 0 2.5px var(--kb-accent);
 }
 .ktt-daylist {
   display: flex;
@@ -739,7 +737,7 @@ button.kc-chip {
 }
 .ktt-name.is-button:focus-visible,
 .ktt-menu button:focus-visible {
-  outline: 2.5px solid var(--ktt-accent);
+  outline: 2.5px solid var(--kb-accent);
   outline-offset: 2px;
 }
 .ktt-name-text {
@@ -809,12 +807,7 @@ button.kc-chip {
   margin: 0;
   font-size: 15px;
   font-weight: 700;
-  color: var(--dd-sub);
-}
-.kdd-empty {
-  margin: auto 0;
-  font-size: 17.5px;
-  opacity: 0.6;
+  color: var(--kb-sub);
 }
 .kdd-main {
   display: flex;
@@ -826,14 +819,14 @@ button.kc-chip {
   flex: none;
   padding: 6px 16px;
   border-radius: 999px;
-  background: var(--dd-accent);
+  background: var(--kb-accent);
   font-size: 30px;
   font-weight: 800;
   letter-spacing: -0.5px;
   font-variant-numeric: tabular-nums;
 }
 .kdd-num.is-today {
-  background: var(--dd-check);
+  background: var(--kb-check);
 }
 .kdd-info {
   display: flex;
@@ -853,7 +846,7 @@ button.kc-chip {
 }
 .kdd-date {
   font-size: 15px;
-  color: var(--dd-sub);
+  color: var(--kb-sub);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -892,7 +885,7 @@ button.kc-chip {
   gap: 6px;
   margin: 0;
   padding: 12px 0 0;
-  border-top: 1.5px dashed var(--dd-check);
+  border-top: 1.5px dashed var(--kb-check);
   list-style: none;
   font-size: 15px;
 }

@@ -1,11 +1,11 @@
 import type { CalendarEvent } from '@kkumikkumi/schema'
-import { eventSpan } from './calendar'
+import { eventSpan, parseDate } from './calendar'
 
 // 디데이 계산(순수 함수). 날짜는 로컬 날짜 문자열(YYYY-MM-DD)끼리 달력 산술로 센다(DST 무관).
 
 const dayNumber = (date: string): number => {
-  const [y, m, d] = date.split('-').map(Number) as [number, number, number]
-  return Date.UTC(y, m - 1, d) / 86_400_000
+  const { y, m0, d } = parseDate(date)
+  return Date.UTC(y, m0, d) / 86_400_000
 }
 
 /** a → b 까지 며칠(b가 나중이면 양수) */
@@ -51,9 +51,9 @@ export function sortUpcoming(events: readonly CalendarEvent[]): CalendarEvent[] 
 export function ddayDateLabel(e: CalendarEvent): string {
   const { first, last } = eventSpan(e)
   const one = (date: string) => {
-    const [y, m, d] = date.split('-').map(Number) as [number, number, number]
-    const wd = '일월화수목금토'[new Date(y, m - 1, d).getDay()]
-    return `${m}월 ${d}일 (${wd})`
+    const { y, m0, d } = parseDate(date)
+    const wd = '일월화수목금토'[new Date(y, m0, d).getDay()]
+    return `${m0 + 1}월 ${d}일 (${wd})`
   }
   return first === last ? one(first) : `${one(first)} ~ ${one(last)}`
 }

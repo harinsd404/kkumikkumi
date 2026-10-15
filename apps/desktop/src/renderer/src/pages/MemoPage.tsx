@@ -13,6 +13,7 @@ import {
   type TextEdit,
 } from '../board/memoFormat'
 import type { MemoStore } from '../app/useMemos'
+import { ConfirmButton } from '../ui/ConfirmButton'
 
 interface Props {
   store: MemoStore
@@ -145,7 +146,6 @@ function replaceText(ta: HTMLTextAreaElement, next: TextEdit) {
 
 function MemoEditor({ memo, store, now }: { memo: Memo; store: MemoStore; now: Date }) {
   const [mode, setMode] = useState<'edit' | 'view'>(() => (memo.body.trim() ? 'view' : 'edit'))
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const ta = useRef<HTMLTextAreaElement>(null)
   const id = memo.id
   const { edit } = store
@@ -225,17 +225,7 @@ function MemoEditor({ memo, store, now }: { memo: Memo; store: MemoStore; now: D
         >
           {memo.pinned ? '고정 해제' : '고정'}
         </button>
-        <button
-          type="button"
-          className="pg-pill is-danger"
-          onClick={() => {
-            if (!confirmDelete) return setConfirmDelete(true)
-            void store.remove(id)
-          }}
-          onBlur={() => setConfirmDelete(false)}
-        >
-          {confirmDelete ? '정말 삭제' : '삭제'}
-        </button>
+        <ConfirmButton label="삭제" confirmLabel="정말 삭제" onConfirm={() => store.remove(id)} />
       </header>
 
       {mode === 'edit' ? (

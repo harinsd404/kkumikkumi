@@ -7,7 +7,7 @@ import {
   type ThemeLook,
   type ThemeTemplateId,
 } from '@kkumikkumi/schema'
-import { useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { useDeferredValue, useMemo, useState } from 'react'
 import { Board } from '../board/Board'
 import type { BoardData } from '../board/BoardContext'
 import { fontStack, FONTS } from '../board/fonts'
@@ -22,6 +22,7 @@ import {
   withColorsFrom,
   type LookColorKey,
 } from './themeLook'
+import { ModalBackdrop } from './Modal'
 
 const HEX = /^#[0-9a-fA-F]{6}$/
 const FONT_OPTIONS = Object.entries(FONTS).map(([id, f]) => ({ id, label: f.label }))
@@ -81,12 +82,6 @@ export function ThemeDialog({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !busy && onCancel()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onCancel, busy])
-
   const trimmed = name.trim()
   const nameError =
     trimmed === ''
@@ -139,10 +134,7 @@ export function ThemeDialog({
   }
 
   return (
-    <div
-      className="dlg-backdrop"
-      onPointerDown={(e) => e.target === e.currentTarget && !busy && onCancel()}
-    >
+    <ModalBackdrop onClose={onCancel} busy={busy}>
       <div className="dlg td" role="dialog" aria-modal="true" aria-labelledby="td-title">
         <h2 id="td-title" className="td-title">
           {mode === 'create' ? '새 테마 만들기' : '테마 색·글꼴 수정'}
@@ -156,7 +148,7 @@ export function ThemeDialog({
                 maxLength={40}
                 disabled={nameLocked}
                 onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && void submit()}
+                onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && void submit()}
                 autoFocus={!nameLocked}
               />
             </label>
@@ -318,15 +310,20 @@ export function ThemeDialog({
           </button>
         </div>
       </div>
-    </div>
+    </ModalBackdrop>
   )
 }
 
 /** 대표색 점 3개(배경, 강조, 체크) */
 export function Dots({ look }: { look: ThemeLook }) {
+  return <ColorDots colors={[look.background.color, look.palette.accent, look.palette.check]} />
+}
+
+/** 대표색 점(타이틀바 테마 메뉴도 같이 쓴다) */
+export function ColorDots({ colors }: { colors: readonly string[] }) {
   return (
     <span className="td-dots" aria-hidden>
-      {[look.background.color, look.palette.accent, look.palette.check].map((c, i) => (
+      {colors.map((c, i) => (
         <span key={i} style={{ background: c }} />
       ))}
     </span>

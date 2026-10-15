@@ -1,9 +1,8 @@
 import { createHash } from 'node:crypto'
 import { LIMITS, type Asset } from '@kkumikkumi/schema'
 import sharp from 'sharp'
+import type { AssetPurpose } from '../../shared/api'
 import { sniffImage, type SniffedFormat } from './sniff'
-
-export type AssetPurpose = 'image' | 'pet'
 
 export type AssetErrorCode =
   | 'empty'

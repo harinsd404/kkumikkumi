@@ -197,6 +197,10 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
   - 표기: 시작 전 D-N, 시작일~마지막 날 D-DAY(여러 날이면 진행 중), 끝나면 D+N. 날짜는 로컬 날짜 문자열 달력 산술(순수 함수 + 테스트).
   - IPC calendar.get(없으면 null), calendar.upcoming(끝나지 않은 일정, 종류마다 시작 순 limit ≤ 50). 위젯 갤러리(데이터 없으면 예시 일정), 인스펙터 일정 고르기, 누르면 캘린더 페이지.
 
+- [x] **전체 점검 + 리팩토링 (2026-10-15 사용자 지시)** — 1차 배포(펫 제외) 전 정리.
+  - R1 버그 수정: 패키지된 앱에서 ELECTRON_RENDERER_URL 무시(IPC 노출 방지), 앱 URL 비교 NFC 정규화, IPC/close-ready 발신자 검사 통일, 테마별 쓰기 순서(정리·이름·되돌리기와 저장 경합), save로 기본 테마 이름 변경 거부, 투두 완료 이벤트는 저장 뒤·없는 목록은 not_found, 공용 대화창 틀(맨 위 창만 Esc, 열려 있으면 편집 단축키 막기), 한글 조합 중 Enter 무시, 닫을 때 blur 저장·진행 중 IPC 대기·자동 저장 dispose 시 저장, 인스펙터 선택 바뀌면 입력 상태 초기화, 숫자 칸 입력 중 보정 안 함, 지운 타이머 프리셋, 디데이 고르기 자정 갱신, 여러 날 일정 둘째 날 끌기, 시간표 칸 지우기 실패 시 머무름, 끌기 중 사라질 때 리스너 정리.
+  - R2 구조 정리(동작 그대로): main IPC 핸들러 영역별 분리 + 입력 스키마 모음, main/index 창·타이머·보안 분리, settings 키값 헬퍼, 타입 단일 출처(ThemeSummary·AssetPurpose·TimerCommand 일치 검사), 저장 에셋 형식 PNG/JPEG로 축소(WebP 입력은 그대로 디코딩), BoardScreen·Inspector·CalendarPage·TimetablePage 분리, 공용 날짜 헬퍼·확인 버튼·이름 바꾸기 칸·체크 상자, CSS 덮어쓰기 정리와 --ui-danger, 번들되는 의존성을 devDependencies로.
+
 - [ ] **M0 펫 프로토타입(스파이크)** — 코드 품질이 아니라 "되는가"를 검증. 수동 확인이 끝나기 전에는 체크하지 않는다.
   - spikes/pet-proto/ 에 독립 Electron 프로젝트. 키 내용/키 코드는 읽지도 로깅하지도 않는다.
   - 검증: (1) 투명+frameless+항상 위 창에 PNG 표시, 작은 창 setBounds 이동과 FPS/프레임 간격 로그 (2) 클릭 통과 + 펫 위에서만 드래그 (3) 풀스크린/다른 Space/다중 모니터 표시와 Dock 부작용 (4) 타이핑 감지 후보 비교: powerMonitor.getSystemIdleTime(기준선) → CoreGraphics 호출(koffi) → Swift CLI 헬퍼, 전역 훅은 최후 수단 (5) on/off 시 창/폴링/자식 프로세스 완전 종료 (6) app.getAppMetrics()로 idle/걷기 CPU와 메모리 기록 (7) 이동 방식 A(작은 창 이동)와 C(하단 얇은 오버레이)를 스위치로 비교.

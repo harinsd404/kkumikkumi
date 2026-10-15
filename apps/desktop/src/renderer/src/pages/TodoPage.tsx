@@ -3,8 +3,11 @@ import { useState } from 'react'
 import './pages.css'
 import type { BoardActions, TodoData } from '../board/BoardContext'
 import { addDays, localDate } from '../board/calendar'
-import checkUrl from '../board/icons/check.svg'
 import type { UserData } from '../app/useUserData'
+import { ConfirmButton } from '../ui/ConfirmButton'
+import { InlineRename } from '../ui/InlineRename'
+import { TodoCheck } from '../ui/TodoCheck'
+import { monthDay } from './dateText'
 import {
   dueForFilter,
   FILTER_LABEL,
@@ -32,8 +35,7 @@ const EMPTY_TEXT: Record<TodoFilter, string> = {
 function dueLabel(due: string, today: string): string {
   if (due === today) return '오늘'
   if (due === addDays(today, 1)) return '내일'
-  const [, m, d] = due.split('-').map(Number)
-  return `${m}/${d}`
+  return monthDay(due)
 }
 
 /** 할 일 세부 페이지: 목록 사이드바 / 필터·검색 목록 / 선택한 항목 상세 */
@@ -99,7 +101,7 @@ export function TodoPage({ todos, actions, lists, now }: Props) {
           <ul className="pg-list">
             {shown.map((i) => (
               <li key={i.id} className={`pg-row ${i.id === selected ? 'is-selected' : ''}`}>
-                <Check item={i} actions={actions} />
+                <TodoCheck item={i} actions={actions} />
                 <button
                   type="button"
                   className={`pg-row-main ${i.done ? 'is-done' : ''}`}
@@ -132,21 +134,6 @@ export function TodoPage({ todos, actions, lists, now }: Props) {
         />
       )}
     </div>
-  )
-}
-
-function Check({ item, actions }: { item: TodoItem; actions: BoardActions }) {
-  return (
-    <button
-      type="button"
-      role="checkbox"
-      aria-checked={item.done}
-      aria-label={item.done ? '완료 취소' : '완료'}
-      className={`pg-check ${item.done ? 'is-done' : ''}`}
-      onClick={() => void actions.todo.update(item.id, { done: !item.done })}
-    >
-      {item.done && <img src={checkUrl} alt="" draggable={false} />}
-    </button>
   )
 }
 
@@ -189,7 +176,6 @@ function ListSidebar({
 }) {
   const [name, setName] = useState('')
   const [renaming, setRenaming] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const cur = todos.lists.find((l) => l.id === current)
 
   return (
@@ -199,31 +185,19 @@ function ListSidebar({
         {todos.lists.map((l) => (
           <li key={l.id}>
             {renaming && l.id === current ? (
-              <input
-                className="pg-input"
-                autoFocus
-                defaultValue={l.name}
+              <InlineRename
+                name={l.name}
+                label="목록 이름"
                 maxLength={100}
-                aria-label="목록 이름"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.nativeEvent.isComposing) e.currentTarget.blur()
-                  if (e.key === 'Escape') setRenaming(false)
-                }}
-                onBlur={(e) => {
-                  const v = e.currentTarget.value.trim()
-                  if (v && v !== l.name) void lists.rename(l.id, v)
-                  setRenaming(false)
-                }}
+                onRename={(v) => void lists.rename(l.id, v)}
+                onClose={() => setRenaming(false)}
               />
             ) : (
               <button
                 type="button"
                 className="pg-list-btn"
                 aria-current={l.id === current}
-                onClick={() => {
-                  onPick(l.id)
-                  setConfirmDelete(false)
-                }}
+                onClick={() => onPick(l.id)}
                 onDoubleClick={() => setRenaming(true)}
               >
                 <span className="pg-list-name">{l.name}</span>
@@ -263,18 +237,12 @@ function ListSidebar({
           <button type="button" className="pg-pill" onClick={() => setRenaming(true)}>
             이름 바꾸기
           </button>
-          <button
-            type="button"
-            className="pg-pill is-danger"
-            onClick={async () => {
-              if (!confirmDelete) return setConfirmDelete(true)
-              setConfirmDelete(false)
-              await lists.remove(cur.id)
-            }}
-            onBlur={() => setConfirmDelete(false)}
-          >
-            {confirmDelete ? '할 일까지 지울까요?' : '목록 삭제'}
-          </button>
+          <ConfirmButton
+            key={cur.id}
+            label="목록 삭제"
+            confirmLabel="할 일까지 지울까요?"
+            onConfirm={() => lists.remove(cur.id)}
+          />
         </div>
       )}
     </nav>
@@ -297,14 +265,13 @@ function ItemDetail({
   onMoved(listId: string): void
   onClose(): void
 }) {
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const update = (patch: Parameters<BoardActions['todo']['update']>[1]) =>
     void actions.todo.update(item.id, patch)
 
   return (
     <aside className="pg-card pg-detail" aria-label="할 일 상세">
       <div className="pg-detail-head">
-        <Check item={item} actions={actions} />
+        <TodoCheck item={item} actions={actions} />
         <input
           className="pg-input pg-detail-title"
           defaultValue={item.title}
@@ -380,17 +347,13 @@ function ItemDetail({
       </label>
 
       <div className="pg-detail-actions">
-        <button
-          type="button"
-          className="pg-pill is-danger"
-          onClick={async () => {
-            if (!confirmDelete) return setConfirmDelete(true)
+        <ConfirmButton
+          label="삭제"
+          confirmLabel="정말 삭제"
+          onConfirm={async () => {
             if (await actions.todo.remove(item.id)) onClose()
           }}
-          onBlur={() => setConfirmDelete(false)}
-        >
-          {confirmDelete ? '정말 삭제' : '삭제'}
-        </button>
+        />
         <span className="pg-spacer" />
         <button type="button" className="pg-pill" onClick={onClose}>
           닫기

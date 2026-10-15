@@ -55,6 +55,15 @@ export function imageCss(c: ImageContent): { frame: CSSProperties; img: CSSPrope
   }
 }
 
+/** 블록 안 CSS에서 쓰는 팔레트 변수(--kb-accent / --kb-check / --kb-sub) */
+export function paletteVars(p: Palette): CSSProperties {
+  return {
+    '--kb-accent': p.accent,
+    '--kb-check': p.check,
+    '--kb-sub': p.subText,
+  } as CSSProperties
+}
+
 /** 단색 SVG를 마스크로 쓰고 color로 칠한다 */
 export function maskCss(url: string, color: string): CSSProperties {
   return {

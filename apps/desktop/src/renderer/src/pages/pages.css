@@ -29,13 +29,14 @@
 .pg-title {
   margin: 0;
 }
+/* 구역 제목: 버튼과 헷갈리지 않게 바탕 없는 작은 글자 */
 .pg-chip {
   align-self: flex-start;
-  padding: 8px 18px;
-  border-radius: 999px;
-  background: var(--t-control);
-  font-size: 14px;
+  padding: 0;
+  color: var(--t-sub);
+  font-size: 13px;
   font-weight: 700;
+  letter-spacing: 0.02em;
 }
 .pg-title {
   font-size: 24px;
@@ -87,24 +88,59 @@
   padding: 7px 16px;
   border: 0;
   border-radius: 999px;
-  background: transparent;
   color: inherit;
   font: inherit;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
 }
-.pg-quick .pg-pill,
-.pg-side-actions .pg-pill,
-.pg-detail-actions .pg-pill {
+/* 버튼 3종(2026-10-14 통일): 보조(기본, control 바탕) · 주(tp-primary, 강조색) · 위험(is-danger, 옅은 빨강).
+   탭 칸(role=tab/radio)은 아래 .pg-tabs 규칙을 따른다. */
+.pg-pill:not([role='tab']):not([role='radio']) {
   background: var(--t-control);
 }
-.pg-pill[aria-selected='true'] {
+.pg-pill:not([role='tab']):not([role='radio']):hover:not(:disabled) {
+  background: color-mix(in srgb, var(--t-control) 85%, var(--t-text));
+}
+.pg-pill.tp-primary:not([role='tab']):not([role='radio']) {
+  background: var(--t-accent);
+}
+.pg-pill.tp-primary:not([role='tab']):not([role='radio']):hover:not(:disabled) {
+  background: color-mix(in srgb, var(--t-accent) 85%, var(--t-text));
+}
+.pg-pill.is-danger:not([role='tab']) {
+  background: color-mix(in srgb, var(--ui-danger) 10%, #ffffff);
+  color: var(--ui-danger);
+}
+.pg-pill.is-danger:not([role='tab']):hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ui-danger) 18%, #ffffff);
+}
+.pg-pill:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+/* 탭(role=tablist/radiogroup): 홈 안에 고른 칸만 흰색으로 떠오르는 한 덩어리 */
+.pg-tabs[role='tablist'],
+.pg-tabs[role='radiogroup'] {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
   background: var(--t-control);
 }
-.pg-pill.is-danger {
+.pg-tabs[role='tablist'] .pg-pill,
+.pg-tabs[role='radiogroup'] .pg-pill {
+  padding: 6px 16px;
   background: transparent;
-  color: #c0392b;
+  color: var(--t-sub);
+}
+.pg-tabs[role='tablist'] .pg-pill[aria-selected='true'],
+.pg-tabs[role='radiogroup'] .pg-pill[aria-checked='true'] {
+  background: #ffffff;
+  color: var(--t-text);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.1);
 }
 .pg-pill:focus-visible,
 .pg-check:focus-visible,
@@ -305,13 +341,9 @@
 .pg-cal-main .pg-head {
   flex-wrap: wrap;
 }
-.pg-pill.is-filled {
-  background: var(--t-control);
-}
 .pg-round {
   width: 34px;
   padding: 7px 0;
-  background: var(--t-control);
   font-size: 18px;
   line-height: 1;
 }
@@ -608,13 +640,6 @@
   align-items: center;
   overflow-y: auto;
 }
-.tp-main > .pg-tabs {
-  align-self: stretch;
-}
-.pg-pill:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
 .tp-face {
   position: relative;
   flex: none;
@@ -682,9 +707,11 @@
   justify-content: center;
   gap: 8px;
 }
+.tp-head {
+  align-self: stretch;
+}
 .tp-primary {
   min-width: 110px;
-  background: var(--t-accent);
   font-size: 16px;
 }
 .tp-settings {
@@ -1135,7 +1162,7 @@
 }
 .tt-error {
   margin: 0;
-  color: #c0392b;
+  color: var(--ui-danger);
   font-size: 13px;
 }
 .tt-period-list {
@@ -1152,7 +1179,7 @@
   gap: 6px;
 }
 .tt-period-list li.is-bad .pg-input {
-  border-bottom-color: #c0392b;
+  border-bottom-color: var(--ui-danger);
 }
 .tt-period-n {
   flex: none;
@@ -1194,12 +1221,6 @@
 .tt-check input:focus-visible + .tt-check-box {
   outline: 2px solid var(--t-accent);
   outline-offset: 2px;
-}
-.tt-list-toggle {
-  background: var(--t-control);
-}
-.tt-list-toggle[aria-pressed='true'] {
-  background: var(--t-accent);
 }
 /* 보기 방식: 한 덩어리로 붙은 두 칸(둘 중 하나) */
 .tt-seg {
@@ -1283,62 +1304,4 @@
   align-items: center;
   justify-content: center;
   gap: 14px;
-}
-
-/* ── 통일 규칙(2026-10-14): 구역 제목 / 버튼 3종 / 탭 ──
-   구역 제목은 버튼과 헷갈리지 않게 바탕 없는 작은 글자.
-   버튼: 보조(기본, control 바탕) · 주(tp-primary, 강조색) · 위험(is-danger, 옅은 빨강).
-   탭(role=tablist/radiogroup): 홈 안에 고른 칸만 흰색으로 떠오르는 한 덩어리. */
-.pg-chip {
-  padding: 0;
-  border-radius: 0;
-  background: none;
-  color: var(--t-sub);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-.pg-pill:not([role='tab']):not([role='radio']) {
-  background: var(--t-control);
-}
-.pg-pill:not([role='tab']):not([role='radio']):hover:not(:disabled) {
-  background: color-mix(in srgb, var(--t-control) 85%, var(--t-text));
-}
-.pg-pill.tp-primary:not([role='tab']):not([role='radio']) {
-  background: var(--t-accent);
-}
-.pg-pill.tp-primary:not([role='tab']):not([role='radio']):hover:not(:disabled) {
-  background: color-mix(in srgb, var(--t-accent) 85%, var(--t-text));
-}
-.pg-pill.is-danger:not([role='tab']) {
-  background: color-mix(in srgb, #c0392b 10%, #ffffff);
-  color: #c0392b;
-}
-.pg-pill.is-danger:not([role='tab']):hover:not(:disabled) {
-  background: color-mix(in srgb, #c0392b 18%, #ffffff);
-}
-.pg-tabs[role='tablist'],
-.pg-tabs[role='radiogroup'] {
-  display: inline-flex;
-  align-self: flex-start;
-  align-items: center;
-  gap: 2px;
-  padding: 3px;
-  border-radius: 999px;
-  background: var(--t-control);
-}
-.pg-tabs[role='tablist'] .pg-pill,
-.pg-tabs[role='radiogroup'] .pg-pill {
-  padding: 6px 16px;
-  background: transparent;
-  color: var(--t-sub);
-}
-.pg-tabs[role='tablist'] .pg-pill[aria-selected='true'],
-.pg-tabs[role='radiogroup'] .pg-pill[aria-checked='true'] {
-  background: #ffffff;
-  color: var(--t-text);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 0.1);
-}
-.tp-head {
-  align-self: stretch;
 }

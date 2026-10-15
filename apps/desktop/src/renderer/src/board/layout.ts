@@ -1,4 +1,12 @@
-import { CANVAS, CELL, type GridRect } from '@kkumikkumi/schema'
+import {
+  blockRect,
+  CANVAS,
+  CELL,
+  type FreeItem,
+  type GridBlock,
+  type GridItem,
+  type GridRect,
+} from '@kkumikkumi/schema'
 
 /**
  * 시안의 바깥 여백과 블록 간격(1280px 기준 20px)을 논리 캔버스(×1.25)로 환산한 값.
@@ -34,6 +42,23 @@ export function fitScale(containerW: number, containerH: number) {
     scale,
     offsetX: (containerW - CANVAS.width * scale) / 2,
     offsetY: (containerH - CANVAS.height * scale) / 2,
+  }
+}
+
+/** 그리드 블록 → 겹침 판정용 칸 사각형(크기표에 없는 블록은 뺀다) */
+export const gridItems = (blocks: readonly GridBlock[]): GridItem[] =>
+  blocks.flatMap((b) => {
+    const r = blockRect(b)
+    return r ? [{ id: b.id, ...r }] : []
+  })
+
+const byZ = (a: FreeItem, b: FreeItem) => a.z - b.z
+
+/** 자유 아이템을 레이어(블록 뒤/앞)별로 나누고 z 순서대로(뒤 → 앞) 정렬 */
+export function freeLayers(items: readonly FreeItem[]): { back: FreeItem[]; front: FreeItem[] } {
+  return {
+    back: items.filter((f) => f.layer === 'back').sort(byZ),
+    front: items.filter((f) => f.layer === 'front').sort(byZ),
   }
 }
 

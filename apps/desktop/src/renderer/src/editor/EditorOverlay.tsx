@@ -5,7 +5,6 @@ import {
   rectsOverlap,
   type FreeItem,
   type GridBlock,
-  type GridItem,
   type GridRect,
 } from '@kkumikkumi/schema'
 import {
@@ -15,7 +14,8 @@ import {
   type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from 'react'
-import { blockBox, type Box } from '../board/layout'
+import { blockBox, freeLayers, gridItems, type Box } from '../board/layout'
+import { usePointerTrack } from '../board/pointerTrack'
 import {
   resizeFromCorner,
   rotationFromPointer,
@@ -40,50 +40,34 @@ interface Props {
 
 const DRAG_THRESHOLD = 3
 const CORNERS: Corner[] = ['nw', 'ne', 'sw', 'se']
-const byZ = (a: FreeItem, b: FreeItem) => a.z - b.z
 
-/** pointermove/pointerup을 window에서 받는다(빠르게 움직여 요소 밖으로 나가도 끊기지 않도록). */
-function track(onMove: (e: PointerEvent) => void, onUp: (e: PointerEvent) => void) {
-  const up = (e: PointerEvent) => {
-    window.removeEventListener('pointermove', onMove)
-    window.removeEventListener('pointercancel', up)
-    window.removeEventListener('pointerup', up)
-    onUp(e)
-  }
-  window.addEventListener('pointermove', onMove)
-  window.addEventListener('pointerup', up)
-  window.addEventListener('pointercancel', up)
+/** 화면 좌표 → 레이어(el) 안의 캔버스 좌표 */
+function clientToCanvas(el: HTMLElement, scale: number, c: { clientX: number; clientY: number }) {
+  const r = el.getBoundingClientRect()
+  return { x: (c.clientX - r.left) / scale, y: (c.clientY - r.top) / scale }
 }
 
 /** 편집 모드 레이어: 그리드 안내선, 선택/드래그/핸들, 파일 드롭. 캔버스 좌표계 안에서 그려진다. */
 export function EditorOverlay({ ed, scale, onDropFile, incoming, toCanvasRef }: Props) {
   const root = useRef<HTMLDivElement>(null)
+  const track = usePointerTrack()
   const [ghost, setGhost] = useState<{ rect: GridRect; from: Box; at: Box; valid: boolean } | null>(
     null,
   )
   const t = ed.theme
   const px = (n: number) => n / Math.max(scale, 0.01) // 화면 px → 캔버스 px (핸들 크기 고정용)
 
-  const toCanvas = (e: { clientX: number; clientY: number }): Point => {
-    const r = root.current!.getBoundingClientRect()
-    return { x: (e.clientX - r.left) / scale, y: (e.clientY - r.top) / scale }
-  }
+  const toCanvas: ToCanvas = (c) => clientToCanvas(root.current!, scale, c)
 
   useLayoutEffect(() => {
     if (!toCanvasRef) return
-    toCanvasRef.current = (c) => {
-      const r = root.current!.getBoundingClientRect()
-      return { x: (c.clientX - r.left) / scale, y: (c.clientY - r.top) / scale }
-    }
+    toCanvasRef.current = (c) => clientToCanvas(root.current!, scale, c)
     return () => {
       toCanvasRef.current = null
     }
   }, [toCanvasRef, scale])
 
-  const items: GridItem[] = t.blocks.flatMap((b) => {
-    const r = blockRect(b)
-    return r ? [{ id: b.id, ...r }] : []
-  })
+  const items = gridItems(t.blocks)
 
   const startBlockDrag = (b: GridBlock, box: Box) => (e: ReactPointerEvent) => {
     if (e.button !== 0) return
@@ -226,8 +210,7 @@ export function EditorOverlay({ ed, scale, onDropFile, incoming, toCanvasRef }: 
     )
   }
 
-  const back = t.freeItems.filter((f) => f.layer === 'back').sort(byZ)
-  const front = t.freeItems.filter((f) => f.layer === 'front').sort(byZ)
+  const { back, front } = freeLayers(t.freeItems)
 
   return (
     <div

@@ -59,6 +59,8 @@ export interface UserData {
   /** 앱 안 타이머 완료 표시 */
   timerDone: TimerDoneInfo | null
   dismissTimerDone(): void
+  /** 진행 중인 사용자 데이터 저장이 끝날 때까지 기다린다(창 닫기 전) */
+  flush(): Promise<void>
 }
 
 /** onError는 안정적인 함수(setState 등)를 넘긴다 */
@@ -76,10 +78,19 @@ export function useUserData(onError: (text: string) => void): UserData {
     setVersion((v) => v + 1)
   }, [])
 
+  /** 아직 끝나지 않은 IPC 호출(창을 닫기 전에 기다린다) */
+  const [inflight] = useState(() => new Set<Promise<unknown>>())
+
   /** IPC 결과 처리: 실패면 안내하고 false. 성공하면 투두/버전 갱신. */
   const run = useCallback(
     async <T>(p: Promise<IpcResult<T>>, refresh = true): Promise<T | null> => {
-      const r = await p
+      inflight.add(p)
+      let r: IpcResult<T>
+      try {
+        r = await p
+      } finally {
+        inflight.delete(p)
+      }
       if (!r.ok) {
         onError(errText(r.error.code))
         if (refresh) await refreshTodos() // 낙관적 변경 되돌리기
@@ -88,7 +99,7 @@ export function useUserData(onError: (text: string) => void): UserData {
       if (refresh) await refreshTodos()
       return r.value
     },
-    [refreshTodos, onError],
+    [refreshTodos, onError, inflight],
   )
   /** 결과 값이 없는(null을 돌려주는) 채널용: 성공 여부만. run의 null은 실패와 구분되지 않는다. */
   const runOk = useCallback(
@@ -217,16 +228,23 @@ export function useUserData(onError: (text: string) => void): UserData {
     [run],
   )
 
+  const closeEditor = useCallback(() => setEditing(null), [])
+  const dismissTimerDone = useCallback(() => setTimerDone(null), [])
+  const flush = useCallback(async () => {
+    await Promise.allSettled([...inflight])
+  }, [inflight])
+
   return {
     data,
     actions,
     lists,
     events,
     editing,
-    closeEditor: () => setEditing(null),
+    closeEditor,
     timer: timerApi,
     timerDone,
-    dismissTimerDone: () => setTimerDone(null),
+    dismissTimerDone,
+    flush,
   }
 }
 
