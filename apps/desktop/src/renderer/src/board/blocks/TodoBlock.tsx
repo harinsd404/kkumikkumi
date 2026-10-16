@@ -12,9 +12,10 @@ import { blockCategories, dueText, isOverdue, reorderIds } from '../todo'
 type TodoBlockT = Extract<GridBlock, { type: 'todo' }>
 
 /**
- * 시안(Figma 15:2832 / 15:2781)의 투두 카드. 카테고리(할 일 목록)마다 구역 하나: 이름 칩(+로 추가) 아래 할 일.
- * props.listId가 null이면 모든 카테고리, 있으면 그 카테고리만(2026-10-16 사용자 지시).
- * L은 구역을 세 줄로 나란히. actions가 없으면(편집 모드/미리보기) 읽기 전용.
+ * 시안(Figma 15:2832 / 15:2781)의 투두 카드. 블록 전체가 "오늘의 할 일"이고, 그 안을 카테고리(할 일 목록)
+ * 구역으로 나눈다: 이름 칩(+로 오늘 마감 추가) 아래 할 일(2026-10-16 사용자 지시).
+ * props.listId가 null이면 모든 카테고리, 있으면 그 카테고리만. L은 구역을 세 줄로 나란히.
+ * actions가 없으면(편집 모드/미리보기) 읽기 전용.
  */
 export function TodoBlock({ block }: { block: TodoBlockT }) {
   const { theme, data, actions: all, mode, now } = useBoard()
@@ -31,9 +32,13 @@ export function TodoBlock({ block }: { block: TodoBlockT }) {
         block.props.showCompleted,
       )
     : []
+  const empty = sections.every((s) => s.items.length === 0)
 
   return (
     <div className={`kt kt--${block.size}`}>
+      <p className="kt-head" style={{ color: p.subText }}>
+        오늘의 할 일
+      </p>
       {sections.length === 0 ? (
         // 데이터가 없는 미리보기(위젯 갤러리 등)
         <Section
@@ -60,6 +65,11 @@ export function TodoBlock({ block }: { block: TodoBlockT }) {
             actions={actions}
           />
         ))
+      )}
+      {empty && (
+        <p className="kb-empty kb-empty--opaque kt-empty-all" style={{ color: p.subText }}>
+          오늘 할 일이 없어요
+        </p>
       )}
     </div>
   )
@@ -94,7 +104,7 @@ function Section({
   const commitAdd = async (title: string) => {
     const t = title.trim()
     setAdding(false)
-    if (t && actions && listId) await actions.todo.create(listId, t, null)
+    if (t && actions && listId) await actions.todo.create(listId, t, today)
   }
 
   /** 행 드래그: 화면 좌표끼리만 비교하므로 보드 스케일과 무관 */
@@ -140,7 +150,7 @@ function Section({
           <button
             type="button"
             className="kt-plus-btn"
-            aria-label={`${name}에 추가`}
+            aria-label={`${name}에 오늘 할 일 추가`}
             onClick={() => setAdding(true)}
           >
             <img className="kt-plus" src={plusUrl} alt="" draggable={false} />
@@ -165,11 +175,7 @@ function Section({
           onBlur={(e) => void commitAdd(e.currentTarget.value)}
         />
       )}
-      {items.length === 0 && !adding ? (
-        <p className="kb-empty kb-empty--opaque" style={{ color: p.subText }}>
-          할 일이 없어요
-        </p>
-      ) : (
+      {items.length > 0 && (
         <ul className="kt-list" ref={listRef}>
           {items.map((i, idx) => (
             <Item
@@ -267,7 +273,7 @@ function Item({
             {i.title}
           </span>
         )}
-        {i.dueDate !== null && (
+        {i.dueDate !== null && i.dueDate !== today && (
           <span className={`kt-due ${overdue ? 'is-overdue' : ''}`} style={{ color: p.subText }}>
             {dueText(i.dueDate, today)}
           </span>

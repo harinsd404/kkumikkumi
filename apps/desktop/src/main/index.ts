@@ -60,7 +60,7 @@ void app.whenReady().then(async () => {
       now: Date.now,
       newId: randomUUID,
       defaultThemeName: '푸딩 아침',
-      defaultListName: '오늘의 할 일',
+      defaultListName: '할 일',
     })
   } catch (err) {
     logError('[boot]', errorKind(err))
@@ -76,7 +76,7 @@ void app.whenReady().then(async () => {
       now: Date.now,
       newId: randomUUID,
       pickImageFile,
-      defaultListName: '오늘의 할 일',
+      defaultListName: '할 일',
       timer,
       takeMissedTimerDone,
       onTodoCompleted: () => bus.emit('todo:completed'),

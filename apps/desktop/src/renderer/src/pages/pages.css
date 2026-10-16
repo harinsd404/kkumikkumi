@@ -1515,5 +1515,21 @@
   min-height: 70px;
 }
 .tdo-new-cat {
-  margin-top: 4px;
+  align-self: flex-start;
+  border: 1.5px dashed color-mix(in srgb, var(--t-sub) 45%, transparent);
+  background: transparent;
+  color: var(--t-sub);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 7px 16px;
+  cursor: pointer;
+}
+.tdo-new-cat:hover {
+  background: #f2f2f2;
+}
+.tdo-new-cat.is-editing {
+  border-style: solid;
+  background: #ffffff;
+  cursor: text;
 }

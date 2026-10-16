@@ -191,6 +191,16 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: start;
 }
+/* 블록 제목 "오늘의 할 일"(L은 구역 줄 위로 가로질러) */
+.kt-head {
+  grid-column: 1 / -1;
+  margin: 0 0 -10px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.kt-empty-all {
+  grid-column: 1 / -1;
+}
 .kt-section {
   display: flex;
   flex-direction: column;

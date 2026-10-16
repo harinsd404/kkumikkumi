@@ -270,28 +270,51 @@ function ItemDetail({
   )
 }
 
+/** 새 카테고리: 칩 모양 버튼을 누르면 그 자리에서 이름을 적는다(Enter 저장, Escape 취소) */
 function NewCategory({ lists }: { lists: UserData['lists'] }) {
+  const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
+  const close = () => {
+    setOpen(false)
+    setName('')
+  }
+  const save = async () => {
+    const n = name.trim()
+    if (!n) return close()
+    if (await lists.create(n)) close()
+  }
+  if (!open)
+    return (
+      <button type="button" className="tdo-cat-chip tdo-new-cat" onClick={() => setOpen(true)}>
+        + 카테고리 추가
+      </button>
+    )
   return (
-    <form
-      className="pg-add tdo-new-cat"
-      onSubmit={async (e) => {
-        e.preventDefault()
-        const n = name.trim()
-        if (n && (await lists.create(n))) setName('')
-      }}
-    >
-      <span className="pg-add-plus" aria-hidden>
-        +
+    <div className="tdo-cat-head">
+      <span className="tdo-cat-chip tdo-new-cat is-editing">
+        <input
+          className="tdo-cat-rename"
+          autoFocus
+          placeholder="카테고리 이름"
+          aria-label="새 카테고리 이름"
+          maxLength={40}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing) void save()
+            if (e.key === 'Escape') {
+              e.stopPropagation()
+              close()
+            }
+          }}
+        />
       </span>
-      <input
-        className="pg-input"
-        placeholder="새 카테고리"
-        aria-label="새 카테고리 이름"
-        maxLength={40}
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
-    </form>
+      <button type="button" className="pg-pill" onClick={() => void save()}>
+        만들기
+      </button>
+      <button type="button" className="pg-pill" onClick={close}>
+        취소
+      </button>
+    </div>
   )
 }

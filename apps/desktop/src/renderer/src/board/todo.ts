@@ -17,9 +17,9 @@ export interface CategorySection<T> {
 }
 
 /**
- * 보드 블록: 카테고리마다 할 일(order 순). pinned가 있는 카테고리면 그것만, 아니면 전부(카테고리 순서).
- * showCompleted가 false면 완료 항목을 숨긴다. 마감이 지난 날의 완료 항목은 날짜가 바뀌면 빠진다
- * (할 일 페이지 "완료"에서 볼 수 있음).
+ * 보드 블록("오늘의 할 일"): 카테고리마다 오늘 할 일(order 순). 마감이 오늘이거나 지났는데 못 한 일,
+ * showCompleted면 오늘 마감인 끝낸 일도. 마감 없는 일과 내일 이후 일은 할 일 화면에서 본다.
+ * pinned가 있는 카테고리면 그것만, 아니면 전부(카테고리 순서, 빈 카테고리도 +로 추가하도록 보여 준다).
  */
 export function blockCategories<T extends ItemLike>(
   lists: readonly { id: string; name: string; order: number }[],
@@ -37,8 +37,9 @@ export function blockCategories<T extends ItemLike>(
       name: l.name,
       items: [...(items[l.id] ?? [])]
         .sort((a, b) => a.order - b.order)
-        .filter((i) => showCompleted || !i.done)
-        .filter((i) => !(i.done && i.dueDate !== null && i.dueDate < today)),
+        .filter((i) =>
+          i.done ? showCompleted && i.dueDate === today : i.dueDate !== null && i.dueDate <= today,
+        ),
     }))
 }
 
