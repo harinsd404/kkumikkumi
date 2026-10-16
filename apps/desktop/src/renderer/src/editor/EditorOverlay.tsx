@@ -17,13 +17,15 @@ import {
 import { blockBox, freeLayers, gridItems, type Box } from '../board/layout'
 import { usePointerTrack } from '../board/pointerTrack'
 import {
+  panFocus,
   resizeFromCorner,
   rotationFromPointer,
   snapToCell,
+  toLocalDelta,
   type Corner,
   type Point,
 } from './state/geometry'
-import type { EditorApi } from './useEditor'
+import type { EditorApi, Selection } from './useEditor'
 
 /** 화면 좌표 → 캔버스 좌표(갤러리에서 끌어 올 때 부모가 쓴다) */
 export type ToCanvas = (client: { clientX: number; clientY: number }) => Point
@@ -69,9 +71,62 @@ export function EditorOverlay({ ed, scale, onDropFile, incoming, toCanvasRef }: 
 
   const items = gridItems(t.blocks)
 
+  /** 사진 위치 조정 대상: 칸(캔버스 px), 회전, 지금 이미지 설정, 원본 크기. 사진이 없으면 null */
+  const panTarget = (s: Selection) => {
+    if (!s) return null
+    if (s.kind === 'block') {
+      const b = t.blocks.find((x) => x.id === s.id)
+      const r = b && blockRect(b)
+      if (!b || b.type !== 'image' || !r || !b.props.assetHash) return null
+      const box = blockBox(r)
+      const asset = t.assets.find((a) => a.hash === b.props.assetHash)
+      return asset && { box, rotation: 0, content: b.props, asset }
+    }
+    const f = t.freeItems.find((x) => x.id === s.id)
+    if (!f || f.kind !== 'image' || f.locked) return null
+    const asset = t.assets.find((a) => a.hash === f.content.assetHash)
+    const box = { left: f.x, top: f.y, width: f.w, height: f.h }
+    return asset && { box, rotation: f.rotation, content: f.content, asset }
+  }
+  const adjusting = ed.adjusting
+  const pan = panTarget(adjusting)
+
+  /** 다른 것을 누르면 사진 위치 조정을 끝낸다 */
+  const endAdjust = (unless?: string) => {
+    if (ed.adjusting && ed.adjusting.id !== unless) ed.adjust(null)
+  }
+
+  const startPan = (e: ReactPointerEvent) => {
+    if (e.button !== 0 || !adjusting || !pan) return
+    e.stopPropagation()
+    const start = toCanvas(e)
+    const { box, rotation, content, asset } = pan
+    const target = adjusting
+    track(
+      (ev) => {
+        const p = toCanvas(ev)
+        const d = toLocalDelta(p.x - start.x, p.y - start.y, rotation)
+        const next = panFocus(
+          content.focus,
+          d,
+          { w: box.width, h: box.height },
+          { w: asset.width, h: asset.height },
+          content.fit,
+        )
+        const focus = { ...content.focus, ...next }
+        const opts = { groupKey: `pan:${target.id}`, continuous: true }
+        if (target.kind === 'block')
+          ed.dispatch({ type: 'block/props', id: target.id, patch: { focus } }, opts)
+        else ed.dispatch({ type: 'free/content', id: target.id, patch: { focus } }, opts)
+      },
+      () => ed.endGesture(),
+    )
+  }
+
   const startBlockDrag = (b: GridBlock, box: Box) => (e: ReactPointerEvent) => {
     if (e.button !== 0) return
     e.stopPropagation()
+    endAdjust(b.id)
     ed.select({ kind: 'block', id: b.id })
     const rect = blockRect(b)!
     const start = toCanvas(e)
@@ -111,6 +166,7 @@ export function EditorOverlay({ ed, scale, onDropFile, incoming, toCanvasRef }: 
   const startFreeMove = (f: FreeItem) => (e: ReactPointerEvent) => {
     if (e.button !== 0) return
     e.stopPropagation()
+    endAdjust(f.id)
     ed.select({ kind: 'free', id: f.id })
     if (f.locked) return
     const start = toCanvas(e)
@@ -180,6 +236,9 @@ export function EditorOverlay({ ed, scale, onDropFile, incoming, toCanvasRef }: 
           outlineWidth: px(selected ? 2 : 1),
         }}
         onPointerDown={startFreeMove(f)}
+        onDoubleClick={() => {
+          if (f.kind === 'image' && !f.locked) ed.adjust({ kind: 'free', id: f.id })
+        }}
         aria-label={f.kind === 'image' ? '이미지' : '스티커'}
       >
         {selected && !f.locked && (
@@ -217,7 +276,9 @@ export function EditorOverlay({ ed, scale, onDropFile, incoming, toCanvasRef }: 
       ref={root}
       className="ke-overlay"
       onPointerDown={(e) => {
-        if (e.target === e.currentTarget) ed.select(null)
+        if (e.target !== e.currentTarget) return
+        ed.select(null)
+        endAdjust()
       }}
       onDragOver={(e) => {
         e.preventDefault()
@@ -247,11 +308,50 @@ export function EditorOverlay({ ed, scale, onDropFile, incoming, toCanvasRef }: 
             className={`ke-hit ke-block ${selected ? 'is-selected' : ''}`}
             style={{ ...box, outlineWidth: px(selected ? 2.5 : 1) }}
             onPointerDown={startBlockDrag(b, box)}
+            onDoubleClick={() => {
+              // 이미지 블록은 두 번 누르면 사진 위치 조정
+              if (b.type === 'image' && b.props.assetHash) ed.adjust({ kind: 'block', id: b.id })
+            }}
             aria-label={`${b.type} 블록`}
           />
         )
       })}
       {front.map(freeHit)}
+      {pan && (
+        <>
+          <div
+            className="ke-pan"
+            style={{
+              ...pan.box,
+              transform: pan.rotation ? `rotate(${pan.rotation}deg)` : undefined,
+              outlineWidth: px(2.5),
+            }}
+            onPointerDown={startPan}
+            aria-label="끌어서 사진 위치 조정"
+          />
+          <div
+            className="ke-pan-bar"
+            style={{
+              left: pan.box.left,
+              top: Math.max(0, pan.box.top - px(44)),
+              gap: px(8),
+              padding: `${px(5)}px ${px(6)}px ${px(5)}px ${px(12)}px`,
+              fontSize: px(13),
+              borderRadius: px(999),
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <span>끌어서 사진 위치 조정</span>
+            <button
+              type="button"
+              style={{ padding: `${px(4)}px ${px(12)}px`, borderRadius: px(999) }}
+              onClick={() => ed.adjust(null)}
+            >
+              완료
+            </button>
+          </div>
+        </>
+      )}
       {incoming && (
         <div
           className={`ke-ghost ${incoming.valid ? 'is-valid' : 'is-invalid'}`}

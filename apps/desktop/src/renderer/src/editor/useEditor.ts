@@ -31,6 +31,9 @@ export interface EditorApi {
   theme: Theme
   selection: Selection
   select(s: Selection): void
+  /** 사진 위치를 끌어서 조정하는 중인 이미지 블록/꾸미기(없으면 null) */
+  adjusting: Selection
+  adjust(s: Selection): void
   /** 실패하면 false(안내 문구를 띄움) */
   dispatch(a: EditorAction, o?: CommitOptions): boolean
   /** 드래그 등 연속 조작이 끝났을 때 */
@@ -56,6 +59,7 @@ export function useEditor(initial: Theme, deps: EditorDeps): EditorApi {
   const [h, setH] = useState<History<Theme>>(() => createHistory(initial))
   const hist = useRef(h)
   const [selection, setSelection] = useState<Selection>(null)
+  const [adjusting, setAdjusting] = useState<Selection>(null)
   const [status, setStatus] = useState<SaveStatus>({ state: 'idle' })
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -108,11 +112,10 @@ export function useEditor(initial: Theme, deps: EditorDeps): EditorApi {
 
   const theme = h.present
   // 실행 취소 등으로 선택한 요소가 사라졌으면 선택 해제로 본다
-  const live =
-    selection &&
-    (selection.kind === 'block' ? theme.blocks : theme.freeItems).some((x) => x.id === selection.id)
-      ? selection
-      : null
+  const exists = (s: Selection) =>
+    !!s && (s.kind === 'block' ? theme.blocks : theme.freeItems).some((x) => x.id === s.id)
+  const live = exists(selection) ? selection : null
+  const liveAdjust = exists(adjusting) ? adjusting : null
 
   // 내용이 같으면 같은 객체(분 단위 시계 등으로 다시 그려질 때 [ed] 의존 콜백이 매번 바뀌지 않도록)
   return useMemo<EditorApi>(
@@ -120,6 +123,8 @@ export function useEditor(initial: Theme, deps: EditorDeps): EditorApi {
       theme,
       selection: live,
       select: setSelection,
+      adjusting: liveAdjust,
+      adjust: setAdjusting,
       dispatch,
       endGesture: () => set(seal(hist.current)),
       undo: () => set(undo(hist.current)),
@@ -131,6 +136,6 @@ export function useEditor(initial: Theme, deps: EditorDeps): EditorApi {
       showNotice: setNotice,
       flush: () => autosaver.flush(),
     }),
-    [theme, live, dispatch, set, h, status, notice, autosaver],
+    [theme, live, liveAdjust, dispatch, set, h, status, notice, autosaver],
   )
 }

@@ -161,7 +161,10 @@ export function BlockProps({
               className={block.props.assetHash ? undefined : 'ki-primary'}
               onClick={async () => {
                 const a = await pickImage('image')
-                if (a) set({ assetHash: a.hash })
+                if (!a) return
+                // 새 사진은 가운데에서 시작하고 바로 끌어서 위치를 잡게 한다
+                set({ assetHash: a.hash, focus: { ...block.props.focus, x: 0.5, y: 0.5 } })
+                ed.adjust({ kind: 'block', id: block.id })
               }}
             >
               {block.props.assetHash ? '이미지 바꾸기' : '+ 이미지 고르기'}
@@ -172,7 +175,11 @@ export function BlockProps({
               </button>
             )}
           </div>
-          <ImageContentFields content={block.props} apply={(patch, key) => set(patch, key)} />
+          <ImageContentFields
+            content={block.props}
+            apply={(patch, key) => set(patch, key)}
+            onAdjust={() => ed.adjust({ kind: 'block', id: block.id })}
+          />
         </Section>
       )
   }

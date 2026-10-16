@@ -5,9 +5,11 @@ import {
   dropCell,
   MIN_ITEM_SIZE,
   MIN_VISIBLE,
+  panFocus,
   resizeFromCorner,
   rotationFromPointer,
   snapToCell,
+  toLocalDelta,
 } from '../geometry'
 
 const box = { x: 100, y: 100, w: 200, h: 100, rotation: 0 }
@@ -106,5 +108,37 @@ describe('rotationFromPointer', () => {
   it('snap이면 15도 단위', () => {
     const deg = rotationFromPointer(box, { x: c.x + 50, y: c.y - 40 }, true)
     expect(deg % 15).toBe(0)
+  })
+})
+
+describe('panFocus (사진 끌어서 위치 조정)', () => {
+  const box = { w: 400, h: 200 }
+  it('가로로 긴 사진(cover): 넘치는 만큼 끌면 끝에서 끝으로, 넘치지 않는 세로는 그대로', () => {
+    // 800x200 사진을 400x200 칸에 cover → 너비 800, 넘침 400
+    const f = { x: 0.5, y: 0.5, zoom: 1 }
+    expect(panFocus(f, { dx: -200, dy: 50 }, box, { w: 800, h: 200 }, 'cover')).toEqual({
+      x: 1,
+      y: 0.5,
+    })
+    expect(panFocus(f, { dx: 100, dy: 0 }, box, { w: 800, h: 200 }, 'cover').x).toBeCloseTo(0.25)
+  })
+  it('확대하면 넘치는 길이가 늘어 같은 거리에 덜 움직이고, 0~1을 넘지 않는다', () => {
+    const f = { x: 0.5, y: 0.5, zoom: 2 }
+    // 400x200 사진, cover 배율 1, 확대 2 → 넘침 가로 400, 세로 200
+    const r = panFocus(f, { dx: -100, dy: 1000 }, box, { w: 400, h: 200 }, 'cover')
+    expect(r.x).toBeCloseTo(0.75)
+    expect(r.y).toBe(0)
+  })
+  it('딱 맞으면(넘침 없음) 움직이지 않는다', () => {
+    const f = { x: 0.3, y: 0.7, zoom: 1 }
+    expect(panFocus(f, { dx: 50, dy: 50 }, box, { w: 400, h: 200 }, 'cover')).toEqual({
+      x: 0.3,
+      y: 0.7,
+    })
+  })
+  it('회전한 꾸미기는 끈 방향을 꾸미기 기준으로 돌린다', () => {
+    const d = toLocalDelta(10, 0, 90)
+    expect(d.dx).toBeCloseTo(0)
+    expect(d.dy).toBeCloseTo(-10)
   })
 })

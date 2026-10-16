@@ -379,6 +379,38 @@ body {
   background: rgba(255, 255, 255, 0.35);
   pointer-events: none;
 }
+/* 사진 위치 조정: 사진 위를 끌면 보이는 부분이 움직인다 */
+.ke-pan {
+  position: absolute;
+  z-index: 5;
+  border-radius: 25px;
+  outline: 0 dashed var(--ui-accent, #d9b48a);
+  outline-style: dashed;
+  cursor: grab;
+  touch-action: none;
+}
+.ke-pan:active {
+  cursor: grabbing;
+}
+.ke-pan-bar {
+  position: absolute;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  background: var(--ui-text, #4a3a36);
+  color: #ffffff;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
+}
+.ke-pan-bar button {
+  border: 0;
+  background: #ffffff;
+  color: var(--ui-text, #4a3a36);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
 
 /* ── 인스펙터 (화면 px, 보드 위에 떠 있음) ── */
 .ki {

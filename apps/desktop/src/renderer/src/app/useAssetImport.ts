@@ -55,9 +55,10 @@ export function useAssetImport(
       ed.dispatch({
         type: 'block/props',
         id: target.id,
-        patch: { assetHash: r.asset.hash },
+        patch: { assetHash: r.asset.hash, focus: { ...target.props.focus, x: 0.5, y: 0.5 } },
       })
       ed.select({ kind: 'block', id: target.id })
+      ed.adjust({ kind: 'block', id: target.id }) // 바로 끌어서 위치 잡기
       return
     }
     // 투명 영역이 있으면 스티커(잘리지 않게), 아니면 이미지
@@ -70,7 +71,8 @@ export function useAssetImport(
 /** 캔버스 좌표 아래의 이미지 블록(없으면 null) */
 function imageBlockAt(t: Theme, at: Point) {
   for (const b of t.blocks) {
-    const r = b.type === 'image' ? blockRect(b) : null
+    if (b.type !== 'image') continue
+    const r = blockRect(b)
     if (!r) continue
     const box = blockBox(r)
     if (

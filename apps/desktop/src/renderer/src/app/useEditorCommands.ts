@@ -89,7 +89,8 @@ export function useEditorCommands(ed: EditorApi, themeId: string) {
       else if (c === 'duplicate') duplicate()
       else if (c === 'save') void ed.flush()
       else if (c === 'escape') {
-        if (ed.selection) ed.select(null)
+        if (ed.adjusting) ed.adjust(null)
+        else if (ed.selection) ed.select(null)
         else void exitEdit()
       }
     }

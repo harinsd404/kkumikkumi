@@ -83,13 +83,32 @@ export function DecorFields(props: {
 }
 
 /** 이미지 맞춤/초점/확대/모양(그리드 image 블록과 자유 이미지 공용) */
+/**
+ * 이미지 옵션. 사진 위치는 보드에서 끌어서 정한다(가로·세로 초점 슬라이더 대신, 2026-10-16 사용자 지시).
+ * onAdjust가 있고 사진이 있으면 "사진 위치 조정" 버튼으로 끌기 모드를 켠다.
+ */
 export function ImageContentFields(props: {
   content: ImageContent
   apply(patch: Partial<ImageContent>, groupKey?: string): void
+  onAdjust?: (() => void) | undefined
 }) {
-  const { content: c, apply } = props
+  const { content: c, apply, onAdjust } = props
   return (
     <>
+      {onAdjust && c.assetHash && (
+        <div className="ki-buttons">
+          <button type="button" onClick={onAdjust}>
+            사진 위치 조정 (끌기)
+          </button>
+          <button
+            type="button"
+            disabled={c.focus.x === 0.5 && c.focus.y === 0.5}
+            onClick={() => apply({ focus: { ...c.focus, x: 0.5, y: 0.5 } })}
+          >
+            가운데로
+          </button>
+        </div>
+      )}
       <Segmented
         label="맞춤"
         value={c.fit}
@@ -98,24 +117,6 @@ export function ImageContentFields(props: {
           { value: 'contain', label: '전체 보기' },
         ]}
         onChange={(fit) => apply({ fit })}
-      />
-      <Slider
-        label="가로 초점"
-        value={c.focus.x}
-        min={0}
-        max={1}
-        step={0.01}
-        format={pct}
-        onChange={(x) => apply({ focus: { ...c.focus, x } }, 'fx')}
-      />
-      <Slider
-        label="세로 초점"
-        value={c.focus.y}
-        min={0}
-        max={1}
-        step={0.01}
-        format={pct}
-        onChange={(y) => apply({ focus: { ...c.focus, y } }, 'fy')}
       />
       <Slider
         label="확대"
@@ -153,6 +154,7 @@ export function FreeImageFields({
         apply={(patch, key) =>
           ed.dispatch({ type: 'free/content', id: item.id, patch }, groupOf(item.id, key))
         }
+        onAdjust={item.locked ? undefined : () => ed.adjust({ kind: 'free', id: item.id })}
       />
     </Section>
   )

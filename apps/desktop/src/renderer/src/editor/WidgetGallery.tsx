@@ -157,12 +157,8 @@ export function WidgetGallery({
 }) {
   return (
     <div className="wg">
-      {/* 사진·스티커는 자주 쓰는 꾸미기라 맨 위에 */}
-      <section className="wg-decor" aria-label="사진·스티커 넣기">
-        <button type="button" className="wg-decor-btn" onClick={() => onAddDecor('image')}>
-          사진 넣기
-          <span>잘라서 채움</span>
-        </button>
+      {/* 스티커는 자주 쓰는 꾸미기라 맨 위에. 사진은 이미지 블록에 넣는다(2026-10-16 사용자 지시) */}
+      <section className="wg-decor" aria-label="스티커 넣기">
         <button type="button" className="wg-decor-btn" onClick={() => onAddDecor('sticker')}>
           스티커 넣기
           <span>투명 PNG 권장</span>

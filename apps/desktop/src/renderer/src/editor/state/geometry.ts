@@ -94,3 +94,38 @@ export function rotationFromPointer(b: Box, pointer: Point, snap: boolean): numb
   deg = ((((deg + 180) % 360) + 360) % 360) - 180
   return Object.is(deg, -0) ? 0 : deg
 }
+
+/**
+ * 사진 끌어서 위치 조정: 화면에서 사진을 (dx, dy)만큼 끌면 focus(object-position 0~1)를 얼마나 바꿀지.
+ * 그려지는 사진의 왼쪽 끝 = -focus.x × (zoom × 맞춘 너비 − 칸 너비)이므로, 넘치는 길이(E)만큼 끌면 0→1.
+ * 넘치지 않는 방향(E ≤ 0)은 움직이지 않는다. dx, dy와 box는 같은 단위(캔버스 px).
+ */
+export function panFocus(
+  focus: { x: number; y: number; zoom: number },
+  d: { dx: number; dy: number },
+  box: { w: number; h: number },
+  image: { w: number; h: number },
+  fit: 'cover' | 'contain',
+): { x: number; y: number } {
+  const fitScale =
+    fit === 'cover'
+      ? Math.max(box.w / image.w, box.h / image.h)
+      : Math.min(box.w / image.w, box.h / image.h)
+  const ex = focus.zoom * image.w * fitScale - box.w
+  const ey = focus.zoom * image.h * fitScale - box.h
+  const clamp = (v: number) => Math.min(1, Math.max(0, v))
+  return {
+    x: ex > 0.5 ? clamp(focus.x - d.dx / ex) : focus.x,
+    y: ey > 0.5 ? clamp(focus.y - d.dy / ey) : focus.y,
+  }
+}
+
+/** 회전한 꾸미기 안에서 끈 거리: 화면 방향 (dx, dy)를 꾸미기의 가로·세로 방향으로 돌린다 */
+export function toLocalDelta(
+  dx: number,
+  dy: number,
+  rotationDeg: number,
+): { dx: number; dy: number } {
+  const r = (-rotationDeg * Math.PI) / 180
+  return { dx: dx * Math.cos(r) - dy * Math.sin(r), dy: dx * Math.sin(r) + dy * Math.cos(r) }
+}
