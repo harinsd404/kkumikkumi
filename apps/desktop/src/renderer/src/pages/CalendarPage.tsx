@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { BoardActions } from '../board/BoardContext'
 import { localDate, type EventInput } from '../board/calendar'
 import { useDayData } from '../board/calendarData'
@@ -16,6 +16,11 @@ interface Props {
   now: Date
   weekStartsOn: 0 | 1
   updateEvent(id: string, e: EventInput): Promise<boolean>
+  /** 고른 날(할 일 화면과 같이 쓴다) */
+  anchor: string
+  onAnchor(date: string): void
+  /** 머리줄 오른쪽 끝에 붙일 버튼(작게 보기 전환 등) */
+  headerExtra?: ReactNode
 }
 
 const VIEWS: { id: CalView; label: string }[] = [
@@ -24,11 +29,19 @@ const VIEWS: { id: CalView; label: string }[] = [
   { id: 'day', label: '일' },
 ]
 
-/** 캘린더 세부 페이지: 월/주/일 보기 + 고른 날의 목록. 일정은 끌어서 옮긴다. */
-export function CalendarPage({ actions, version, now, weekStartsOn, updateEvent }: Props) {
+/** 달력 크게 보기: 월/주/일 보기 + 고른 날의 목록. 일정은 끌어서 옮긴다. */
+export function CalendarPage({
+  actions,
+  version,
+  now,
+  weekStartsOn,
+  updateEvent,
+  anchor,
+  onAnchor: setAnchor,
+  headerExtra,
+}: Props) {
   const today = localDate(now.getTime())
   const [view, setView] = useState<CalView>('month')
-  const [anchor, setAnchor] = useState(today)
   const days = visibleDays(view, anchor, weekStartsOn)
   const data = useDayData(days, actions, version)
   const { drag, bind } = useEventDrag(actions, updateEvent)
@@ -73,6 +86,7 @@ export function CalendarPage({ actions, version, now, weekStartsOn, updateEvent 
               </button>
             ))}
           </div>
+          {headerExtra}
         </header>
 
         {view === 'month' ? (

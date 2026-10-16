@@ -29,7 +29,6 @@ import { useWidgetDrag } from './useWidgetDrag'
 const PAGES: PageNav['pages'] = [
   { id: 'board', label: '보드' },
   { id: 'todo', label: '할 일' },
-  { id: 'calendar', label: '캘린더' },
   { id: 'timer', label: '타이머' },
   { id: 'memo', label: '메모' },
   { id: 'timetable', label: '시간표' },
@@ -65,6 +64,8 @@ export function BoardScreen({
   /** 흰 배경 스티커: 지울지 물어보는 중인 원본 에셋 */
   const [cutout, setCutout] = useState<Asset | null>(null)
   const [page, setPage] = useState<AppPage>(initialPage)
+  /** 할 일 화면에서 달력을 크게 보는 중(캘린더·디데이 블록에서 들어오면 크게) */
+  const [todoBig, setTodoBig] = useState(false)
   const themes = useThemes()
   /** 메모 블록에서 들어오면 그 메모를 연다 */
   const [memoOpen, setMemoOpen] = useState<string | null>(null)
@@ -77,8 +78,14 @@ export function BoardScreen({
       memo: { toggle: memoToggle },
       timetable: { select: (id) => void timetableSelect(id) },
       pages: {
-        todo: () => setPage('todo'),
-        calendar: () => setPage('calendar'),
+        todo: () => {
+          setTodoBig(false)
+          setPage('todo')
+        },
+        calendar: () => {
+          setTodoBig(true)
+          setPage('todo')
+        },
         timer: () => setPage('timer'),
         timetable: () => setPage('timetable'),
         memo: (b) => {
@@ -153,6 +160,8 @@ export function BoardScreen({
           memoOpen={memoOpen}
           timetable={timetable}
           now={now}
+          todoBig={todoBig}
+          onTodoBig={setTodoBig}
         />
         {page === 'board' && (
           <div className="app-stage">

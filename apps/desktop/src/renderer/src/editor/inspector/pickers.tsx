@@ -171,7 +171,7 @@ export function DdayFields({
   )
 }
 
-/** 투두 블록이 보여 줄 목록 고르기 + 목록 추가/이름 변경/삭제 */
+/** 투두 블록이 보여 줄 카테고리(전체 또는 하나) 고르기 + 카테고리 추가/이름 변경/삭제 */
 export function TodoListFields({
   lists,
   listId,
@@ -185,11 +185,11 @@ export function TodoListFields({
   const [newName, setNewName] = useState('')
   const [rename, setRename] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const shown = current ?? lists.all[0] ?? null
+  const shown = current
 
   return (
     <>
-      <Row label="목록">
+      <Row label="카테고리">
         <select
           className="ki-select"
           value={current?.id ?? ''}
@@ -199,7 +199,7 @@ export function TodoListFields({
             onSelect(e.target.value || null)
           }}
         >
-          <option value="">기본 목록{lists.all[0] ? ` (${lists.all[0].name})` : ''}</option>
+          <option value="">전체 (카테고리별)</option>
           {lists.all.map((l) => (
             <option key={l.id} value={l.id}>
               {l.name}
@@ -238,8 +238,8 @@ export function TodoListFields({
       >
         <input
           className="ki-text"
-          placeholder="새 목록 이름"
-          aria-label="새 목록 이름"
+          placeholder="새 카테고리 이름"
+          aria-label="새 카테고리 이름"
           value={newName}
           maxLength={40}
           onChange={(e) => setNewName(e.target.value)}
@@ -259,7 +259,7 @@ export function TodoListFields({
               if (await lists.remove(current.id)) onSelect(null)
             }}
           >
-            {confirmDelete ? '한 번 더 누르면 목록과 할 일이 지워져요' : '이 목록 삭제'}
+            {confirmDelete ? '한 번 더 누르면 카테고리와 할 일이 지워져요' : '이 카테고리 삭제'}
           </button>
         </div>
       )}

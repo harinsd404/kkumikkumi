@@ -170,10 +170,7 @@
   flex: 1;
 }
 
-/* ── 할 일 페이지 ── */
-.pg-todo.has-detail {
-  grid-template-columns: 240px minmax(0, 1fr) 300px;
-}
+/* ── 목록(메모·시간표 사이드바)과 할 일 줄 ── */
 .pg-lists,
 .pg-list {
   display: flex;
@@ -214,9 +211,6 @@
 .pg-count {
   color: var(--t-sub);
   font-size: 13px;
-}
-.pg-side-actions {
-  margin-top: auto;
 }
 .pg-list {
   gap: 4px;
@@ -295,11 +289,6 @@
 }
 .pg-detail {
   overflow-y: auto;
-}
-.pg-detail-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
 }
 .pg-detail-title {
   flex: 1;
@@ -1304,4 +1293,227 @@
   align-items: center;
   justify-content: center;
   gap: 14px;
+}
+
+/* ── 할 일 화면: 작은 달력 + 카테고리별 할 일 (2026-10-16) ── */
+.tdo {
+  grid-template-columns: minmax(300px, 0.85fr) minmax(0, 1.15fr);
+}
+.tdo-cal {
+  gap: 14px;
+}
+.tdo-month {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  row-gap: 4px;
+}
+.tdo-dow {
+  padding-bottom: 4px;
+  color: var(--t-sub);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+.tdo-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 0 4px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.tdo-day:hover {
+  background: var(--t-surface);
+}
+.tdo-day:focus-visible {
+  outline: 2px solid var(--t-accent);
+  outline-offset: -2px;
+}
+.tdo-day.is-out {
+  opacity: 0.35;
+}
+/* 남은 할 일 수 배지: 없으면 옅은 자리만 */
+.tdo-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--t-control) 45%, transparent);
+  font-size: 12px;
+  font-weight: 700;
+}
+.tdo-badge.has-count {
+  background: var(--t-check);
+}
+.tdo-daynum {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 4px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.tdo-day.is-today .tdo-daynum {
+  background: var(--t-accent);
+}
+.tdo-day.is-selected .tdo-daynum {
+  background: var(--t-text);
+  color: #ffffff;
+}
+.tdo-dots {
+  display: flex;
+  gap: 2px;
+  height: 5px;
+}
+.tdo-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+.tdo-big {
+  align-self: flex-start;
+  margin-top: auto;
+}
+.tdo-main {
+  gap: 14px;
+}
+.tdo-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.tdo-events {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tdo-event-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tdo-event {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 6px 12px;
+  border: 0;
+  border-left: 4px solid;
+  border-radius: 10px;
+  background: var(--t-surface);
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.tdo-event-time {
+  color: var(--t-sub);
+  font-size: 12px;
+  font-weight: 700;
+}
+.tdo-cats {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.tdo-cat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tdo-cat-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* 보드 할 일 블록의 구역 칩과 같은 모양 */
+.tdo-cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 8px 7px 16px;
+  border-radius: 999px;
+  background: #f2f2f2;
+  font-size: 15px;
+  font-weight: 700;
+}
+.tdo-cat-rename {
+  width: 140px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1.5px solid var(--t-sub);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+.tdo-cat-add {
+  display: flex;
+  padding: 2px;
+  border: 0;
+  border-radius: 50%;
+  background: #ffffff;
+  cursor: pointer;
+}
+.tdo-cat-add img {
+  width: 20px;
+  height: 20px;
+}
+.tdo-cat-add:focus-visible {
+  outline: 2px solid var(--t-accent);
+}
+/* 카테고리 이름 바꾸기·삭제는 칸에 올리거나 초점이 있을 때만 */
+.tdo-cat-tools {
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.tdo-cat-head:hover .tdo-cat-tools,
+.tdo-cat-tools:focus-within {
+  opacity: 1;
+}
+.tdo-add-input {
+  margin-left: 8px;
+}
+.tdo-items {
+  overflow: visible;
+}
+.tdo-item.is-open > .pg-row {
+  background: var(--t-surface);
+}
+.tdo-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 4px 0 8px 40px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--t-surface);
+}
+.tdo-detail-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+.tdo-note {
+  min-height: 70px;
+}
+.tdo-new-cat {
+  margin-top: 4px;
 }

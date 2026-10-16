@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dueForSection, groupTodos, isOverdue, reorderIds, sectionsForSize } from '../todo'
+import { blockCategories, dueText, isOverdue, reorderIds } from '../todo'
 
 const T = '2026-10-12'
 const item = (id: string, dueDate: string | null, order: number, done = false) => ({
@@ -9,47 +9,42 @@ const item = (id: string, dueDate: string | null, order: number, done = false) =
   done,
 })
 
-describe('투두 섹션', () => {
-  const items = [
-    item('late', '2026-10-01', 5),
-    item('today', T, 1),
-    item('tmr', '2026-10-13', 2),
-    item('later', '2026-10-20', 3),
-    item('none', null, 0),
-    item('doneToday', T, 4, true),
+describe('카테고리별 할 일(보드 블록)', () => {
+  const lists = [
+    { id: 'b', name: '학교', order: 1 },
+    { id: 'a', name: '개인', order: 0 },
+    { id: 'c', name: '빈 카테고리', order: 2 },
   ]
-  it('오늘(지난 것 포함) / 내일 / 보관함(마감 없음, 모레 이후)', () => {
-    const g = groupTodos(items, T, true)
-    expect(g.today.map((i) => i.id)).toEqual(['today', 'doneToday', 'late']) // order 순
-    expect(g.tomorrow.map((i) => i.id)).toEqual(['tmr'])
-    expect(g.inbox.map((i) => i.id)).toEqual(['none', 'later'])
+  const items = {
+    a: [item('a2', null, 2), item('a1', T, 1), item('aDone', T, 3, true)],
+    b: [item('late', '2026-10-01', 0), item('oldDone', '2026-10-01', 1, true)],
+  }
+  it('카테고리 순서대로, 안은 order 순, 빈 카테고리도 나온다', () => {
+    const s = blockCategories(lists, items, null, T, true)
+    expect(s.map((x) => x.name)).toEqual(['개인', '학교', '빈 카테고리'])
+    expect(s[0]!.items.map((i) => i.id)).toEqual(['a1', 'a2', 'aDone'])
+    expect(s[2]!.items).toEqual([])
   })
-  it('완료 숨기기', () => {
-    expect(groupTodos(items, T, false).today.map((i) => i.id)).toEqual(['today', 'late'])
+  it('완료 숨기기, 지난 날의 완료는 항상 빠지고 못 한 일은 남는다', () => {
+    expect(blockCategories(lists, items, null, T, false)[0]!.items.map((i) => i.id)).toEqual([
+      'a1',
+      'a2',
+    ])
+    expect(blockCategories(lists, items, null, T, true)[1]!.items.map((i) => i.id)).toEqual([
+      'late',
+    ])
   })
-  it('날짜가 바뀌면 지난 날의 완료 항목은 빠지고, 못 한 항목만 오늘로 넘어온다', () => {
-    const items = [
-      item('doneYesterday', '2026-10-11', 0, true),
-      item('lateUndone', '2026-10-11', 1),
-    ]
-    const g = groupTodos(items, T, true)
-    expect(g.today.map((i) => i.id)).toEqual(['lateUndone'])
-    expect([...g.tomorrow, ...g.inbox]).toEqual([])
+  it('고정한 카테고리만, 없는 카테고리면 전부', () => {
+    expect(blockCategories(lists, items, 'b', T, true).map((x) => x.listId)).toEqual(['b'])
+    expect(blockCategories(lists, items, 'zzz', T, true)).toHaveLength(3)
   })
-  it('월말 내일 계산', () => {
-    expect(groupTodos([item('a', '2026-11-01', 0)], '2026-10-31', true).tomorrow).toHaveLength(1)
-    expect(dueForSection('tomorrow', '2026-12-31')).toBe('2027-01-01')
-    expect(dueForSection('today', T)).toBe(T)
-    expect(dueForSection('inbox', T)).toBeNull()
-  })
-  it('지난 마감 표시는 미완료만', () => {
-    expect(isOverdue(item('a', '2026-10-01', 0), T)).toBe(true)
-    expect(isOverdue(item('a', '2026-10-01', 0, true), T)).toBe(false)
-    expect(isOverdue(item('a', T, 0), T)).toBe(false)
-  })
-  it('크기별 섹션', () => {
-    expect(sectionsForSize('S')).toEqual(['today'])
-    expect(sectionsForSize('L')).toEqual(['today', 'tomorrow', 'inbox'])
+  it('마감 표시와 지난 마감', () => {
+    expect(dueText(T, T)).toBe('오늘')
+    expect(dueText('2026-10-13', T)).toBe('내일')
+    expect(dueText('2026-11-02', T)).toBe('11/2')
+    expect(dueText('2026-11-01', '2026-10-31')).toBe('내일')
+    expect(isOverdue(item('x', '2026-10-01', 0), T)).toBe(true)
+    expect(isOverdue(item('x', '2026-10-01', 0, true), T)).toBe(false)
   })
 })
 

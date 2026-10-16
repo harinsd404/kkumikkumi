@@ -3,61 +3,70 @@ import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import checkUrl from '../icons/check.svg'
 import plusUrl from '../icons/plus.svg'
 import { useBoard, type BoardActions } from '../BoardContext'
-import { addDays, localDate, monthDay } from '../calendar'
+import { addDays, localDate } from '../calendar'
 import { sectionTone } from '../colors'
 import { usePointerTrack } from '../pointerTrack'
 import { paletteVars } from '../style'
-import {
-  dueForSection,
-  groupTodos,
-  isOverdue,
-  reorderIds,
-  SECTION_LABEL,
-  sectionsForSize,
-  type TodoSection,
-} from '../todo'
+import { blockCategories, dueText, isOverdue, reorderIds } from '../todo'
 
 type TodoBlockT = Extract<GridBlock, { type: 'todo' }>
 
 /**
- * 시안(Figma 15:2832 / 15:2781)의 투두 카드. 섹션: 오늘의 할 일 / 내일 해야할 일 / 보관함.
- * S는 오늘만, M은 오늘+내일, L은 세 섹션을 나란히. actions가 없으면(편집 모드/미리보기) 읽기 전용.
+ * 시안(Figma 15:2832 / 15:2781)의 투두 카드. 카테고리(할 일 목록)마다 구역 하나: 이름 칩(+로 추가) 아래 할 일.
+ * props.listId가 null이면 모든 카테고리, 있으면 그 카테고리만(2026-10-16 사용자 지시).
+ * L은 구역을 세 줄로 나란히. actions가 없으면(편집 모드/미리보기) 읽기 전용.
  */
 export function TodoBlock({ block }: { block: TodoBlockT }) {
   const { theme, data, actions: all, mode, now } = useBoard()
   const actions = mode === 'use' ? all : undefined // 편집 모드에서는 내용을 바꾸지 않는다
   const p = theme.defaults.palette
   const todos = data.todos
-  const listId =
-    block.props.listId && todos?.items[block.props.listId]
-      ? block.props.listId
-      : todos?.defaultListId
-  const items = (listId && todos?.items[listId]) || []
   const today = localDate(now.getTime())
-  const groups = groupTodos(items, today, block.props.showCompleted)
-  const sections = sectionsForSize(block.size)
+  const sections = todos
+    ? blockCategories(
+        todos.lists,
+        todos.items,
+        block.props.listId,
+        today,
+        block.props.showCompleted,
+      )
+    : []
 
   return (
     <div className={`kt kt--${block.size}`}>
-      {sections.map((s, idx) => (
+      {sections.length === 0 ? (
+        // 데이터가 없는 미리보기(위젯 갤러리 등)
         <Section
-          key={s}
-          section={s}
-          tone={sectionTone(p, idx)}
-          items={groups[s]}
-          allIds={items.map((i) => i.id)}
-          listId={listId ?? null}
+          name="할 일"
+          tone={sectionTone(p, 0)}
+          items={[]}
+          allIds={[]}
+          listId={null}
           today={today}
           palette={p}
-          actions={actions}
+          actions={undefined}
         />
-      ))}
+      ) : (
+        sections.map((s, idx) => (
+          <Section
+            key={s.listId}
+            name={s.name}
+            tone={sectionTone(p, idx)}
+            items={s.items}
+            allIds={(todos?.items[s.listId] ?? []).map((i) => i.id)}
+            listId={s.listId}
+            today={today}
+            palette={p}
+            actions={actions}
+          />
+        ))
+      )}
     </div>
   )
 }
 
 function Section({
-  section,
+  name,
   tone,
   items,
   allIds,
@@ -66,7 +75,8 @@ function Section({
   palette: p,
   actions,
 }: {
-  section: TodoSection
+  /** 카테고리 이름 */
+  name: string
   tone: { label: string; done: string }
   items: readonly TodoItem[]
   allIds: readonly string[]
@@ -84,7 +94,7 @@ function Section({
   const commitAdd = async (title: string) => {
     const t = title.trim()
     setAdding(false)
-    if (t && actions && listId) await actions.todo.create(listId, t, dueForSection(section, today))
+    if (t && actions && listId) await actions.todo.create(listId, t, null)
   }
 
   /** 행 드래그: 화면 좌표끼리만 비교하므로 보드 스케일과 무관 */
@@ -123,14 +133,14 @@ function Section({
   }
 
   return (
-    <section className="kt-section" aria-label={SECTION_LABEL[section]}>
+    <section className="kt-section" aria-label={name}>
       <div className="kt-chip">
-        <span style={{ color: tone.label }}>{SECTION_LABEL[section]}</span>
+        <span style={{ color: tone.label }}>{name}</span>
         {editable ? (
           <button
             type="button"
             className="kt-plus-btn"
-            aria-label={`${SECTION_LABEL[section]}에 추가`}
+            aria-label={`${name}에 추가`}
             onClick={() => setAdding(true)}
           >
             <img className="kt-plus" src={plusUrl} alt="" draggable={false} />
@@ -183,11 +193,6 @@ function Section({
   )
 }
 
-const shortDate = (date: string) => {
-  const { m, d } = monthDay(date)
-  return `${m}/${d}`
-}
-
 function Item({
   item: i,
   today,
@@ -211,7 +216,6 @@ function Item({
   const [editing, setEditing] = useState(false)
   const [menu, setMenu] = useState(false)
   const overdue = isOverdue(i, today)
-  const showDue = i.dueDate !== null && (overdue || i.dueDate > addDays(today, 1))
 
   const commitTitle = (v: string) => {
     setEditing(false)
@@ -263,9 +267,9 @@ function Item({
             {i.title}
           </span>
         )}
-        {showDue && (
+        {i.dueDate !== null && (
           <span className={`kt-due ${overdue ? 'is-overdue' : ''}`} style={{ color: p.subText }}>
-            {shortDate(i.dueDate!)}
+            {dueText(i.dueDate, today)}
           </span>
         )}
         {actions && !editing && (

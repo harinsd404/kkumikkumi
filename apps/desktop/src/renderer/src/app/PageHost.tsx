@@ -1,6 +1,5 @@
 import type { Theme } from '@kkumikkumi/schema'
 import { themeTones } from '../board/timetable'
-import { CalendarPage } from '../pages/CalendarPage'
 import { MemoPage } from '../pages/MemoPage'
 import { TimerPage } from '../pages/TimerPage'
 import { TimetablePage } from '../pages/TimetablePage'
@@ -20,6 +19,9 @@ interface Props {
   memoOpen: string | null
   timetable: TimetableStore
   now: Date
+  /** 할 일 화면에서 달력을 크게 보는 중 */
+  todoBig: boolean
+  onTodoBig(big: boolean): void
 }
 
 /** 보드 창 안 세부 페이지(보드면 아무것도 그리지 않는다). 테마 팔레트·글꼴을 쓴다. */
@@ -34,22 +36,33 @@ export function PageHost(props: Props) {
   )
 }
 
-function pageContent({ page, theme, user, memos, memoOpen, timetable, now }: Props) {
+function pageContent({
+  page,
+  theme,
+  user,
+  memos,
+  memoOpen,
+  timetable,
+  now,
+  todoBig,
+  onTodoBig,
+}: Props) {
   switch (page) {
     case 'board':
       return null
     case 'todo':
       return (
-        <TodoPage todos={user.data.todos} actions={user.actions} lists={user.lists} now={now} />
-      )
-    case 'calendar':
-      return (
-        <CalendarPage
+        <TodoPage
+          todos={user.data.todos}
           actions={user.actions}
-          version={user.data.version ?? 0}
+          lists={user.lists}
+          palette={theme.defaults.palette}
           now={now}
+          version={user.data.version ?? 0}
           weekStartsOn={weekStartsOf(theme)}
           updateEvent={user.events.update}
+          big={todoBig}
+          onBig={onTodoBig}
         />
       )
     case 'timer':
