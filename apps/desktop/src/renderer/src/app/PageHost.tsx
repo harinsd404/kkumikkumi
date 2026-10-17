@@ -8,6 +8,7 @@ import { TodoPage } from '../pages/TodoPage'
 import { themeVars } from './themeVars'
 import type { SettingsSection } from '../../../shared/api'
 import type { AppPage, ThemeMenu } from './TitleBar'
+import type { BoardData } from '../board/BoardContext'
 import type { MemoStore } from './useMemos'
 import type { TimetableStore } from './useTimetable'
 import type { UserData } from './useUserData'
@@ -25,6 +26,8 @@ interface Props {
   todoBig: boolean
   onTodoBig(big: boolean): void
   themeMenu: ThemeMenu | undefined
+  /** 보드와 같은 데이터(설정 페이지 테마 미리보기) */
+  boardData: BoardData
   /** 설정 페이지에서 바로 보여 줄 구역(앱 메뉴 "AI 연결…") */
   settingsSection: SettingsSection | null
   showNotice(text: string): void
@@ -53,6 +56,7 @@ function pageContent({
   todoBig,
   onTodoBig,
   themeMenu,
+  boardData,
   settingsSection,
   showNotice,
 }: Props) {
@@ -63,7 +67,9 @@ function pageContent({
       return (
         <SettingsPage
           themeMenu={themeMenu}
-          themeName={theme.name}
+          theme={theme}
+          data={boardData}
+          now={now}
           pomodoro={user.data.pomodoro}
           updatePomodoro={user.timer.updatePomodoro}
           section={settingsSection}

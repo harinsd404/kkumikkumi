@@ -178,6 +178,7 @@ export function BoardScreen({
           todoBig={todoBig}
           onTodoBig={setTodoBig}
           themeMenu={themeActions.themeMenu}
+          boardData={boardData}
           settingsSection={settingsSection}
           showNotice={ed.showNotice}
         />

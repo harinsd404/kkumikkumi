@@ -1586,19 +1586,19 @@
 .st-themes {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 8px;
+  gap: 12px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 .st-theme {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
   width: 100%;
-  padding: 10px 14px;
+  padding: 8px 8px 10px;
   border: 1.5px solid var(--t-control);
-  border-radius: 14px;
+  border-radius: 16px;
   background: #ffffff;
   color: inherit;
   font: inherit;
@@ -1611,6 +1611,36 @@
 .st-theme.is-current {
   border-color: var(--t-accent);
   cursor: default;
+}
+.st-theme:disabled:not(.is-current) {
+  cursor: default;
+}
+/* 미리보기: 16:10 보드를 칸에 맞춰 줄인다(Board가 크기에 맞춰 스케일) */
+.st-thumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--t-control) 30%, #ffffff);
+  pointer-events: none;
+}
+.st-thumb > * {
+  position: absolute;
+  inset: 0;
+}
+.st-thumb-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--t-sub);
+  font-size: 12px;
+}
+.st-theme-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
 }
 .st-theme-name {
   flex: 1;

@@ -1,9 +1,10 @@
-import type { MiniTimerPrefs, PomodoroSettings } from '@kkumikkumi/schema'
+import type { MiniTimerPrefs, PomodoroSettings, Theme } from '@kkumikkumi/schema'
 import { useEffect, useState } from 'react'
 import type { AppFolder, SettingsSection } from '../../../shared/api'
-import { ColorDots } from '../app/ThemeDialog'
 import type { ThemeMenu } from '../app/TitleBar'
+import type { BoardData } from '../board/BoardContext'
 import { McpSection } from './settings/McpSection'
+import { ThemeSection } from './settings/ThemeSection'
 import { PomodoroSettingsForm } from './TimerPage'
 
 // 설정 페이지: 지금 있는 앱 설정을 한곳에 모은다(테마, 타이머, AI 연결, 정보).
@@ -12,7 +13,11 @@ import { PomodoroSettingsForm } from './TimerPage'
 interface Props {
   /** 없으면(테마 바꾸기를 못 할 때) 테마 구역은 이름만 */
   themeMenu: ThemeMenu | undefined
-  themeName: string
+  /** 지금 테마(미리보기) */
+  theme: Theme
+  /** 미리보기에 쓰는 지금 데이터(할 일, 일정, 메모 …) */
+  data: BoardData
+  now: Date
   pomodoro: PomodoroSettings | undefined
   updatePomodoro(patch: Partial<PomodoroSettings>): Promise<boolean>
   /** 앱 메뉴에서 바로 보여 줄 구역 */
@@ -30,59 +35,12 @@ export function SettingsPage(p: Props) {
     <div className="pg pg-settings">
       <div className="st-col">
         <h1 className="pg-title">설정</h1>
-        <ThemeSection menu={p.themeMenu} name={p.themeName} />
+        <ThemeSection menu={p.themeMenu} current={p.theme} data={p.data} now={p.now} />
         <TimerSection pomodoro={p.pomodoro} update={p.updatePomodoro} showNotice={p.showNotice} />
         <McpSection highlight={p.section === 'mcp'} />
         <InfoSection showNotice={p.showNotice} />
       </div>
     </div>
-  )
-}
-
-function ThemeSection({ menu, name }: { menu: ThemeMenu | undefined; name: string }) {
-  // 목록을 최신으로(다른 창에서 만들거나 지운 테마)
-  const onOpen = menu?.onOpen
-  useEffect(() => onOpen?.(), [onOpen])
-  return (
-    <section className="pg-card st-card" aria-labelledby="st-theme">
-      <h2 id="st-theme" className="pg-chip">
-        테마
-      </h2>
-      {menu ? (
-        <>
-          <ul className="st-themes" aria-label="테마 고르기">
-            {menu.themes.map((t) => {
-              const current = t.id === menu.currentId
-              return (
-                <li key={t.id}>
-                  <button
-                    type="button"
-                    className={`st-theme ${current ? 'is-current' : ''}`}
-                    aria-pressed={current}
-                    disabled={current}
-                    onClick={() => menu.onSelect(t.id)}
-                  >
-                    <ColorDots colors={t.colors} />
-                    <span className="st-theme-name">{t.name}</span>
-                    {current && <span className="st-tag">사용 중</span>}
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-          <div className="pg-tabs">
-            <button type="button" className="pg-pill" onClick={menu.onCreate}>
-              새 테마 만들기
-            </button>
-            <button type="button" className="pg-pill" onClick={menu.onManage}>
-              테마 관리
-            </button>
-          </div>
-        </>
-      ) : (
-        <p className="st-note">지금 테마: {name}</p>
-      )}
-    </section>
   )
 }
 
