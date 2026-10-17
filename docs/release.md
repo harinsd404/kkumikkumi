@@ -9,6 +9,7 @@ pnpm dist          # apps/desktop/dist/kkumikkumi-<버전>-arm64.dmg
 ```
 
 - 버전은 `apps/desktop/package.json`의 `version`. 올린 뒤 `pnpm dist`.
+- 버전을 올리면 `CHANGELOG.md`에 바뀐 점을 적고 README의 "최신 버전" 줄을 맞춘다.
 - 설정은 `apps/desktop/electron-builder.yml`. Apple Silicon(arm64) DMG만 만든다.
 - ad-hoc 서명(`identity: "-"`)만 하고 공증은 하지 않는다. 개발자 ID 인증서가 생기면 identity/hardenedRuntime/notarize를 다시 정한다.
 - 앱 안의 파일 이름은 영문(`kkumikkumi.app`)이고, 보이는 이름은 "꾸미꾸미"다(이유는 electron-builder.yml 주석과 verified-facts.md).
