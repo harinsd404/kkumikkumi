@@ -310,6 +310,13 @@ export const ColorComboSchema = LookColorsSchema.extend({
 })
 export const ColorCombosSchema = z.array(ColorComboSchema).max(MAX_COLOR_COMBOS)
 
+/* ───────── 외부 AI 연결 (MCP, 앱 설정: 테마/내보내기와 무관) ───────── */
+
+/** off = 연결 안 받음(기본), read = 읽기 도구만, readwrite = 읽기 + 추가/수정/삭제 도구 */
+export const McpModeSchema = z.enum(['off', 'read', 'readwrite'])
+export const McpPrefsSchema = z.strictObject({ mode: McpModeSchema })
+export const DEFAULT_MCP_PREFS: z.infer<typeof McpPrefsSchema> = { mode: 'off' }
+
 /* ───────── 창 상태 (앱 상태: 테마/내보내기와 무관) ───────── */
 
 /** 미니 타이머 창 설정 */
@@ -325,6 +332,8 @@ export const WindowStateSchema = z.strictObject({
 
 export type WindowState = z.infer<typeof WindowStateSchema>
 export type MiniTimerPrefs = z.infer<typeof MiniTimerPrefsSchema>
+export type McpMode = z.infer<typeof McpModeSchema>
+export type McpPrefs = z.infer<typeof McpPrefsSchema>
 export type TodoList = z.infer<typeof TodoListSchema>
 export type TodoItem = z.infer<typeof TodoItemSchema>
 export type Memo = z.infer<typeof MemoSchema>

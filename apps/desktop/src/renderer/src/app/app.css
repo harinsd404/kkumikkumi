@@ -1613,3 +1613,58 @@ form.ki-row {
   opacity: 0.5;
   cursor: default;
 }
+
+/* ── AI 연결(MCP) 창 ── */
+.dlg.mcp {
+  width: min(480px, calc(100vw - 40px));
+  gap: 14px;
+}
+.mcp-note,
+.mcp-warn {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ui-sub);
+}
+.mcp-warn {
+  color: var(--ui-text);
+}
+.mcp-seg {
+  align-self: flex-start;
+}
+.mcp-seg button {
+  padding: 5px 14px;
+}
+.mcp-snippets {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mcp-snippet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ui-sub);
+}
+.mcp-snippet-head button {
+  padding: 2px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ui-hover);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.mcp-snippet pre {
+  margin: 4px 0 0;
+  padding: 8px 10px;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: var(--ui-hover);
+  font-family: ui-monospace, monospace;
+  font-size: 11.5px;
+  white-space: pre;
+  user-select: text;
+}

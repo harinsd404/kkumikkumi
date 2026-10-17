@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
-import { app, dialog } from 'electron'
+import { app, BrowserWindow, dialog } from 'electron'
 import { APP_DISPLAY_NAME, APP_INTERNAL_NAME } from '../shared/identity'
 import { pickImageFile } from './assets/pickImageFile'
 import { handleAssetProtocol, registerAssetScheme } from './assets/protocol'
@@ -16,6 +16,8 @@ import { boardWindow, createBoardWindow, registerCloseHandshake } from './window
 import { applyMiniPrefs, closeMiniTimer, openMiniTimer } from './window/miniWindow'
 import { errorKind, initLog, logError } from './log'
 import { setAppMenu } from './menu'
+import { createMcpController, type McpController } from './mcp/controller'
+import { createMcpServer } from './mcp/tools'
 
 /** 빌드 때 정하는 데이터 폴더 이름(배포 전 시험 빌드만 다르게, 보통은 빈 문자열 → 내부 식별자) */
 declare const __KKUMI_DATA_DIR__: string
@@ -35,6 +37,7 @@ app.on('child-process-gone', (_e, d) => logError(`[${d.type}] gone`, d.reason))
 
 let core: AppCore | null = null
 let timer: TimerService | null = null
+let mcp: McpController | null = null
 const getCore = () => core
 registerCloseHandshake()
 
@@ -53,7 +56,18 @@ app.on('web-contents-created', (_event, contents) => hardenWebContents(contents)
 
 void app.whenReady().then(async () => {
   if (!isPrimary) return
-  setAppMenu()
+  setAppMenu({
+    openMcpSettings: () => {
+      const win = boardWindow() ?? (core ? createBoardWindow(getCore) : null)
+      if (!win) return
+      win.show()
+      win.focus()
+      // 새로 만든 창이면 로드가 끝난 뒤 보낸다
+      if (win.webContents.isLoading())
+        win.webContents.once('did-finish-load', () => win.webContents.send('app:open-mcp'))
+      else win.webContents.send('app:open-mcp')
+    },
+  })
   try {
     core = await bootstrap({
       userDataDir: app.getPath('userData'),
@@ -70,23 +84,45 @@ void app.whenReady().then(async () => {
   }
   handleAssetProtocol(core.themes)
   timer = startTimerService(core)
-  registerIpc(
-    createHandlers({
-      ...core,
-      now: Date.now,
-      newId: randomUUID,
-      pickImageFile,
-      defaultListName: '할 일',
-      timer,
-      takeMissedTimerDone,
-      onTodoCompleted: () => bus.emit('todo:completed'),
-      miniTimer: {
-        open: () => openMiniTimer(getCore),
-        close: closeMiniTimer,
-        apply: applyMiniPrefs,
-      },
-    }),
-  )
+  const c = core
+  const handlers = createHandlers({
+    ...core,
+    now: Date.now,
+    newId: randomUUID,
+    pickImageFile,
+    defaultListName: '할 일',
+    timer,
+    takeMissedTimerDone,
+    onTodoCompleted: () => bus.emit('todo:completed'),
+    miniTimer: {
+      open: () => openMiniTimer(getCore),
+      close: closeMiniTimer,
+      apply: applyMiniPrefs,
+    },
+    mcp: {
+      status: () => mcp!.status(),
+      apply: (mode) => mcp!.apply(mode),
+    },
+  })
+  // 외부 AI 연결(MCP): 앱 IPC와 같은 핸들러를 쓴다. 바뀐 데이터는 열린 창들이 다시 읽는다.
+  mcp = createMcpController({
+    userDataDir: app.getPath('userData'),
+    makeServer: (mode) =>
+      createMcpServer({
+        handlers,
+        mode,
+        currentMode: () => mcp?.status().mode ?? 'off',
+        now: Date.now,
+        version: app.getVersion(),
+        changed: (domain) => {
+          for (const w of BrowserWindow.getAllWindows())
+            if (!w.isDestroyed()) w.webContents.send('data:changed', domain)
+        },
+      }),
+    onError: (tag, err) => logError(tag, errorKind(err)),
+  })
+  registerIpc(handlers)
+  void mcp.apply(c.repos.settings.mcp().mode)
 
   createBoardWindow(getCore)
   app.on('activate', () => {
@@ -100,6 +136,8 @@ app.on('window-all-closed', () => {
 })
 
 app.on('will-quit', () => {
+  void mcp?.dispose()
+  mcp = null
   timer?.dispose()
   timer = null
   core?.db.close()

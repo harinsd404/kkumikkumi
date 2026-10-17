@@ -223,6 +223,11 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
   - 오류 기록(로그 폴더/main.log, 태그와 오류 종류만), 메뉴 "도움말 → 오류 기록 폴더 열기". 시험 빌드(KKUMI_SMOKE_DATA_DIR)로 실제 데이터 없이 배포본 확인. docs/release.md.
   - 남은 M8: 개발자 ID 서명·공증, universal/x64, 업데이트 방식, 클린 계정 확인.
 
+- [x] **외부 AI 연결 MCP (2026-10-17 사용자 지시)** — 읽기·쓰기. 자세한 내용은 docs/mcp.md.
+  - 실행 중인 앱(main)이 @modelcontextprotocol/sdk로 MCP 서버를 Unix 소켓(userData/mcp/kkumikkumi.sock, 폴더 0700·소켓 0600)에 연다. AI 앱은 `/usr/bin/nc -U <소켓>`을 stdio 서버로 실행(Node 불필요). DB는 앱만 연다.
+  - 설정 settings 'mcp'(off 기본/read/readwrite), 앱 메뉴 "AI 연결…" 창(모드, 전송 안내, Codex·Claude Code 설정 복사). 모드가 바뀌면 기존 연결을 끊고 호출 때도 다시 확인.
+  - 도구는 앱 IPC 핸들러를 그대로 호출(같은 zod 재검증). 할 일·카테고리·일정·메모 CRUD, 타이머 조작, 시간표·오늘 보기 읽기. 테마/에셋/설정은 열지 않는다. 쓰기 뒤 data:changed로 창이 다시 읽는다.
+
 - [ ] **M0 펫 프로토타입(스파이크)** — 코드 품질이 아니라 "되는가"를 검증. 수동 확인이 끝나기 전에는 체크하지 않는다.
   - spikes/pet-proto/ 에 독립 Electron 프로젝트. 키 내용/키 코드는 읽지도 로깅하지도 않는다.
   - 검증: (1) 투명+frameless+항상 위 창에 PNG 표시, 작은 창 setBounds 이동과 FPS/프레임 간격 로그 (2) 클릭 통과 + 펫 위에서만 드래그 (3) 풀스크린/다른 Space/다중 모니터 표시와 Dock 부작용 (4) 타이핑 감지 후보 비교: powerMonitor.getSystemIdleTime(기준선) → CoreGraphics 호출(koffi) → Swift CLI 헬퍼, 전역 훅은 최후 수단 (5) on/off 시 창/폴링/자식 프로세스 완전 종료 (6) app.getAppMetrics()로 idle/걷기 CPU와 메모리 기록 (7) 이동 방식 A(작은 창 이동)와 C(하단 얇은 오버레이)를 스위치로 비교.

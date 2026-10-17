@@ -11,6 +11,7 @@ import { otherThemes } from './colorGroups'
 import { CutoutDialog } from './CutoutDialog'
 import { EditPanel, usePanelTab } from './EditPanel'
 import { EventDialog } from './EventDialog'
+import { McpDialog } from './McpDialog'
 import { PageHost } from './PageHost'
 import { ThemeDialogs } from './ThemeDialogs'
 import { themeColorVars } from './themeVars'
@@ -63,6 +64,9 @@ export function BoardScreen({
   const assets = useAssetImport(ed, theme.id, cmd.addDecor)
   /** 흰 배경 스티커: 지울지 물어보는 중인 원본 에셋 */
   const [cutout, setCutout] = useState<Asset | null>(null)
+  /** 앱 메뉴 "AI 연결…" */
+  const [mcpOpen, setMcpOpen] = useState(false)
+  useEffect(() => window.kkumi.onOpenMcpSettings(() => setMcpOpen(true)), [])
   const [page, setPage] = useState<AppPage>(initialPage)
   /** 할 일 화면에서 달력을 크게 보는 중(캘린더·디데이 블록에서 들어오면 크게) */
   const [todoBig, setTodoBig] = useState(false)
@@ -220,6 +224,7 @@ export function BoardScreen({
           data={boardData}
           now={now}
         />
+        {mcpOpen && <McpDialog onClose={() => setMcpOpen(false)} />}
         {cutout && (
           <CutoutDialog
             themeId={theme.id}

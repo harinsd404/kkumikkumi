@@ -1,9 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { KkumiApi } from '../shared/api'
+import type { DataDomain, KkumiApi } from '../shared/api'
 import { isChannel } from '../shared/channels'
 
 /** main → renderer 이벤트 구독(허용된 이벤트만, 마지막 등록만 유효) */
-function subscribe<T>(event: 'timer:changed' | 'timer:done', cb: (v: T) => void) {
+function subscribe<T>(event: 'timer:changed' | 'timer:done' | 'app:open-mcp', cb: (v: T) => void) {
   ipcRenderer.removeAllListeners(event)
   ipcRenderer.on(event, (_e, v: T) => cb(v))
 }
@@ -27,6 +27,13 @@ const api: KkumiApi = {
   },
   onTimerChanged: (cb) => subscribe('timer:changed', cb),
   onTimerDone: (cb) => subscribe('timer:done', cb),
+  onDataChanged: (cb) => {
+    // 투두/메모/시간표 훅이 각각 구독하므로 removeAllListeners를 쓰지 않고 해제 함수를 돌려준다
+    const fn = (_e: unknown, d: DataDomain) => cb(d)
+    ipcRenderer.on('data:changed', fn)
+    return () => void ipcRenderer.removeListener('data:changed', fn)
+  },
+  onOpenMcpSettings: (cb) => subscribe('app:open-mcp', cb),
 }
 
 contextBridge.exposeInMainWorld('kkumi', api)

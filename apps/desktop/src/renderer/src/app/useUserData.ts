@@ -131,6 +131,15 @@ export function useUserData(onError: (text: string) => void): UserData {
     window.kkumi.onTimerDone(setTimerDone)
   }, [refreshTodos])
 
+  // 외부 AI 연결(MCP)로 바뀐 할 일/일정을 다시 읽는다(version이 올라 달력도 다시 읽음)
+  useEffect(
+    () =>
+      window.kkumi.onDataChanged((domain) => {
+        if (domain === 'todo' || domain === 'calendar') void refreshTodos()
+      }),
+    [refreshTodos],
+  )
+
   const actions = useMemo<BoardActions>(
     () => ({
       todo: {

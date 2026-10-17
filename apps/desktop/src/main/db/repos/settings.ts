@@ -1,12 +1,15 @@
 import {
   ColorCombosSchema,
+  DEFAULT_MCP_PREFS,
   DEFAULT_MINI_TIMER,
   DEFAULT_POMODORO,
+  McpPrefsSchema,
   MiniTimerPrefsSchema,
   PomodoroSettingsSchema,
   SettingsSchema,
   TimetablePrefsSchema,
   type ColorCombo,
+  type McpPrefs,
   type MiniTimerPrefs,
   type PomodoroSettings,
   type Settings,
@@ -22,6 +25,7 @@ export class SettingsRepo {
   private readonly miniKv: KvSetting<MiniTimerPrefs>
   private readonly timetableKv: KvSetting<TimetablePrefs>
   private readonly combosKv: KvSetting<ColorCombo[]>
+  private readonly mcpKv: KvSetting<McpPrefs>
 
   constructor(db: Db) {
     this.app = kvSetting(db, 'app', SettingsSchema)
@@ -30,6 +34,7 @@ export class SettingsRepo {
     this.miniKv = kvSetting(db, 'miniTimer', MiniTimerPrefsSchema)
     this.timetableKv = kvSetting(db, 'timetablePrefs', TimetablePrefsSchema)
     this.combosKv = kvSetting(db, 'colorCombos', ColorCombosSchema)
+    this.mcpKv = kvSetting(db, 'mcp', McpPrefsSchema)
   }
 
   /** 없으면 null. 손상됐으면 예외(bootstrap이 복구한다). */
@@ -75,5 +80,14 @@ export class SettingsRepo {
 
   saveColorCombos(list: ColorCombo[]): ColorCombo[] {
     return this.combosKv.save(list)
+  }
+
+  /** 외부 AI 연결(MCP) 설정(없거나 손상됐으면 꺼짐) */
+  mcp(): McpPrefs {
+    return this.mcpKv.readOr(DEFAULT_MCP_PREFS)
+  }
+
+  saveMcp(prefs: McpPrefs): McpPrefs {
+    return this.mcpKv.save(prefs)
   }
 }

@@ -24,7 +24,7 @@ export default defineConfig({
     build: {
       // 워크스페이스 스키마 패키지는 .ts 소스를 export하므로 번들에 포함한다. zod도 함께 번들.
       // sharp는 네이티브 모듈이라 외부로 둔다(기본 동작: dependencies는 external).
-      externalizeDeps: { exclude: ['@kkumikkumi/schema', 'zod'] },
+      externalizeDeps: { exclude: ['@kkumikkumi/schema', 'zod', '@modelcontextprotocol/sdk'] },
     },
   },
   preload: {

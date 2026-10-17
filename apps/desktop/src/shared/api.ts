@@ -7,6 +7,7 @@ import type {
   CalendarEvent,
   ColorCombo,
   LookColors,
+  McpMode,
   Memo,
   MiniTimerPrefs,
   PomodoroPhase,
@@ -195,6 +196,10 @@ export interface IpcSpec {
   'colorCombos.list': { in: undefined; out: ColorCombo[] }
   'colorCombos.add': { in: LookColors & { name: string }; out: ColorCombo }
   'colorCombos.delete': { in: Id; out: null }
+  /** 외부 AI 연결(MCP) 상태 */
+  'mcp.status': { in: undefined; out: McpStatus }
+  /** 모드를 바꾸면 이미 연결된 AI 앱은 끊긴다(다시 연결해야 새 모드가 적용된다) */
+  'mcp.update': { in: { mode: McpMode }; out: McpStatus }
 }
 
 // 모든 채널에 스펙이 있는지 컴파일 타임에 확인
@@ -213,6 +218,19 @@ export interface TimetableData {
   /** 모든 시간표의 칸/항목(timetableId로 나뉜다) */
   entries: TimetableEntry[]
 }
+
+export interface McpStatus {
+  mode: McpMode
+  /** AI 앱이 연결할 소켓 경로(설정 안내용) */
+  socketPath: string
+  /** 소켓을 열어 연결을 받는 중 */
+  listening: boolean
+  /** 켰는데 열지 못한 이유 */
+  error: 'path_too_long' | 'listen_failed' | null
+}
+
+/** 외부(MCP)에서 사용자 데이터가 바뀌었을 때 renderer가 다시 읽을 영역 */
+export type DataDomain = 'todo' | 'calendar' | 'memos'
 
 export interface TimerDoneInfo {
   mode: TimerMode
@@ -235,6 +253,10 @@ export interface KkumiApi {
   onTimerChanged(cb: (s: TimerState) => void): void
   /** 실행 중이던 타이머가 끝났을 때. 마지막 등록만 유효. */
   onTimerDone(cb: (info: TimerDoneInfo) => void): void
+  /** 외부 AI 연결(MCP)로 사용자 데이터가 바뀌었을 때. 여러 곳에서 구독할 수 있다(돌려준 함수로 해제). */
+  onDataChanged(cb: (domain: DataDomain) => void): () => void
+  /** 앱 메뉴 "AI 연결…"을 눌렀을 때. 마지막 등록만 유효. */
+  onOpenMcpSettings(cb: () => void): void
   invoke<C extends Channel>(
     channel: C,
     ...args: IpcSpec[C]['in'] extends undefined ? [] : [input: IpcSpec[C]['in']]

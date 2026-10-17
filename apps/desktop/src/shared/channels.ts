@@ -59,6 +59,8 @@ export const CHANNELS = [
   'colorCombos.list',
   'colorCombos.add',
   'colorCombos.delete',
+  'mcp.status',
+  'mcp.update',
 ] as const
 
 export type Channel = (typeof CHANNELS)[number]

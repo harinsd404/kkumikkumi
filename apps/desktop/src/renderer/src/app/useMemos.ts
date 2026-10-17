@@ -48,6 +48,23 @@ export function useMemos(onError: (text: string) => void): MemoStore {
     })()
   }, [commit, onError])
 
+  // 외부 AI 연결(MCP)로 메모가 바뀌면 다시 읽는다. 아직 저장 안 한 입력은 화면 본문을 그대로 둔다.
+  useEffect(
+    () =>
+      window.kkumi.onDataChanged((domain) => {
+        if (domain !== 'memos') return
+        void (async () => {
+          const r = await window.kkumi.invoke('memos.list')
+          if (!r.ok) return
+          const typed = pending.current
+          commit(
+            sortMemos(r.value.map((m) => (typed.has(m.id) ? { ...m, body: typed.get(m.id)! } : m))),
+          )
+        })()
+      }),
+    [commit],
+  )
+
   const flush = useCallback((): Promise<void> => {
     window.clearTimeout(timer.current)
     // 순서대로 저장되도록 이어 붙인다
