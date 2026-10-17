@@ -41,10 +41,14 @@ export function MiniTimerApp() {
       if (mp.ok) setPrefs(mp.value)
     })()
     window.kkumi.onTimerChanged(setT)
-    // 뽀모도로 설정은 보드 창에서 바뀔 수 있어 창이 다시 보일 때 맞춘다
+    // 뽀모도로 설정과 항상 위는 보드 창(타이머·설정 페이지)에서 바뀔 수 있어 창이 다시 보일 때 맞춘다
     const onFocus = async () => {
-      const p = await window.kkumi.invoke('timer.pomodoro.get')
+      const [p, mp] = await Promise.all([
+        window.kkumi.invoke('timer.pomodoro.get'),
+        window.kkumi.invoke('miniTimer.prefs'),
+      ])
       if (p.ok) setPomo(p.value)
+      if (mp.ok) setPrefs(mp.value)
     }
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)

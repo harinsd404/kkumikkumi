@@ -1,11 +1,13 @@
 import type { Theme } from '@kkumikkumi/schema'
 import { themeTones } from '../board/timetable'
 import { MemoPage } from '../pages/MemoPage'
+import { SettingsPage } from '../pages/SettingsPage'
 import { TimerPage } from '../pages/TimerPage'
 import { TimetablePage } from '../pages/TimetablePage'
 import { TodoPage } from '../pages/TodoPage'
 import { themeVars } from './themeVars'
-import type { AppPage } from './TitleBar'
+import type { SettingsSection } from '../../../shared/api'
+import type { AppPage, ThemeMenu } from './TitleBar'
 import type { MemoStore } from './useMemos'
 import type { TimetableStore } from './useTimetable'
 import type { UserData } from './useUserData'
@@ -22,6 +24,10 @@ interface Props {
   /** 할 일 화면에서 달력을 크게 보는 중 */
   todoBig: boolean
   onTodoBig(big: boolean): void
+  themeMenu: ThemeMenu | undefined
+  /** 설정 페이지에서 바로 보여 줄 구역(앱 메뉴 "AI 연결…") */
+  settingsSection: SettingsSection | null
+  showNotice(text: string): void
 }
 
 /** 보드 창 안 세부 페이지(보드면 아무것도 그리지 않는다). 테마 팔레트·글꼴을 쓴다. */
@@ -46,10 +52,24 @@ function pageContent({
   now,
   todoBig,
   onTodoBig,
+  themeMenu,
+  settingsSection,
+  showNotice,
 }: Props) {
   switch (page) {
     case 'board':
       return null
+    case 'settings':
+      return (
+        <SettingsPage
+          themeMenu={themeMenu}
+          themeName={theme.name}
+          pomodoro={user.data.pomodoro}
+          updatePomodoro={user.timer.updatePomodoro}
+          section={settingsSection}
+          showNotice={showNotice}
+        />
+      )
     case 'todo':
       return (
         <TodoPage

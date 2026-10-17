@@ -17,12 +17,13 @@ interface EditTools {
 
 /** 보드 창 안에서 보여 줄 화면 */
 /** 화면. 할 일과 캘린더는 한 화면(할 일)이다(2026-10-16). */
-export type AppPage = 'board' | 'todo' | 'timer' | 'memo' | 'timetable'
+export type AppPage = 'board' | 'todo' | 'timer' | 'memo' | 'timetable' | 'settings'
 
 export interface PageNav {
   current: AppPage
   /** 지금 갈 수 있는 화면(구현된 세부 페이지만) */
-  pages: readonly { id: AppPage; label: string }[]
+  /** icon이 있으면 글자 대신 아이콘만(좁은 타이틀바에서 넘치지 않게), label은 접근성 이름 */
+  pages: readonly { id: AppPage; label: string; icon?: string }[]
   onNavigate(page: AppPage): void
 }
 
@@ -75,11 +76,17 @@ export function TitleBar({ themeName, themeMenu, editing, onToggleEdit, tools, n
                 key={p.id}
                 type="button"
                 role="tab"
-                className="tb-tab"
+                className={`tb-tab ${p.icon ? 'tb-tab-icon' : ''}`}
                 aria-selected={nav.current === p.id}
+                aria-label={p.icon ? p.label : undefined}
+                title={p.icon ? p.label : undefined}
                 onClick={() => nav.onNavigate(p.id)}
               >
-                {p.label}
+                {p.icon ? (
+                  <span className="tb-glyph" style={maskCss(p.icon, 'currentColor')} />
+                ) : (
+                  p.label
+                )}
               </button>
             ))}
           </div>

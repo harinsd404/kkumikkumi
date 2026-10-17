@@ -12,11 +12,11 @@ AI 앱 ──stdio──> /usr/bin/nc -U <소켓> ──Unix 소켓──> 꾸�
 - 데이터는 언제나 실행 중인 앱(main)만 읽고 쓴다. DB를 두 프로세스가 열지 않는다.
 - 도구는 앱 IPC 핸들러를 그대로 부른다(같은 입력 검증과 저장 규칙). 쓰기가 끝나면 `data:changed`를 창에 보내 보드와 페이지가 다시 읽는다.
 - 앱이 꺼져 있으면 `nc`가 바로 실패하고 AI 앱은 "서버 연결 실패"로 보인다. 앱을 켠 뒤 AI 앱에서 다시 연결한다.
-- 코드: `apps/desktop/src/main/mcp/`(controller = 소켓, tools = 도구, format = 시각/출력 변환).
+- 코드: `apps/desktop/src/main/mcp/`(controller = 소켓, tools = 도구, format = 시각/출력 변환), 화면은 `renderer/src/pages/settings/McpSection.tsx`.
 
 ## 켜기
 
-앱 메뉴 **꾸미꾸미 → AI 연결…**에서 고른다. 설정은 사용자 데이터(settings `mcp`)이고 테마/내보내기에 들어가지 않는다.
+설정 페이지(타이틀바 톱니 탭, 또는 앱 메뉴 **꾸미꾸미 → 설정…** ⌘,)의 **AI 연결** 구역에서 고른다. 앱 메뉴 **AI 연결…**은 그 구역으로 바로 간다. 설정은 사용자 데이터(settings `mcp`)이고 테마/내보내기에 들어가지 않는다.
 
 | 모드       | 내용                              |
 | ---------- | --------------------------------- |
@@ -28,7 +28,7 @@ AI 앱 ──stdio──> /usr/bin/nc -U <소켓> ──Unix 소켓──> 꾸�
 
 ## AI 앱 설정
 
-창에서 복사할 수 있다. 소켓 경로는 `~/Library/Application Support/kkumikkumi/mcp/kkumikkumi.sock`.
+설정 페이지에서 복사할 수 있다. 소켓 경로는 `~/Library/Application Support/kkumikkumi/mcp/kkumikkumi.sock`.
 
 ```toml
 # ~/.codex/config.toml

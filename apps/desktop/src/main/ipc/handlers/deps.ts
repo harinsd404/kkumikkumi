@@ -1,5 +1,11 @@
 import type { McpMode, MiniTimerPrefs, Settings } from '@kkumikkumi/schema'
-import type { AssetPurpose, IpcSpec, McpStatus, TimerDoneInfo } from '../../../shared/api'
+import type {
+  AppFolder,
+  AssetPurpose,
+  IpcSpec,
+  McpStatus,
+  TimerDoneInfo,
+} from '../../../shared/api'
 import type { Channel } from '../../../shared/channels'
 import type { PipelineOptions } from '../../assets/pipeline'
 import type { Db } from '../../db/connection'
@@ -27,6 +33,8 @@ export interface HandlerDeps {
   miniTimer?: { open(): void; close(): void; apply(prefs: MiniTimerPrefs): void }
   /** 외부 AI 연결(MCP) 소켓 제어. 없으면(테스트) 저장만 하고 꺼진 상태로 보고한다. */
   mcp?: { status(): McpStatus; apply(mode: McpMode): Promise<McpStatus> }
+  /** 앱 정보와 폴더 열기(electron 의존이라 주입) */
+  app?: { version: string; openFolder(folder: AppFolder): Promise<void> }
 }
 
 export type Handlers = { [C in Channel]: (input: unknown) => Promise<IpcSpec[C]['out']> }

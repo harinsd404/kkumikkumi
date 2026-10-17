@@ -1,3 +1,4 @@
+import { appHandlers } from './handlers/app'
 import { assetHandlers } from './handlers/assets'
 import { calendarHandlers } from './handlers/calendar'
 import { colorComboHandlers } from './handlers/colorCombos'
@@ -27,5 +28,6 @@ export function createHandlers(d: HandlerDeps): Handlers {
     ...themeRuleHandlers(d),
     ...colorComboHandlers(d),
     ...mcpHandlers(d),
+    ...appHandlers(d),
   }
 }

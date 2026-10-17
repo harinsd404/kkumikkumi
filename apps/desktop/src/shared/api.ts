@@ -200,6 +200,10 @@ export interface IpcSpec {
   'mcp.status': { in: undefined; out: McpStatus }
   /** 모드를 바꾸면 이미 연결된 AI 앱은 끊긴다(다시 연결해야 새 모드가 적용된다) */
   'mcp.update': { in: { mode: McpMode }; out: McpStatus }
+  /** 설정 페이지 "정보" */
+  'app.info': { in: undefined; out: { version: string } }
+  /** Finder로 열기(허용된 폴더만) */
+  'app.openFolder': { in: { folder: AppFolder }; out: null }
 }
 
 // 모든 채널에 스펙이 있는지 컴파일 타임에 확인
@@ -229,6 +233,12 @@ export interface McpStatus {
   error: 'path_too_long' | 'listen_failed' | null
 }
 
+/** 설정 페이지에서 Finder로 열 수 있는 폴더 */
+export type AppFolder = 'logs' | 'userData'
+
+/** 설정 페이지에서 바로 보여 줄 구역(앱 메뉴 "AI 연결…") */
+export type SettingsSection = 'mcp'
+
 /** 외부(MCP)에서 사용자 데이터가 바뀌었을 때 renderer가 다시 읽을 영역 */
 export type DataDomain = 'todo' | 'calendar' | 'memos'
 
@@ -255,8 +265,8 @@ export interface KkumiApi {
   onTimerDone(cb: (info: TimerDoneInfo) => void): void
   /** 외부 AI 연결(MCP)로 사용자 데이터가 바뀌었을 때. 여러 곳에서 구독할 수 있다(돌려준 함수로 해제). */
   onDataChanged(cb: (domain: DataDomain) => void): () => void
-  /** 앱 메뉴 "AI 연결…"을 눌렀을 때. 마지막 등록만 유효. */
-  onOpenMcpSettings(cb: () => void): void
+  /** 앱 메뉴 "설정…"(section null) / "AI 연결…"(section 'mcp')을 눌렀을 때. 마지막 등록만 유효. */
+  onOpenSettings(cb: (section: SettingsSection | null) => void): void
   invoke<C extends Channel>(
     channel: C,
     ...args: IpcSpec[C]['in'] extends undefined ? [] : [input: IpcSpec[C]['in']]

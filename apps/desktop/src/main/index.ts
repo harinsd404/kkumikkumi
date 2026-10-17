@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
-import { app, BrowserWindow, dialog } from 'electron'
+import { app, BrowserWindow, dialog, shell } from 'electron'
 import { APP_DISPLAY_NAME, APP_INTERNAL_NAME } from '../shared/identity'
 import { pickImageFile } from './assets/pickImageFile'
 import { handleAssetProtocol, registerAssetScheme } from './assets/protocol'
@@ -57,15 +57,17 @@ app.on('web-contents-created', (_event, contents) => hardenWebContents(contents)
 void app.whenReady().then(async () => {
   if (!isPrimary) return
   setAppMenu({
-    openMcpSettings: () => {
+    openSettings: (section) => {
       const win = boardWindow() ?? (core ? createBoardWindow(getCore) : null)
       if (!win) return
       win.show()
       win.focus()
       // 새로 만든 창이면 로드가 끝난 뒤 보낸다
       if (win.webContents.isLoading())
-        win.webContents.once('did-finish-load', () => win.webContents.send('app:open-mcp'))
-      else win.webContents.send('app:open-mcp')
+        win.webContents.once('did-finish-load', () =>
+          win.webContents.send('app:open-settings', section),
+        )
+      else win.webContents.send('app:open-settings', section)
     },
   })
   try {
@@ -98,6 +100,14 @@ void app.whenReady().then(async () => {
       open: () => openMiniTimer(getCore),
       close: closeMiniTimer,
       apply: applyMiniPrefs,
+    },
+    app: {
+      version: app.getVersion(),
+      openFolder: async (folder) => {
+        // shell.openPath는 실패하면 오류 문자열을 돌려준다(경로는 사용자 데이터라 로그에 남기지 않음)
+        const err = await shell.openPath(app.getPath(folder))
+        if (err) logError('[app] openFolder', folder)
+      },
     },
     mcp: {
       status: () => mcp!.status(),

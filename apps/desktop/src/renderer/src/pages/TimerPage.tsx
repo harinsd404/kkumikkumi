@@ -292,7 +292,7 @@ const FIELDS: {
   { key: 'longEvery', label: '긴 휴식 전 집중', min: 2, max: 12, unit: '회' },
 ]
 
-function PomodoroSettingsForm({
+export function PomodoroSettingsForm({
   set,
   update,
 }: {

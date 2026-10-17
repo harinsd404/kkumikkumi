@@ -12,5 +12,6 @@ Figma 시안(파일 mJL2BsO51Ir9l9z4wK1lDI, 노드 3:1079 / 6:2384)에서 내려
 | pattern-stars.svg                         | 370fd                   | 배경 무늬 'stars' 한 줄            |
 | pattern-dots-first.svg / pattern-dots.svg | bed61 / e4d1a           | 배경 무늬 'dots' 첫 줄 / 나머지 줄 |
 | undo.svg / redo.svg                       | (직접 그림, 2026-10-14) | 타이틀바 실행 취소 / 다시 실행     |
+| settings.svg                              | (직접 그림, 2026-10-17) | 타이틀바 설정 탭(톱니)             |
 
 출처 확인 필요: 아이콘/무늬가 직접 그린 것인지(사용자 확인 대기). `ic:round-plus`는 Material Icons(Apache 2.0) 계열로 보인다.

@@ -3,7 +3,10 @@ import type { DataDomain, KkumiApi } from '../shared/api'
 import { isChannel } from '../shared/channels'
 
 /** main → renderer 이벤트 구독(허용된 이벤트만, 마지막 등록만 유효) */
-function subscribe<T>(event: 'timer:changed' | 'timer:done' | 'app:open-mcp', cb: (v: T) => void) {
+function subscribe<T>(
+  event: 'timer:changed' | 'timer:done' | 'app:open-settings',
+  cb: (v: T) => void,
+) {
   ipcRenderer.removeAllListeners(event)
   ipcRenderer.on(event, (_e, v: T) => cb(v))
 }
@@ -33,7 +36,7 @@ const api: KkumiApi = {
     ipcRenderer.on('data:changed', fn)
     return () => void ipcRenderer.removeListener('data:changed', fn)
   },
-  onOpenMcpSettings: (cb) => subscribe('app:open-mcp', cb),
+  onOpenSettings: (cb) => subscribe('app:open-settings', cb),
 }
 
 contextBridge.exposeInMainWorld('kkumi', api)

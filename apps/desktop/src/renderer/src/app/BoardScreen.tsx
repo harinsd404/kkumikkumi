@@ -1,5 +1,7 @@
 import type { Asset, Theme } from '@kkumikkumi/schema'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { SettingsSection } from '../../../shared/api'
+import settingsUrl from '../board/icons/settings.svg'
 import { Board } from '../board/Board'
 import type { BoardActions } from '../board/BoardContext'
 import { useMinuteClock } from '../board/useMinuteClock'
@@ -11,7 +13,6 @@ import { otherThemes } from './colorGroups'
 import { CutoutDialog } from './CutoutDialog'
 import { EditPanel, usePanelTab } from './EditPanel'
 import { EventDialog } from './EventDialog'
-import { McpDialog } from './McpDialog'
 import { PageHost } from './PageHost'
 import { ThemeDialogs } from './ThemeDialogs'
 import { themeColorVars } from './themeVars'
@@ -33,6 +34,7 @@ const PAGES: PageNav['pages'] = [
   { id: 'timer', label: '타이머' },
   { id: 'memo', label: '메모' },
   { id: 'timetable', label: '시간표' },
+  { id: 'settings', label: '설정', icon: settingsUrl },
 ]
 
 /** 모듈 수준 함수(안정 참조): 자동 저장기가 매 렌더 새로 만들어지지 않도록 */
@@ -64,10 +66,18 @@ export function BoardScreen({
   const assets = useAssetImport(ed, theme.id, cmd.addDecor)
   /** 흰 배경 스티커: 지울지 물어보는 중인 원본 에셋 */
   const [cutout, setCutout] = useState<Asset | null>(null)
-  /** 앱 메뉴 "AI 연결…" */
-  const [mcpOpen, setMcpOpen] = useState(false)
-  useEffect(() => window.kkumi.onOpenMcpSettings(() => setMcpOpen(true)), [])
   const [page, setPage] = useState<AppPage>(initialPage)
+  /** 앱 메뉴 "설정…"/"AI 연결…": 설정 페이지로(편집 중이면 편집은 그대로 두고 보드 밖으로 나가지 않는다) */
+  const [settingsSection, setSettingsSection] = useState<SettingsSection | null>(null)
+  useEffect(
+    () =>
+      window.kkumi.onOpenSettings((section) => {
+        if (editing) return ed.showNotice('편집을 마친 뒤 설정을 열어 주세요')
+        setSettingsSection(section)
+        setPage('settings')
+      }),
+    [editing, ed.showNotice],
+  )
   /** 할 일 화면에서 달력을 크게 보는 중(캘린더·디데이 블록에서 들어오면 크게) */
   const [todoBig, setTodoBig] = useState(false)
   const themes = useThemes()
@@ -110,6 +120,7 @@ export function BoardScreen({
   )
   const navigate = useCallback((p: AppPage) => {
     setMemoOpen(null)
+    setSettingsSection(null)
     setPage(p)
   }, [])
   const assetUrl = useMemo(() => makeAssetUrl(theme), [theme])
@@ -166,6 +177,9 @@ export function BoardScreen({
           now={now}
           todoBig={todoBig}
           onTodoBig={setTodoBig}
+          themeMenu={themeActions.themeMenu}
+          settingsSection={settingsSection}
+          showNotice={ed.showNotice}
         />
         {page === 'board' && (
           <div className="app-stage">
@@ -224,7 +238,6 @@ export function BoardScreen({
           data={boardData}
           now={now}
         />
-        {mcpOpen && <McpDialog onClose={() => setMcpOpen(false)} />}
         {cutout && (
           <CutoutDialog
             themeId={theme.id}
