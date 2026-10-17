@@ -34,6 +34,18 @@ codesign --verify --deep --strict dist/mac-arm64/kkumikkumi.app   # 서명 확�
 shasum -a 256 dist/*.dmg                                          # 받는 사람에게 같이 알려 준다
 ```
 
+## 올리기 (GitHub 릴리스)
+
+DMG는 130MB 정도라 저장소에 커밋할 수 없다(GitHub 파일당 100MB 제한, zip으로 묶어도 거의 줄지 않음). 릴리스에 첨부한다.
+
+```sh
+gh release create v<버전> apps/desktop/dist/kkumikkumi-<버전>-arm64.dmg \
+  --target <빌드한 커밋> --title "꾸미꾸미 <버전>" --notes-file <CHANGELOG 그 버전 + 설치 방법 + SHA-256>
+```
+
+- 저장소가 공개라 릴리스 파일은 누구나 받을 수 있다.
+- README 맨 위 "다운로드" 링크의 버전(파일 이름)을 새 버전으로 바꾼다. "최신 릴리스" 링크는 그대로 둬도 된다.
+
 ## 받는 사람: 설치와 첫 실행
 
 1. DMG를 열고 `꾸미꾸미`를 Applications로 끌어 놓는다.

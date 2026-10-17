@@ -9,7 +9,9 @@
 </p>
 
 <p align="center">
-  <b>최신 버전 0.2.0</b> (2026-10-17) · <a href="CHANGELOG.md">업데이트 내역</a>
+  <a href="https://github.com/harinsd404/kkumikkumi/releases/download/v0.2.0/kkumikkumi-0.2.0-arm64.dmg"><b>⬇ 다운로드 (macOS, Apple Silicon, 0.2.0)</b></a>
+  <br />
+  <a href="https://github.com/harinsd404/kkumikkumi/releases/latest">최신 릴리스</a> · <a href="CHANGELOG.md">업데이트 내역</a>
 </p>
 
 <p align="center">
@@ -86,7 +88,7 @@
 
 Apple Silicon Mac(M1 이상)용 DMG를 제공합니다. 아직 Apple 공증을 받지 않아 처음 열 때 한 번 허용이 필요합니다.
 
-1. `kkumikkumi-0.2.0-arm64.dmg`를 열고 **꾸미꾸미**를 Applications로 끌어 놓습니다.
+1. [릴리스 페이지](https://github.com/harinsd404/kkumikkumi/releases/latest)에서 `kkumikkumi-0.2.0-arm64.dmg`를 받아 열고 **꾸미꾸미**를 Applications로 끌어 놓습니다.
 2. 처음 열 때 경고가 뜨면 **시스템 설정 → 개인정보 보호 및 보안 → 확인 없이 열기**를 누릅니다.
 
 이전 버전 위에 덮어쓰면 데이터는 그대로 남습니다. 버전별 변경은 [CHANGELOG.md](CHANGELOG.md)에 있습니다.
