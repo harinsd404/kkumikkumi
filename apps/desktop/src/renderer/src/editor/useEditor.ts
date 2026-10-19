@@ -45,7 +45,7 @@ export interface EditorApi {
   status: SaveStatus
   notice: string | null
   showNotice(text: string): void
-  flush(): Promise<void>
+  flush(): Promise<boolean>
 }
 
 export interface EditorDeps {

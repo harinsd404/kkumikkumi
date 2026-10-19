@@ -45,6 +45,7 @@ export const CHANNELS = [
   'memos.update',
   'memos.delete',
   'timetable.get',
+  'timetable.set',
   'timetables.create',
   'timetables.update',
   'timetables.delete',

@@ -57,6 +57,14 @@ export function useTimetable(onError: (text: string) => void): TimetableStore {
     void fetchData().then((v) => v && setData(v))
   }, [])
 
+  useEffect(
+    () =>
+      window.kkumi.onDataChanged((domain) => {
+        if (domain === 'timetable') void reload()
+      }),
+    [reload],
+  )
+
   const fail = useCallback(
     async (r: IpcResult<unknown>, text?: Record<string, string>) => {
       if (r.ok) return true

@@ -14,6 +14,23 @@ import { ConflictError, NotFoundError } from '../../db/repos'
 import { IdIn, mergePatch, NoInput } from '../inputs'
 import type { HandlerDeps, HandlersOf } from './deps'
 
+/** MCP와 IPC가 같은 입력 모양을 사용한다. 전체 설정의 교차 검증은 병합 후 수행한다. */
+export const SetTimetableInput = z.strictObject({
+  timetableId: Uuid.optional(),
+  name: TimetableSchema.shape.name.optional(),
+  settings: z.strictObject(TimetableSettingsSchema.shape).partial().optional(),
+  entries: z
+    .array(
+      z.strictObject({
+        slot: TimetableSlotSchema,
+        subject: TimetableContentSchema.shape.subject,
+        room: TimetableContentSchema.shape.room.default(''),
+        tone: TimetableContentSchema.shape.tone.default(null),
+      }),
+    )
+    .max(500),
+})
+
 /** 시간표 목록(timetables.*) + 칸/항목(timetable.*) */
 export function timetableHandlers(d: HandlerDeps): HandlersOf<'timetable' | 'timetables'> {
   const { repos } = d
@@ -37,6 +54,56 @@ export function timetableHandlers(d: HandlerDeps): HandlersOf<'timetable' | 'tim
   return {
     'timetable.get': async (i) => {
       NoInput.parse(i)
+      return timetableData()
+    },
+    'timetable.set': async (i) => {
+      const input = SetTimetableInput.parse(i)
+      const cur = input.timetableId ? repos.timetable.getTimetable(input.timetableId) : null
+      if (input.timetableId && !cur) throw new NotFoundError('timetable')
+      const name = TimetableSchema.shape.name.parse(input.name ?? cur?.name)
+      const settings = mergePatch(
+        TimetableSettingsSchema,
+        cur?.settings ?? DEFAULT_TIMETABLE,
+        input.settings,
+      )
+      const entries = z
+        .array(SetTimetableInput.shape.entries.element)
+        .refine(
+          (items) =>
+            items.every(
+              (e) =>
+                e.slot.kind === settings.mode &&
+                (e.slot.kind !== 'period' || e.slot.period <= settings.periods.length),
+            ),
+          '항목의 방식과 교시 번호를 시간표 설정에 맞춰 주세요',
+        )
+        .parse(input.entries)
+      const cells = new Set<string>()
+      for (const e of entries) {
+        if (e.slot.kind !== 'period') continue
+        const key = `${e.slot.day}:${e.slot.period}`
+        if (cells.has(key)) throw new ConflictError('timetable_cell')
+        cells.add(key)
+      }
+      const now = d.now()
+      const id = cur?.id ?? d.newId()
+      transaction(d.db, () => {
+        if (!cur && repos.timetable.countTimetables() >= TIMETABLE_MAX_COUNT)
+          throw new ConflictError('timetable_limit')
+        const t = { id, name, settings, createdAt: cur?.createdAt ?? now, updatedAt: now }
+        if (cur) repos.timetable.updateTimetable(t)
+        else repos.timetable.insertTimetable(t)
+        repos.timetable.deleteAllOf(id)
+        for (const e of entries)
+          repos.timetable.insert({
+            ...e,
+            id: d.newId(),
+            timetableId: id,
+            createdAt: now,
+            updatedAt: now,
+          })
+        repos.settings.saveTimetablePrefs({ activeId: id })
+      })
       return timetableData()
     },
     'timetables.create': async (i) => {

@@ -1,7 +1,7 @@
 import type { McpMode } from '@kkumikkumi/schema'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DataDomain } from '../../../shared/api'
 import { makeEnv, type TestEnv } from '../../__tests__/helpers'
 import { createHandlers } from '../../ipc/handlers'
@@ -17,6 +17,7 @@ beforeEach(async () => {
   changed = []
 })
 afterEach(async () => {
+  vi.restoreAllMocks()
   await env.cleanup()
 })
 
@@ -69,6 +70,7 @@ describe('MCP 도구', () => {
     expect(names).toContain('list_todos')
     expect(names).not.toContain('add_todo')
     expect(names).not.toContain('delete_event')
+    expect(names).not.toContain('set_timetable')
   })
 
   it('쓰기 도구는 지우기에 destructiveHint를 단다', async () => {
@@ -78,6 +80,7 @@ describe('MCP 도구', () => {
     expect(hint('delete_todo')?.destructiveHint).toBe(true)
     expect(hint('add_todo')?.destructiveHint).toBe(false)
     expect(hint('list_todos')?.readOnlyHint).toBe(true)
+    expect(hint('set_timetable')?.destructiveHint).toBe(true)
   })
 
   it('할 일 추가 → 찾기 → 완료, 바뀐 영역을 알린다', async () => {
@@ -110,6 +113,10 @@ describe('MCP 도구', () => {
     mode = 'read'
     const r = await call('add_todo', { title: '몰래 추가' })
     expect(r.error).toMatch(/^error: read_only/)
+    expect((await call('set_timetable', { name: '학교', entries: [] })).error).toMatch(
+      /^error: read_only/,
+    )
+    expect(changed).toEqual([])
     mode = 'readwrite'
     expect((await call('list_todos')).data.total).toBe(0)
   })
@@ -197,5 +204,161 @@ describe('MCP 도구', () => {
     const r = await call('get_timetable')
     expect(r.error).toBeNull()
     expect(r.data.selected.mode).toBe('period')
+  })
+})
+
+describe('MCP set_timetable', () => {
+  const entry = { slot: { kind: 'period', day: 0, period: 1 }, subject: '국어' }
+  const periods = [
+    { start: '08:40', end: '09:30' },
+    { start: '09:40', end: '10:30' },
+  ]
+
+  it('교시 시간표를 만들고 선택하며 get_timetable과 같은 모양으로 돌려준다', async () => {
+    const { call } = await connect('readwrite')
+    const r = await call('set_timetable', {
+      name: '학교',
+      settings: { periods },
+      entries: [
+        entry,
+        {
+          slot: { kind: 'period', day: 4, period: 2 },
+          subject: '수학',
+          room: '교실',
+          tone: 2,
+        },
+      ],
+    })
+    expect(r.error).toBeNull()
+    expect(r.data.selected).toMatchObject({ name: '학교', mode: 'period', periods })
+    expect(r.data.selected.entries).toHaveLength(2)
+    expect(r.data.selected.entries[0]).toMatchObject({ ...entry, room: '', tone: null })
+    expect(r.data.selected.entries[1]).toMatchObject({ subject: '수학', room: '교실', tone: 2 })
+    expect((await call('get_timetable')).data).toEqual(r.data)
+    expect(changed).toEqual(['timetable'])
+  })
+
+  it('지정한 시간표만 교체하고 이름과 설정은 생략하면 유지한다; 빈 배열은 전체 삭제', async () => {
+    const { call } = await connect('readwrite')
+    const a = (
+      await call('set_timetable', { name: '학교', settings: { periods }, entries: [entry] })
+    ).data.selected
+    const other = (await call('set_timetable', { name: '다른 시간표', entries: [entry] })).data
+      .selected
+    const replacement = { ...entry, subject: '영어' }
+    const r = await call('set_timetable', { timetableId: a.id, entries: [replacement] })
+    expect(r.error).toBeNull()
+    expect(r.data.selected).toMatchObject({ id: a.id, name: a.name, periods })
+    expect(r.data.selected.entries).toHaveLength(1)
+    expect(r.data.selected.entries[0].subject).toBe('영어')
+    expect((await call('get_timetable', { timetableId: other.id })).data.selected).toEqual(other)
+    expect(
+      (await call('set_timetable', { timetableId: a.id, entries: [] })).data.selected.entries,
+    ).toEqual([])
+    expect((await call('get_timetable', { timetableId: other.id })).data.selected).toEqual(other)
+  })
+
+  it('시간 방식으로 바꾸면 기존 교시 칸을 지우고 시간 항목을 저장한다', async () => {
+    const { call } = await connect('readwrite')
+    const a = (await call('set_timetable', { name: '학교', entries: [entry] })).data.selected
+    const timed = { slot: { kind: 'time', day: 5, start: '19:00', end: '20:40' }, subject: '자습' }
+    const r = await call('set_timetable', {
+      timetableId: a.id,
+      name: '주말',
+      settings: { mode: 'time', showSat: true },
+      entries: [timed],
+    })
+    expect(r.error).toBeNull()
+    expect(r.data.selected).toMatchObject({ id: a.id, name: '주말', mode: 'time', showSat: true })
+    expect(r.data.selected.entries).toEqual([expect.objectContaining(timed)])
+    expect(env.core.repos.timetable.listOf(a.id)).toHaveLength(1)
+  })
+
+  it.each([
+    { entries: [entry, entry] },
+    { entries: [{ ...entry, slot: { kind: 'period', day: 0, period: 3 } }] },
+    { entries: [{ ...entry, slot: { kind: 'period', day: 7, period: 1 } }] },
+    { entries: [{ ...entry, subject: ' ' }] },
+    { entries: [{ ...entry, tone: 99 }] },
+    { entries: [{ ...entry, slot: { kind: 'time', day: 0, start: '09:00', end: '10:00' } }] },
+    {
+      settings: { mode: 'time' },
+      entries: [{ ...entry, slot: { kind: 'time', day: 0, start: '10:00', end: '09:00' } }],
+    },
+    {
+      settings: {
+        periods: [
+          { start: '09:00', end: '10:00' },
+          { start: '09:30', end: '10:30' },
+        ],
+      },
+      entries: [],
+    },
+    { entries: Array.from({ length: 501 }, () => entry) },
+  ])('잘못된 전체 교체는 설정·기존 칸·선택을 그대로 보존한다: %#', async (input) => {
+    const { call } = await connect('readwrite')
+    const a = (
+      await call('set_timetable', { name: '학교', settings: { periods }, entries: [entry] })
+    ).data.selected
+    await call('set_timetable', { name: '선택된 시간표', entries: [] })
+    const before = (await call('get_timetable')).data
+    changed.length = 0
+    const r = await call('set_timetable', { timetableId: a.id, name: '바뀐 이름', ...input })
+    expect(r.error).toMatch(/invalid|conflict/i)
+    expect((await call('get_timetable')).data).toEqual(before)
+    expect((await call('get_timetable', { timetableId: a.id })).data.selected).toEqual(a)
+    expect(changed).toEqual([])
+  })
+
+  it('새 시간표에는 이름이 필요하며 없는 ID를 보내면 새로 만들지 않는다', async () => {
+    const { call } = await connect('readwrite')
+    const before = (await call('get_timetable')).data
+    expect((await call('set_timetable', { entries: [] })).error).toMatch(/invalid_input/)
+    expect(
+      (await call('set_timetable', { timetableId: env.newId(), name: '학교', entries: [] })).error,
+    ).toMatch(/not_found/)
+    expect((await call('get_timetable')).data).toEqual(before)
+    expect(changed).toEqual([])
+  })
+
+  it('저장 도중 실패하면 삭제한 기존 칸과 이름·설정·선택을 모두 롤백한다', async () => {
+    const { call } = await connect('readwrite')
+    const a = (await call('set_timetable', { name: '학교', entries: [entry] })).data.selected
+    await call('set_timetable', { name: '선택된 시간표', entries: [] })
+    const before = (await call('get_timetable')).data
+    const repo = env.core.repos.timetable
+    const insert = repo.insert.bind(repo)
+    vi.spyOn(repo, 'insert')
+      .mockImplementationOnce(insert)
+      .mockImplementationOnce(() => {
+        throw new Error('disk')
+      })
+    changed.length = 0
+    const r = await call('set_timetable', {
+      timetableId: a.id,
+      name: '수정',
+      settings: { showSat: true },
+      entries: [entry, { ...entry, slot: { kind: 'period', day: 1, period: 1 } }],
+    })
+    expect(r.error).toMatch(/internal/)
+    expect((await call('get_timetable')).data).toEqual(before)
+    expect((await call('get_timetable', { timetableId: a.id })).data.selected).toEqual(a)
+    expect(changed).toEqual([])
+  })
+
+  it('시간표 개수 제한에 도달하면 생성은 거부하고 기존 시간표 교체는 허용한다', async () => {
+    const { call } = await connect('readwrite')
+    const original = (await call('get_timetable')).data.selected
+    for (let i = env.core.repos.timetable.countTimetables(); i < 20; i++)
+      expect((await call('set_timetable', { name: `시간표 ${i}`, entries: [] })).error).toBeNull()
+    const before = (await call('get_timetable')).data
+    changed.length = 0
+    expect((await call('set_timetable', { name: '초과', entries: [] })).error).toMatch(/conflict/)
+    expect((await call('get_timetable')).data).toEqual(before)
+    expect(changed).toEqual([])
+    expect(
+      (await call('set_timetable', { timetableId: original.id, entries: [entry] })).error,
+    ).toBeNull()
+    expect(env.core.repos.timetable.countTimetables()).toBe(20)
   })
 })

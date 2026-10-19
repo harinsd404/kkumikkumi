@@ -165,6 +165,16 @@ export interface IpcSpec {
   'memos.update': { in: { id: string; patch: { body?: string; pinned?: boolean } }; out: Memo }
   'memos.delete': { in: Id; out: null }
   'timetable.get': { in: undefined; out: TimetableData }
+  /** 이름으로 새 시간표를 만들거나 ID로 기존 시간표의 모든 항목을 원자적으로 교체한다. */
+  'timetable.set': {
+    in: {
+      timetableId?: string
+      name?: string
+      settings?: Partial<TimetableSettings>
+      entries: { slot: TimetableSlot; subject: string; room?: string; tone?: number | null }[]
+    }
+    out: TimetableData
+  }
   /** 새 시간표(copyFrom이면 설정과 칸을 복제). 만든 시간표를 고른 상태로 바꾼다. 최대 개수면 conflict. */
   'timetables.create': { in: { name: string; copyFrom?: string }; out: TimetableData }
   /** 교시 수를 줄이면 뒤 교시 칸은 함께 지워진다(renderer가 먼저 확인). 결과는 전체 다시 읽기. */
@@ -240,7 +250,7 @@ export type AppFolder = 'logs' | 'userData'
 export type SettingsSection = 'mcp'
 
 /** 외부(MCP)에서 사용자 데이터가 바뀌었을 때 renderer가 다시 읽을 영역 */
-export type DataDomain = 'todo' | 'calendar' | 'memos'
+export type DataDomain = 'todo' | 'calendar' | 'memos' | 'timetable'
 
 export interface TimerDoneInfo {
   mode: TimerMode

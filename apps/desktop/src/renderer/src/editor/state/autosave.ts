@@ -22,14 +22,15 @@ export interface AutosaveDeps<T> {
 
 export interface Autosaver<T> {
   schedule(value: T): void
-  /** 대기 중인 변경을 즉시 저장하고 끝날 때까지 기다린다 */
-  flush(): Promise<void>
+  /** 대기/실패한 변경을 저장한다. 실패하면 false(변경은 다음 재시도를 위해 보존). */
+  flush(): Promise<boolean>
   /** 타이머를 멈춘다. 대기 중인 변경은 버리지 않고 바로 저장을 시작한다(기다리지 않음). */
   dispose(): void
 }
 
 export function createAutosaver<T>(d: AutosaveDeps<T>): Autosaver<T> {
   let latest: { value: T } | null = null
+  let failed: { value: T } | null = null
   let timer: unknown = null
   let running: Promise<void> | null = null
 
@@ -37,18 +38,25 @@ export function createAutosaver<T>(d: AutosaveDeps<T>): Autosaver<T> {
     while (latest) {
       const { value } = latest
       latest = null
+      failed = null
       const problem = d.validate(value)
       if (problem) {
+        failed = { value }
         d.onStatus({ state: 'invalid', message: problem })
         continue
       }
       d.onStatus({ state: 'saving' })
       try {
         const r = await d.save(value)
-        if (!latest)
+        if (!latest) {
+          if (!r.ok) failed = { value }
           d.onStatus(r.ok ? { state: 'saved', at: d.now() } : { state: 'error', code: r.code })
+        }
       } catch {
-        if (!latest) d.onStatus({ state: 'error', code: 'internal' })
+        if (!latest) {
+          failed = { value }
+          d.onStatus({ state: 'error', code: 'internal' })
+        }
       }
     }
   }
@@ -69,6 +77,7 @@ export function createAutosaver<T>(d: AutosaveDeps<T>): Autosaver<T> {
   return {
     schedule(value) {
       latest = { value }
+      failed = null
       d.onStatus({ state: 'pending' })
       if (timer !== null) d.clearTimer(timer)
       timer = d.setTimer(() => {
@@ -77,10 +86,15 @@ export function createAutosaver<T>(d: AutosaveDeps<T>): Autosaver<T> {
       }, d.delayMs)
     },
     async flush() {
+      if (!latest && !running && failed) {
+        latest = failed
+        failed = null
+      }
       if (latest) await start()
       else if (running) await running
       // 저장 중에 새 변경이 들어왔으면 그것까지
       if (latest) await start()
+      return failed === null
     },
     dispose() {
       if (latest) void start()
