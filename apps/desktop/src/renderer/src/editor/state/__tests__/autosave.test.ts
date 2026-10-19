@@ -55,7 +55,7 @@ describe('autosave', () => {
     a.schedule(7)
     const p = a.flush()
     await vi.advanceTimersByTimeAsync(20)
-    await p
+    expect(await p).toBe(true)
     expect(saved).toEqual([7])
   })
 
@@ -77,6 +77,7 @@ describe('autosave', () => {
     await vi.advanceTimersByTimeAsync(900)
     expect(saved).toEqual([])
     expect(statuses.at(-1)).toBe('invalid')
+    expect(await a.flush()).toBe(false)
   })
 
   it('저장 실패는 error 상태', async () => {
@@ -84,5 +85,68 @@ describe('autosave', () => {
     a.schedule(1)
     await vi.advanceTimersByTimeAsync(900)
     expect(statuses.at(-1)).toBe('error')
+  })
+
+  it('실패한 변경은 자동 재시도하지 않고 다음 flush에서 같은 값으로 재시도한다', async () => {
+    const opts = { fail: true }
+    const { a, saved, statuses } = setup(opts)
+    a.schedule(7)
+    const first = a.flush()
+    await vi.advanceTimersByTimeAsync(20)
+    expect(await first).toBe(false)
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(saved).toEqual([7])
+
+    opts.fail = false
+    const retry = a.flush()
+    await vi.advanceTimersByTimeAsync(20)
+    expect(await retry).toBe(true)
+    expect(saved).toEqual([7, 7])
+    expect(statuses.at(-1)).toBe('saved')
+    expect(await a.flush()).toBe(true)
+    expect(saved).toEqual([7, 7])
+  })
+
+  it('실패 뒤 새 변경이 들어오면 오래된 실패 값을 다시 저장하지 않는다', async () => {
+    const opts = { fail: true }
+    const { a, saved } = setup(opts)
+    a.schedule(1)
+    await vi.advanceTimersByTimeAsync(900)
+    opts.fail = false
+    a.schedule(2)
+    const p = a.flush()
+    await vi.advanceTimersByTimeAsync(20)
+    expect(await p).toBe(true)
+    expect(saved).toEqual([1, 2])
+  })
+
+  it('저장 중 새 변경이 들어오면 flush는 새 변경의 성공까지 기다린다', async () => {
+    const opts = { fail: true, saveDelay: 1000 }
+    const { a, saved } = setup(opts)
+    a.schedule(1)
+    const p = a.flush()
+    a.schedule(2)
+    await vi.advanceTimersByTimeAsync(1000)
+    opts.fail = false
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(await p).toBe(true)
+    expect(saved).toEqual([1, 2])
+  })
+
+  it('저장 함수가 예외를 던져도 변경을 보존해 재시도한다', async () => {
+    const save = vi.fn().mockRejectedValueOnce(new Error('disk')).mockResolvedValue({ ok: true })
+    const a = createAutosaver<number>({
+      delayMs: 800,
+      validate: () => null,
+      save,
+      onStatus: () => {},
+      now: () => Date.now(),
+      setTimer: (fn, ms) => setTimeout(fn, ms),
+      clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+    })
+    a.schedule(3)
+    expect(await a.flush()).toBe(false)
+    expect(await a.flush()).toBe(true)
+    expect(save.mock.calls).toEqual([[3], [3]])
   })
 })

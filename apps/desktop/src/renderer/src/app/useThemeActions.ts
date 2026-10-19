@@ -15,6 +15,7 @@ const THEME_ERRORS: Record<string, string> = {
   invalid_schema: '테마를 저장할 수 없는 상태예요',
 }
 const errText = (code: string) => THEME_ERRORS[code] ?? `실패했어요 (${code})`
+const SAVE_FAILED = '현재 테마를 저장하지 못했어요. 편집 내용을 유지했으니 다시 저장해 주세요.'
 
 export type OkThemeSummary = Extract<ThemeSummary, { ok: true }>
 
@@ -47,7 +48,7 @@ export function useThemeActions({
   theme: Theme
   page: AppPage
   themes: { list: ThemeSummary[]; refresh(): Promise<void> }
-  flushTheme(): Promise<void>
+  flushTheme(): Promise<boolean>
   flushMemoEdits(): Promise<void>
   showNotice(text: string): void
   onSwitchTheme: ((id: string, page: AppPage) => Promise<boolean>) | undefined
@@ -56,7 +57,11 @@ export function useThemeActions({
   /** 남은 변경을 저장하고 테마를 (다시) 불러온다. 같은 ID여도 화면을 새로 만든다. */
   const switchTo = useCallback(
     async (id: string) => {
-      await Promise.all([flushTheme(), flushMemoEdits()])
+      const [saved] = await Promise.all([flushTheme(), flushMemoEdits()])
+      if (!saved) {
+        showNotice(SAVE_FAILED)
+        return false
+      }
       if (!onSwitchTheme || !(await onSwitchTheme(id, page))) {
         showNotice('테마를 바꾸지 못했어요')
         return false
@@ -90,7 +95,7 @@ export function useThemeActions({
   const [manageOpen, setManageOpen] = useState(false)
 
   const openEdit = async (id: string) => {
-    await flushTheme() // 지금 테마면 편집 중 변경을 먼저 저장
+    if (!(await flushTheme())) return showNotice(SAVE_FAILED)
     const r = await window.kkumi.invoke('themes.get', { id })
     if (!r.ok) return showNotice(errText(r.error.code))
     const s = okThemes.find((x) => x.id === id)
@@ -99,6 +104,7 @@ export function useThemeActions({
 
   const submitTheme = async (res: ThemeDialogResult): Promise<string | null> => {
     if (!themeDlg) return null
+    if (!(await flushTheme())) return SAVE_FAILED
     if (themeDlg.mode === 'create') {
       const r = await window.kkumi.invoke('themes.create', {
         name: res.name,
@@ -112,7 +118,6 @@ export function useThemeActions({
       return null
     }
     const id = themeDlg.theme.id
-    await flushTheme()
     const cur = await window.kkumi.invoke('themes.get', { id }) // 최신 배치에 외형만 바꾼다
     if (!cur.ok) return errText(cur.error.code)
     const r = await window.kkumi.invoke('themes.save', {
@@ -138,14 +143,14 @@ export function useThemeActions({
     onEdit: (id) => void openEdit(id),
     onCreate: () => setThemeDlg({ mode: 'create' }),
     onRename: async (id, name) => {
-      if (id === theme.id) await flushTheme()
+      if (id === theme.id && !(await flushTheme())) return SAVE_FAILED
       const r = await window.kkumi.invoke('themes.rename', { id, name })
       if (!r.ok) return errText(r.error.code)
       await afterChange(id)
       return null
     },
     onDuplicate: async (id) => {
-      if (id === theme.id) await flushTheme()
+      if (id === theme.id && !(await flushTheme())) return SAVE_FAILED
       const src = okThemes.find((s) => s.id === id)
       const name = uniqueName(
         okThemes.map((s) => s.name),
@@ -157,7 +162,7 @@ export function useThemeActions({
       return null
     },
     onDelete: async (id) => {
-      if (id === theme.id) await flushTheme()
+      if (id === theme.id && !(await flushTheme())) return SAVE_FAILED
       const r = await window.kkumi.invoke('themes.delete', { id })
       if (!r.ok) return errText(r.error.code)
       if (id === theme.id) await switchTo(r.value.activeThemeId)
@@ -165,7 +170,7 @@ export function useThemeActions({
       return null
     },
     onReset: async (id) => {
-      if (id === theme.id) await flushTheme()
+      if (id === theme.id && !(await flushTheme())) return SAVE_FAILED
       const r = await window.kkumi.invoke('themes.resetBuiltin', { id })
       if (!r.ok) return errText(r.error.code)
       await afterChange(id)

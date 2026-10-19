@@ -59,7 +59,7 @@ export function BoardScreen({
   const timetable = useTimetable(ed.showNotice)
   const now = useMinuteClock()
   const theme = ed.theme
-  const cmd = useEditorCommands(ed, theme.id)
+  const cmd = useEditorCommands(ed)
   const editing = cmd.editing
   const [panelTab, setPanelTab] = usePanelTab(ed.selection)
   const drag = useWidgetDrag(ed, cmd.addBlock)

@@ -1,8 +1,8 @@
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, stat, utimes } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { BUILTIN_THEME_IDS, presetLook } from '@kkumikkumi/schema'
+import { BUILTIN_THEME_IDS, presetLook, type Asset } from '@kkumikkumi/schema'
 import { openDb } from '../db/connection'
 import { makeEnv } from './helpers'
 
@@ -95,5 +95,81 @@ describe('bootstrap', () => {
     const b = await makeEnv(dir)
     expect(b.core.repos.settings.get()?.schemaVersion).toBe(1)
     await b.cleanup()
+  })
+
+  it('재시작 때만 오래된 미사용 에셋을 정리하고 참조 중인 파일과 최근 파일은 보존한다', async () => {
+    const dir = await tmp()
+    const a = await makeEnv(dir)
+    const store = a.core.themes
+    const t = await store.create({ ...presetLook('pudding'), name: '사진', template: 'classic' })
+    const assets: Asset[] = ['a', 'b', 'c'].map((c) => ({
+      hash: c.repeat(64),
+      mime: 'image/png',
+      width: 1,
+      height: 1,
+      bytes: 1,
+    }))
+    const [used, unused, recent] = assets as [Asset, Asset, Asset]
+    for (const asset of assets) {
+      await store.writeAsset(t.id, asset, new Uint8Array([1]))
+      const date = new Date(a.clock.now - (asset === recent ? 0 : 11 * 60 * 1000))
+      await utimes(store.assetPath(t.id, asset), date, date)
+    }
+    const withImage = {
+      ...t,
+      assets,
+      blocks: t.blocks.map((b) =>
+        b.type === 'image' ? { ...b, props: { ...b.props, assetHash: used.hash } } : b,
+      ),
+    }
+    await store.save(withImage)
+    // 삭제 → 저장 → 실행취소해도 같은 세션에서는 이미지를 복원할 수 있다.
+    await store.save({ ...withImage, blocks: [] })
+    await store.save(withImage)
+    expect(await readFile(store.assetPath(t.id, used))).toEqual(Buffer.from([1]))
+    await a.cleanup()
+
+    const b = await makeEnv(dir, 1000)
+    try {
+      const loaded = await b.core.themes.read(t.id)
+      expect(loaded.assets).toEqual([used])
+      expect((await stat(b.core.themes.assetPath(t.id, used))).isFile()).toBe(true)
+      expect((await stat(b.core.themes.assetPath(t.id, recent))).isFile()).toBe(true)
+      await expect(stat(b.core.themes.assetPath(t.id, unused))).rejects.toMatchObject({
+        code: 'ENOENT',
+      })
+      await expect(b.core.themes.save(loaded)).resolves.toBeDefined()
+    } finally {
+      await b.cleanup()
+    }
+  })
+
+  it('정리 중 에셋 누락 오류가 나도 앱 시작을 막거나 테마를 덮어쓰지 않는다', async () => {
+    const dir = await tmp()
+    const a = await makeEnv(dir)
+    const t = await a.core.themes.create({
+      ...presetLook('pudding'),
+      name: '사진',
+      template: 'classic',
+    })
+    const asset: Asset = { hash: 'a'.repeat(64), mime: 'image/png', width: 1, height: 1, bytes: 1 }
+    const unused = { ...asset, hash: 'b'.repeat(64) }
+    for (const item of [asset, unused])
+      await a.core.themes.writeAsset(t.id, item, new Uint8Array([1]))
+    const saved = await a.core.themes.save({
+      ...t,
+      assets: [asset, unused],
+      blocks: t.blocks.map((b) =>
+        b.type === 'image' ? { ...b, props: { ...b.props, assetHash: asset.hash } } : b,
+      ),
+    })
+    await rm(a.core.themes.assetPath(t.id, asset))
+    await a.cleanup()
+    const b = await makeEnv(dir, 1000)
+    try {
+      expect(await b.core.themes.read(t.id)).toEqual(saved)
+    } finally {
+      await b.cleanup()
+    }
   })
 })

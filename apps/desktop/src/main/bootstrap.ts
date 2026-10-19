@@ -37,6 +37,16 @@ export async function bootstrap(d: BootstrapDeps): Promise<AppCore> {
       (await themes.ensureBuiltins()) ?? (await themes.ensureAtLeastOne(d.defaultThemeName))
     const valid = new Set((await themes.list()).filter((s) => s.ok).map((s) => s.id))
 
+    // 화면/실행취소 기록이 만들어지기 전에만 파일을 정리한다.
+    // 편집 종료 때 지우면 renderer가 기억하는 에셋과 디스크가 어긋난다.
+    for (const id of valid) {
+      try {
+        await themes.pruneAssets(id, 10 * 60 * 1000)
+      } catch {
+        // 정리는 부가 작업이다. 파일이 손상됐거나 접근할 수 없어도 앱을 열 수 있어야 한다.
+      }
+    }
+
     transaction(db, () => {
       let s: ReturnType<Repos['settings']['get']>
       try {

@@ -12,7 +12,7 @@ const isTextField = (el: EventTarget | null) =>
   (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))
 
 /** 편집 모드 켜고 끄기, 추가/복제/삭제, 편집 중 키보드 단축키 */
-export function useEditorCommands(ed: EditorApi, themeId: string) {
+export function useEditorCommands(ed: EditorApi) {
   const [editing, setEditing] = useState(false)
 
   const addDecor = useCallback(
@@ -57,12 +57,14 @@ export function useEditorCommands(ed: EditorApi, themeId: string) {
   }, [ed])
 
   const exitEdit = useCallback(async () => {
+    if (!(await ed.flush())) {
+      ed.showNotice('저장하지 못했어요. 편집 내용을 유지했으니 다시 저장해 주세요.')
+      return
+    }
     ed.select(null)
     setEditing(false)
-    await ed.flush()
-    // 지운 이미지 파일 정리(최근 10분 안에 가져온 파일은 main이 남겨 둔다)
-    await window.kkumi.invoke('themes.pruneAssets', { id: themeId })
-  }, [ed, themeId])
+    // 실행취소 기록이 참조할 수 있으므로 에셋 정리는 다음 앱 시작 때 한다.
+  }, [ed])
 
   useEffect(() => {
     if (!editing) return
