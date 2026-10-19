@@ -69,14 +69,15 @@ export function BoardScreen({
   const [page, setPage] = useState<AppPage>(initialPage)
   /** 앱 메뉴 "설정…"/"AI 연결…": 설정 페이지로(편집 중이면 편집은 그대로 두고 보드 밖으로 나가지 않는다) */
   const [settingsSection, setSettingsSection] = useState<SettingsSection | null>(null)
+  const showNotice = ed.showNotice
   useEffect(
     () =>
       window.kkumi.onOpenSettings((section) => {
-        if (editing) return ed.showNotice('편집을 마친 뒤 설정을 열어 주세요')
+        if (editing) return showNotice('편집을 마친 뒤 설정을 열어 주세요')
         setSettingsSection(section)
         setPage('settings')
       }),
-    [editing, ed.showNotice],
+    [editing, showNotice],
   )
   /** 할 일 화면에서 달력을 크게 보는 중(캘린더·디데이 블록에서 들어오면 크게) */
   const [todoBig, setTodoBig] = useState(false)

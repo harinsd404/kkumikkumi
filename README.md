@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/harinsd404/kkumikkumi/releases/download/v0.2.0/kkumikkumi-0.2.0-arm64.dmg"><b>⬇ 다운로드 (macOS, Apple Silicon, 0.2.0)</b></a>
+  <a href="https://github.com/harinsd404/kkumikkumi/releases/download/v0.2.1/kkumikkumi-0.2.1-arm64.dmg"><b>⬇ 다운로드 (macOS, Apple Silicon, 0.2.1)</b></a>
   <br />
   <a href="https://github.com/harinsd404/kkumikkumi/releases/latest">최신 릴리스</a> · <a href="CHANGELOG.md">업데이트 내역</a>
 </p>
@@ -71,7 +71,7 @@
 
 ## AI 연결 (MCP)
 
-꾸미꾸미가 켜져 있으면 MCP를 지원하는 AI 앱이 꾸미꾸미의 데이터를 다룰 수 있습니다. 예: "내일 오후 3시에 치과 일정 넣어줘", "이번 주 마감인 할 일 보여줘", "25분 집중 타이머 시작해줘". 개발 버전에서는 `set_timetable`로 교시/시간 방식 시간표도 만들거나 교체할 수 있습니다([입력 예시](docs/mcp.md#시간표-저장)).
+꾸미꾸미가 켜져 있으면 MCP를 지원하는 AI 앱이 꾸미꾸미의 데이터를 다룰 수 있습니다. 예: "내일 오후 3시에 치과 일정 넣어줘", "이번 주 마감인 할 일 보여줘", "25분 집중 타이머 시작해줘". "월요일 1교시 국어, 2교시 수학으로 시간표 만들어줘"처럼 시간표도 만들거나 통째로 바꿀 수 있습니다([입력 예시](docs/mcp.md#시간표-저장)).
 
 1. 설정 → **AI 연결**에서 "읽기만" 또는 "읽기·쓰기"를 고릅니다.
 2. 그 아래에 나오는 설정을 복사해 AI 앱에 넣습니다. 예(Codex):
@@ -88,7 +88,7 @@
 
 Apple Silicon Mac(M1 이상)용 DMG를 제공합니다. 아직 Apple 공증을 받지 않아 처음 열 때 한 번 허용이 필요합니다.
 
-1. [릴리스 페이지](https://github.com/harinsd404/kkumikkumi/releases/latest)에서 `kkumikkumi-0.2.0-arm64.dmg`를 받아 열고 **꾸미꾸미**를 Applications로 끌어 놓습니다.
+1. [릴리스 페이지](https://github.com/harinsd404/kkumikkumi/releases/latest)에서 `kkumikkumi-0.2.1-arm64.dmg`를 받아 열고 **꾸미꾸미**를 Applications로 끌어 놓습니다.
 2. 처음 열 때 경고가 뜨면 **시스템 설정 → 개인정보 보호 및 보안 → 확인 없이 열기**를 누릅니다.
 
 이전 버전 위에 덮어쓰면 데이터는 그대로 남습니다. 버전별 변경은 [CHANGELOG.md](CHANGELOG.md)에 있습니다.
@@ -162,10 +162,19 @@ docs/              확인된 사실, 의존성, 폰트 라이선스, 배포 문�
 - [x] 보드·편집기, 할 일·캘린더·타이머·메모·시간표·디데이 블록
 - [x] 테마 만들기·관리, 색 조합, 1차 배포(펫 제외)
 - [x] 할 일+캘린더 한 화면과 카테고리, AI 연결(MCP), 설정 페이지 (0.2.0)
+- [x] AI로 시간표 만들기·바꾸기, 사진 삭제 후 저장 오류 수정 (0.2.1)
 - [ ] 데스크탑 펫(바탕화면 위를 돌아다니는 캐릭터, 타이핑·음악에 반응)
 - [ ] 시간·요일·집중 모드·다크 모드에 따른 테마 자동 전환
 - [ ] 테마 파일 내보내기/가져오기(zip)
 - [ ] 개발자 ID 서명·공증, Intel Mac 지원
+
+## 기여
+
+기여해 주신 분들께 감사드립니다.
+
+- [@somonox](https://github.com/somonox): 사진 삭제 후 저장 오류 수정, AI 시간표 쓰기 도구 `set_timetable` ([PR #1](https://github.com/harinsd404/kkumikkumi/pull/1))
+
+버그 제보나 제안은 [Issues](https://github.com/harinsd404/kkumikkumi/issues)에, 코드 기여는 Pull Request로 보내 주세요. 보내기 전에 `pnpm typecheck && pnpm lint && pnpm test && pnpm test:electron`을 통과하는지 확인해 주세요.
 
 ## 폰트
 
