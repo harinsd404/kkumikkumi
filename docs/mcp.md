@@ -53,9 +53,54 @@ claude mcp add kkumikkumi -- /usr/bin/nc -U "/Users/<사용자>/Library/Applicat
 | `list_todos`(상태, 카테고리, 마감 구간, 검색)                               | `add_event`, `update_event`, `delete_event`                            |
 | `list_events`(최대 366일)                                                   | `create_memo`, `update_memo`, `delete_memo`                            |
 | `list_memos`, `get_memo`                                                    | `control_timer`(start/pause/resume/reset/뽀모도로)                     |
-| `get_timetable`, `get_timer`                                                |                                                                        |
+| `get_timetable`, `get_timer`                                                | `set_timetable`(시간표 생성/전체 교체)                                 |
 
-지우기 도구에는 `destructiveHint: true`를 달아 AI 앱이 확인을 받게 한다. 테마, 에셋, 앱 설정, 시간표 편집은 열지 않는다.
+지우기 도구와 전체 교체 도구 `set_timetable`에는 `destructiveHint: true`를 단다. 확인 UI를 띄울지는 AI 앱이 결정한다. 테마, 에셋, 앱 설정은 열지 않는다.
+
+### 시간표 저장
+
+`set_timetable`은 매주 반복하는 교시/시간 방식 시간표를 저장한다. 날짜가 있는 캘린더 일정과는 별개다.
+
+- `timetableId`를 생략하면 `name`(필수)으로 새 시간표를 만들고 선택한다. ID를 주면 해당 시간표를 수정하고 선택한다. 없는 ID는 `not_found`.
+- `entries`는 필수이며 해당 시간표의 **모든 항목을 교체**한다. `[]`는 전부 비운다. 앱에서 다른 방식으로 전환해 숨겨진 항목도 지운다. 다른 시간표는 유지한다.
+- 기존 시간표를 수정할 때는 `get_timetable`로 먼저 읽는다. 이 조회는 현재 방식의 항목만 반환한다. 유지할 칸까지 포함해 `entries`를 보내고, 읽기 결과의 항목 `id`는 제거한다.
+- 기존 시간표의 `name`, `settings`는 생략하면 유지한다. `settings`는 부분 수정 가능하며 `periods`를 주면 교시 시각 배열 전체를 교체한다. 새 시간표는 생략한 설정에 앱 기본값을 쓴다.
+- `slot.day`는 월요일 0부터 일요일 6까지, `period`는 1부터 시작한다. 각 슬롯은 `settings.mode`와 일치해야 한다. 시간은 `HH:mm`, 시작은 끝보다 앞이어야 한다. 교시 시각은 순서대로 겹치지 않아야 한다.
+- `room` 생략 시 빈 문자열, `tone` 생략/`null`이면 자동 색(고정 색은 0~11). 최대 시간표 20개, 교시 12개, 한 번에 항목 500개. 입력 오류나 저장 실패 시 기존 시간표·항목·선택을 모두 유지한다.
+- 성공하면 `get_timetable`과 같은 모양으로 목록과 선택된 시간표를 반환한다. 설정의 주말 표시(`showSat`, `showSun`)와 항목 색(`tone`)도 조회할 수 있다.
+
+교시 방식 새 시간표:
+
+```json
+{
+  "name": "학교",
+  "settings": {
+    "mode": "period",
+    "periods": [
+      { "start": "08:40", "end": "09:30" },
+      { "start": "09:40", "end": "10:30" }
+    ]
+  },
+  "entries": [
+    { "slot": { "kind": "period", "day": 0, "period": 1 }, "subject": "국어" },
+    { "slot": { "kind": "period", "day": 1, "period": 2 }, "subject": "수학", "room": "교실" }
+  ]
+}
+```
+
+시간 방식 새 시간표:
+
+```json
+{
+  "name": "방과 후",
+  "settings": { "mode": "time" },
+  "entries": [
+    { "slot": { "kind": "time", "day": 1, "start": "19:00", "end": "20:40" }, "subject": "자습" }
+  ]
+}
+```
+
+기존 시간표를 바꾸려면 위 입력에 조회한 `timetableId`를 추가한다. 새 버전으로 앱을 재시작한 뒤 AI 앱의 MCP 연결을 새로 연결해야 도구 목록에 나타난다.
 
 ## 보안과 개인정보
 

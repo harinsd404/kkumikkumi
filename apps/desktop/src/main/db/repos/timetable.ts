@@ -181,6 +181,11 @@ export class TimetableRepo {
     if (changes === 0) throw new NotFoundError('timetable_entry')
   }
 
+  /** 전체 교체용: 지정한 시간표의 항목만 지운다. */
+  deleteAllOf(timetableId: string): void {
+    this.db.prepare('DELETE FROM timetable_entries WHERE timetable_id = ?').run(timetableId)
+  }
+
   /** 교시 수를 줄일 때: 그 시간표에서 maxPeriod보다 뒤 교시 칸을 지운다. 지운 개수. */
   deletePeriodsAfter(timetableId: string, maxPeriod: number): number {
     return Number(

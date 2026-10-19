@@ -2,10 +2,11 @@ import type { CalendarEvent, McpMode, TodoItem, TodoList } from '@kkumikkumi/sch
 import { DateStr, MEMO_MAX_CHARS, TodoItemSchema, TodoListSchema, Uuid } from '@kkumikkumi/schema'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import type { DataDomain } from '../../shared/api'
+import type { DataDomain, TimetableData } from '../../shared/api'
 import { APP_INTERNAL_NAME } from '../../shared/identity'
 import type { Handlers } from '../ipc/handlers'
 import { toErrorCode } from '../ipc/errors'
+import { SetTimetableInput } from '../ipc/handlers/timetable'
 import {
   addDays,
   eventView,
@@ -141,6 +142,26 @@ export function createMcpServer(d: McpToolDeps): McpServer {
       return (await h['themes.get']({ id: s.activeThemeId })).defaults.palette.accent
     } catch {
       return '#F1A597'
+    }
+  }
+
+  const timetableView = (data: TimetableData, timetableId?: string) => {
+    const id = timetableId ?? data.activeId
+    const t = data.timetables.find((x) => x.id === id)
+    if (!t) throw new ToolInputError('not_found', '시간표가 없습니다.')
+    return {
+      timetables: data.timetables.map((x) => ({ id: x.id, name: x.name })),
+      selected: {
+        id: t.id,
+        name: t.name,
+        mode: t.settings.mode,
+        showSat: t.settings.showSat,
+        showSun: t.settings.showSun,
+        periods: t.settings.periods,
+        entries: data.entries
+          .filter((e) => e.timetableId === t.id && e.slot.kind === t.settings.mode)
+          .map((e) => ({ id: e.id, slot: e.slot, subject: e.subject, room: e.room, tone: e.tone })),
+      },
     }
   }
 
@@ -288,25 +309,7 @@ export function createMcpServer(d: McpToolDeps): McpServer {
       inputSchema: { timetableId: Id.optional() },
       annotations: read,
     },
-    (a) =>
-      run(async () => {
-        const data = await h['timetable.get'](undefined)
-        const id = a.timetableId ?? data.activeId
-        const t = data.timetables.find((x) => x.id === id)
-        if (!t) throw new ToolInputError('not_found', '시간표가 없습니다.')
-        return {
-          timetables: data.timetables.map((x) => ({ id: x.id, name: x.name })),
-          selected: {
-            id: t.id,
-            name: t.name,
-            mode: t.settings.mode,
-            periods: t.settings.periods,
-            entries: data.entries
-              .filter((e) => e.timetableId === t.id && e.slot.kind === t.settings.mode)
-              .map((e) => ({ id: e.id, slot: e.slot, subject: e.subject, room: e.room })),
-          },
-        }
-      }),
+    (a) => run(async () => timetableView(await h['timetable.get'](undefined), a.timetableId)),
   )
 
   server.registerTool(
@@ -320,6 +323,18 @@ export function createMcpServer(d: McpToolDeps): McpServer {
   )
 
   if (d.mode !== 'readwrite') return server
+
+  server.registerTool(
+    'set_timetable',
+    {
+      title: '시간표 저장',
+      description:
+        'timetableId가 없으면 name으로 새 시간표를 만듭니다. ID를 주면 그 시간표의 모든 항목(숨겨진 다른 방식 항목 포함)을 entries로 교체합니다. 기존 시간표는 get_timetable로 먼저 읽고 전체 목록을 보내세요. 빈 entries는 모든 칸을 비웁니다. 결과 시간표를 선택합니다. day: 0=월 … 6=일. 교시는 1부터, 시간은 HH:mm. settings 생략 시 기존 설정(새 시간표는 기본 교시 설정), room/tone 생략 시 빈 강의실/자동 색.',
+      inputSchema: SetTimetableInput.shape,
+      annotations: destroy,
+    },
+    (a) => writing('timetable', async () => timetableView(await h['timetable.set'](a))),
+  )
 
   /* ───────── 쓰기: 할 일 ───────── */
 
