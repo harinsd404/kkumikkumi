@@ -10,6 +10,7 @@ import { ConfirmButton } from '../../ui/ConfirmButton'
 import { InlineRename } from '../../ui/InlineRename'
 import { TodoCheck } from '../../ui/TodoCheck'
 import type { TodoView } from '../todoView'
+import { dragRow, DropZone, type TodoDnd } from './dnd'
 
 interface Common {
   view: TodoView
@@ -27,6 +28,8 @@ interface Common {
   addDue: string | null
   /** 상세에서 고를 스프린트 */
   sprints: readonly Sprint[]
+  /** 끌어서 옮기기 */
+  dnd: TodoDnd
 }
 
 /** 카테고리마다 이름 칩(+로 추가) 아래 할 일. 맨 아래에서 새 카테고리를 만든다. */
@@ -57,6 +60,7 @@ function Category({
   onOpen,
   addDue,
   sprints,
+  dnd,
 }: Common & { section: CategorySection<TodoItem>; tone: { label: string } }) {
   const [adding, setAdding] = useState(false)
   const [renaming, setRenaming] = useState(false)
@@ -69,7 +73,11 @@ function Category({
 
   return (
     <section className="tdo-cat" aria-label={s.name}>
-      <div className="tdo-cat-head">
+      <DropZone
+        dnd={dnd}
+        className="tdo-cat-head"
+        patchFor={(it) => (it.listId === s.listId ? null : { listId: s.listId })}
+      >
         <span className="tdo-cat-chip">
           {renaming ? (
             <InlineRename
@@ -110,7 +118,7 @@ function Category({
             />
           )}
         </span>
-      </div>
+      </DropZone>
 
       {adding && (
         <input
@@ -135,7 +143,7 @@ function Category({
         <ul className="pg-list tdo-items">
           {s.items.map((i) => (
             <li key={i.id} className={`tdo-item ${i.id === openId ? 'is-open' : ''}`}>
-              <div className="pg-row">
+              <div className="pg-row" {...dragRow(dnd, i)}>
                 <TodoCheck item={i} actions={actions} />
                 <button
                   type="button"
@@ -172,8 +180,8 @@ function Category({
   )
 }
 
-/** 할 일 상세(목록 안에서 펼침): 제목, 마감일, 카테고리, 메모, 삭제 */
-function ItemDetail({
+/** 할 일 상세(목록 안에서 펼침): 제목, 마감일, 카테고리, 스프린트, 메모, 삭제. 스프린트 카드도 같이 쓴다 */
+export function ItemDetail({
   item,
   lists,
   sprints,

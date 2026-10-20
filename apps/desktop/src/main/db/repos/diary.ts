@@ -50,14 +50,15 @@ export class DiaryRepo {
   }
 
   /** 일기에서 쓰는 사진 해시 전부(남은 파일 정리용) */
-  photoHashes(): Set<string> {
+  /** 일기가 쓰는 사진 해시. 읽지 못한 행이 하나라도 있으면 null(무엇을 지워도 되는지 모르므로 정리하지 않는다) */
+  photoHashes(): Set<string> | null {
     const out = new Set<string>()
     for (const r of this.db.prepare('SELECT photos FROM diary_entries').all() as Row[]) {
       try {
         for (const p of z.array(DiaryPhotoSchema).parse(JSON.parse(String(r['photos']))))
           out.add(p.hash)
       } catch {
-        // 손상된 행은 건너뛴다(정리는 보수적으로: 아는 것만 지운다)
+        return null
       }
     }
     return out

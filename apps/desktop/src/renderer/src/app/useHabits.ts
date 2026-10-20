@@ -1,5 +1,5 @@
 import type { Habit } from '@kkumikkumi/schema'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { HabitFields, IpcResult } from '../../../shared/api'
 import { addDays, checkKey } from '../../../shared/habits'
 import type { HabitData } from '../board/BoardContext'
@@ -39,13 +39,16 @@ export interface HabitStore {
 /** 습관과 체크(최근 약 400일). 체크는 바로 보이게(낙관적) 바꾸고 실패하면 다시 읽는다. */
 export function useHabits(onError: (text: string) => void): HabitStore {
   const [data, setData] = useState<HabitData | undefined>()
+  // 읽기 세대: 바로 바꾼(낙관적) 변경이나 더 늦게 시작한 읽기가 있으면 이전 읽기 결과는 버린다
+  const gen = useRef(0)
   const reload = useCallback(async () => {
+    const my = ++gen.current
     const v = await fetchHabits(localDate(Date.now()))
-    if (v) setData(v)
+    if (v && my === gen.current) setData(v)
   }, [])
   useEffect(() => {
-    void fetchHabits(localDate(Date.now())).then((v) => v && setData(v))
-  }, [])
+    void reload()
+  }, [reload])
   useEffect(
     () =>
       window.kkumi.onDataChanged((domain) => {
@@ -67,6 +70,7 @@ export function useHabits(onError: (text: string) => void): HabitStore {
     () => ({
       data,
       toggle: (habitId, date, on) => {
+        gen.current++
         setData((d) => {
           if (!d) return d
           const checked = new Set(d.checked)
@@ -74,19 +78,27 @@ export function useHabits(onError: (text: string) => void): HabitStore {
           else checked.delete(checkKey(habitId, date))
           return { ...d, checked }
         })
-        void window.kkumi
-          .invoke('habits.check', { habitId, date, done: on })
-          .then((r) => !r.ok && done(r))
+        void window.kkumi.invoke('habits.check', { habitId, date, done: on }).then(async (r) => {
+          if (r.ok) await reload()
+          else await done(r)
+        })
       },
       create: async (f) => {
         const r = await window.kkumi.invoke('habits.create', f)
         await done(r)
         return r.ok ? r.value : null
       },
-      update: async (id, patch) => done(await window.kkumi.invoke('habits.update', { id, patch })),
+      update: async (id, patch) => {
+        // 바로 보이게(요일을 빠르게 여러 번 눌러도 앞의 변경 위에 쌓이도록)
+        gen.current++
+        setData(
+          (d) => d && { ...d, habits: d.habits.map((h) => (h.id === id ? { ...h, ...patch } : h)) },
+        )
+        return done(await window.kkumi.invoke('habits.update', { id, patch }))
+      },
       remove: async (id) => done(await window.kkumi.invoke('habits.delete', { id })),
       reorder: async (ids) => done(await window.kkumi.invoke('habits.reorder', { ids })),
     }),
-    [data, done],
+    [data, done, reload],
   )
 }

@@ -1622,3 +1622,7 @@ form.ki-row {
   opacity: 0.5;
   cursor: default;
 }
+
+.ki-text[aria-invalid='true'] {
+  border-color: #c8473b;
+}

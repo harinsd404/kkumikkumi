@@ -12,6 +12,7 @@ import { sprintBadge, sprintItems, sprintProgress, sprintsOn } from '../board/sp
 import { CategoryList } from './todo/CategoryList'
 import { MiniMonth } from './todo/MiniMonth'
 import { SprintList } from './todo/SprintList'
+import { DropTray, type TodoDnd } from './todo/dnd'
 import { DiaryCard, DiaryDialog } from './todo/Diary'
 import { useDiary } from './todo/useDiary'
 import { dueForView, remainingByDay, VIEW_LABEL, viewSections, type TodoView } from './todoView'
@@ -141,6 +142,14 @@ function SplitView({
   const diary = useDiary(days[0], days[days.length - 1], date)
   /** 일기 창: 열 때의 일기를 잡아 둔다(저장할 때마다 다시 읽어도 창이 새로 만들어지지 않도록) */
   const [diaryDlg, setDiaryDlg] = useState<{ date: string; entry: DiaryEntry | null } | null>(null)
+  /** 끌고 있는 할 일. 끌기 시작한 그 순간에 화면을 바꾸면 끌기가 취소되므로 한 박자 늦게 반영한다 */
+  const [dragging, setDragging] = useState<TodoItem | null>(null)
+  const dnd: TodoDnd = {
+    dragging,
+    start: (item) => window.setTimeout(() => setDragging(item), 0),
+    end: () => window.setTimeout(() => setDragging(null), 0),
+    move: (id, patch) => void actions.todo.update(id, patch),
+  }
   const empty = view !== 'sprint' && sections.every((s) => s.items.length === 0)
 
   return (
@@ -184,7 +193,7 @@ function SplitView({
         <DiaryCard
           date={date}
           entry={diary.entry}
-          onOpen={() => diary.entry !== undefined && setDiaryDlg({ date, entry: diary.entry })}
+          onOpen={() => void diary.load(date).then((entry) => setDiaryDlg({ date, entry }))}
         />
         {diaryDlg && (
           <DiaryDialog
@@ -234,6 +243,11 @@ function SplitView({
         </div>
 
         <div className="tdo-scroll">
+          {todos && (
+            <div className="tdo-tray-anchor">
+              <DropTray dnd={dnd} lists={todos.lists} sprints={sprints} today={today} />
+            </div>
+          )}
           {view === 'day' && <DayEvents date={date} events={dayEvents} actions={actions} />}
           {view === 'day' && todos && (
             <DaySprints
@@ -251,6 +265,7 @@ function SplitView({
               today={today}
               actions={actions}
               api={sprintApi}
+              dnd={dnd}
             />
           )}
           {view !== 'sprint' && todos && (
@@ -267,6 +282,7 @@ function SplitView({
               onOpen={onOpen}
               addDue={dueForView(view, date)}
               sprints={sprints}
+              dnd={dnd}
             />
           )}
           {empty && (

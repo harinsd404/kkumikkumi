@@ -20,7 +20,8 @@ export function useModal(onClose: () => void, busy = false): void {
     const token = {}
     stack.push(token)
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || e.defaultPrevented || stack.at(-1) !== token) return
+      if (e.key !== 'Escape' || e.isComposing || e.defaultPrevented || stack.at(-1) !== token)
+        return
       e.preventDefault()
       if (!latest.current.busy) latest.current.onClose()
     }

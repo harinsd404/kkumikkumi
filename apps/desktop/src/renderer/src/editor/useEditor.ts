@@ -117,7 +117,13 @@ export function useEditor(initial: Theme, deps: EditorDeps): EditorApi {
   const exists = (s: AdjustTarget) =>
     !!s && (s.kind === 'free' ? theme.freeItems : theme.blocks).some((x) => x.id === s.id)
   const live: Selection = exists(selection) ? selection : null
-  const liveAdjust = exists(adjusting) ? adjusting : null
+  // 배경 사진 조정은 그 블록에 배경 사진이 아직 있을 때만(빼기 후 남은 조정 상태 정리)
+  const liveAdjust =
+    exists(adjusting) &&
+    (adjusting?.kind !== 'blockBg' ||
+      theme.blocks.some((b) => b.id === adjusting.id && b.style.bgImage))
+      ? adjusting
+      : null
 
   // 내용이 같으면 같은 객체(분 단위 시계 등으로 다시 그려질 때 [ed] 의존 콜백이 매번 바뀌지 않도록)
   return useMemo<EditorApi>(

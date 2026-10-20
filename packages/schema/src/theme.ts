@@ -77,7 +77,19 @@ export const HexColor = z.string().regex(/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/)
 export const FontId = z.string().regex(/^[a-z0-9-]{1,40}$/)
 export const BuiltinId = z.string().regex(/^[a-z0-9-]{1,40}$/)
 export const EpochMs = z.number().int().nonnegative()
-export const DateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/) // 로컬 날짜 (타임존 무관)
+/** 날짜 문자열이 실제 있는 날인지(2026-02-30 거부) */
+export function isRealDate(date: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date)
+  if (!m) return false
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])]
+  const t = new Date(Date.UTC(y, mo - 1, d))
+  return t.getUTCFullYear() === y && t.getUTCMonth() === mo - 1 && t.getUTCDate() === d
+}
+/** 로컬 날짜 (타임존 무관). 없는 날(2월 30일 등)은 거부 */
+export const DateStr = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine(isRealDate, '없는 날짜')
 export const Name = z.string().trim().min(1).max(40)
 
 /* ───────── 스타일 (구조화된 값만 허용, 원시 CSS 문자열 금지) ───────── */

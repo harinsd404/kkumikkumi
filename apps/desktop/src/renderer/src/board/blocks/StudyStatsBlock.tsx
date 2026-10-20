@@ -47,6 +47,7 @@ export function StudyStatsBlock({ block }: { block: StudyStatsBlockT }) {
     load
       ? () => load(localDayStart(addDays(today, -HISTORY_DAYS)), localDayStart(addDays(today, 1)))
       : null,
+    true,
   )
   const sessions = load ? loaded : sampleSessions(today)
   const sum = sessions ? summarize(sessions, today, week) : null

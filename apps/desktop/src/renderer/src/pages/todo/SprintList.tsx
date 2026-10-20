@@ -13,7 +13,9 @@ import {
 import type { UserData } from '../../app/useUserData'
 import { ConfirmButton } from '../../ui/ConfirmButton'
 import { TodoCheck } from '../../ui/TodoCheck'
+import { ItemDetail } from './CategoryList'
 import { monthDay } from '../dateText'
+import { dragRow, DropZone, type TodoDnd } from './dnd'
 
 /** 스프린트 보기: 진행 중 → 예정 → 끝남. 카드마다 기간·목표·진행률·안의 할 일 */
 export function SprintList({
@@ -23,6 +25,7 @@ export function SprintList({
   today,
   actions,
   api,
+  dnd,
 }: {
   sprints: readonly Sprint[]
   items: Readonly<Record<string, readonly TodoItem[]>>
@@ -30,6 +33,7 @@ export function SprintList({
   today: string
   actions: BoardActions
   api: UserData['sprints']
+  dnd: TodoDnd
 }) {
   const [creating, setCreating] = useState(false)
   return (
@@ -60,11 +64,13 @@ export function SprintList({
         <SprintCard
           key={s.id}
           sprint={s}
+          sprints={sprints}
           items={sprintItems(items, s.id)}
           lists={lists}
           today={today}
           actions={actions}
           api={api}
+          dnd={dnd}
         />
       ))}
     </div>
@@ -81,9 +87,11 @@ function SprintForm({
 }: {
   initial?: Fields
   today: string
-  onSave(f: Fields): void
+  onSave(f: Fields): void | Promise<unknown>
   onCancel(): void
 }) {
+  // 저장 중에는 다시 보내지 않는다(Enter 두 번에 둘 생기지 않도록)
+  const [saving, setSaving] = useState(false)
   const [f, setF] = useState<Fields>(
     initial ?? {
       name: '',
@@ -101,14 +109,17 @@ function SprintForm({
       onSubmit={(e) => {
         e.preventDefault()
         // 정해진 칸만 보낸다(main은 모르는 항목이 섞이면 거부한다)
-        if (ok)
+        if (!ok || saving) return
+        setSaving(true)
+        void Promise.resolve(
           onSave({
             name: f.name.trim(),
             goal: f.goal.trim(),
             startDate: f.startDate,
             endDate: f.endDate,
             color: f.color,
-          })
+          }),
+        ).finally(() => setSaving(false))
       }}
     >
       <input
@@ -172,7 +183,7 @@ function SprintForm({
         onChange={(e) => set({ goal: e.target.value })}
       />
       <div className="pg-detail-actions">
-        <button type="submit" className="pg-pill" disabled={!ok}>
+        <button type="submit" className="pg-pill" disabled={!ok || saving}>
           {initial ? '저장' : '만들기'}
         </button>
         <button type="button" className="pg-pill" onClick={onCancel}>
@@ -185,18 +196,23 @@ function SprintForm({
 
 function SprintCard({
   sprint: s,
+  sprints,
   items,
   lists,
   today,
   actions,
   api,
+  dnd,
 }: {
   sprint: Sprint
+  /** 할 일 상세에서 다른 스프린트로 옮길 때 */
+  sprints: readonly Sprint[]
   items: TodoItem[]
   lists: readonly TodoList[]
   today: string
   actions: BoardActions
   api: UserData['sprints']
+  dnd: TodoDnd
 }) {
   const status = sprintStatus(s, today)
   const [editing, setEditing] = useState(false)
@@ -204,6 +220,8 @@ function SprintCard({
   const [showDone, setShowDone] = useState(false)
   const [adding, setAdding] = useState(false)
   const [addList, setAddList] = useState(lists[0]?.id ?? '')
+  /** 펼친(고치는 중인) 할 일 */
+  const [openId, setOpenId] = useState<string | null>(null)
   const p = sprintProgress(items)
   const remaining = items.filter((i) => !i.done)
   const done = items.filter((i) => i.done)
@@ -234,18 +252,48 @@ function SprintCard({
     if (t && listId) await actions.todo.create(listId, t, null, s.id)
   }
 
+  // 누르면 그 자리에서 펼쳐 고치고, 줄에 올리면 바로 지우기(두 번 누르기)
   const row = (i: TodoItem) => (
-    <li key={i.id} className="pg-row">
-      <TodoCheck item={i} actions={actions} />
-      <span className={`pg-row-main tdo-sprint-item ${i.done ? 'is-done' : ''}`}>
-        <span className="pg-row-title">{i.title}</span>
-      </span>
-      <span className="tdo-sprint-cat">{listName(i.listId)}</span>
+    <li key={i.id} className={`tdo-item ${i.id === openId ? 'is-open' : ''}`}>
+      <div className="pg-row tdo-sprint-row" {...dragRow(dnd, i)}>
+        <TodoCheck item={i} actions={actions} />
+        <button
+          type="button"
+          className={`pg-row-main ${i.done ? 'is-done' : ''}`}
+          aria-expanded={i.id === openId}
+          onClick={() => setOpenId(i.id === openId ? null : i.id)}
+        >
+          <span className="pg-row-title">{i.title}</span>
+          {i.note && <span className="pg-row-note">{i.note}</span>}
+        </button>
+        <span className="tdo-sprint-cat">{listName(i.listId)}</span>
+        <ConfirmButton
+          key={i.id}
+          className="tdo-row-del"
+          label="×"
+          confirmLabel="지우기"
+          onConfirm={() => actions.todo.remove(i.id)}
+        />
+      </div>
+      {i.id === openId && (
+        <ItemDetail
+          key={i.id}
+          item={i}
+          lists={lists}
+          sprints={sprints}
+          today={today}
+          actions={actions}
+          onClose={() => setOpenId(null)}
+        />
+      )}
     </li>
   )
 
   return (
-    <section
+    <DropZone
+      as="section"
+      dnd={dnd}
+      patchFor={(it) => (it.sprintId === s.id ? null : { sprintId: s.id })}
       className={`tdo-sprint is-${status}`}
       style={{ borderLeftColor: s.color }}
       aria-label={s.name}
@@ -342,6 +390,6 @@ function SprintCard({
           )}
         </>
       )}
-    </section>
+    </DropZone>
   )
 }

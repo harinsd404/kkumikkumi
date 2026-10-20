@@ -383,6 +383,9 @@ describe('MCP 스프린트', () => {
     const inSprint = await call('list_todos', { sprintId: s.data.id, status: 'all' })
     expect(inSprint.data.total).toBe(2)
     expect(
+      (await call('list_todos', { sprintId: '00000000-0000-4000-8000-000000000000' })).error,
+    ).toMatch(/not_found/)
+    expect(
       (await call('create_sprint', { name: 'x', startDate: '2026-11-02', endDate: '2026-10-01' }))
         .error,
     ).toBeTruthy()

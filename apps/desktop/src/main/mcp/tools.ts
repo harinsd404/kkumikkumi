@@ -250,6 +250,8 @@ export function createMcpServer(d: McpToolDeps): McpServer {
         const { lists, items } = await allTodos()
         if (a.categoryId && !lists.some((l) => l.id === a.categoryId))
           throw new ToolInputError('not_found', HINTS['not_found']!)
+        if (a.sprintId && !(await h['sprints.list'](undefined)).some((s) => s.id === a.sprintId))
+          throw new ToolInputError('not_found', HINTS['not_found']!)
         const scoped = items.filter(
           (t) =>
             (!a.categoryId || t.listId === a.categoryId) &&

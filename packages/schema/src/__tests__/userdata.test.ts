@@ -9,6 +9,7 @@ import {
   TimerSessionSchema,
   TimerStateSchema,
 } from '../userdata'
+import { DateStr } from '../theme'
 import { U } from './fixtures'
 
 describe('TimerStateSchema', () => {
@@ -161,5 +162,15 @@ describe('습관', () => {
     expect(HabitSchema.safeParse({ ...ok, days: 0 }).success).toBe(false)
     expect(HabitSchema.safeParse({ ...ok, days: 128 }).success).toBe(false)
     expect(HabitSchema.safeParse({ ...ok, name: 'x'.repeat(31) }).success).toBe(false)
+  })
+})
+
+describe('DateStr', () => {
+  it('없는 날짜는 거부한다', () => {
+    expect(DateStr.safeParse('2028-02-29').success).toBe(true)
+    expect(DateStr.safeParse('2026-02-29').success).toBe(false)
+    expect(DateStr.safeParse('2026-02-31').success).toBe(false)
+    expect(DateStr.safeParse('2026-13-01').success).toBe(false)
+    expect(DateStr.safeParse('2026-1-01').success).toBe(false)
   })
 })

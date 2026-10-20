@@ -237,14 +237,24 @@ function Summary({
   )
 }
 
-function NewHabit({ onCreate, onCancel }: { onCreate(name: string): void; onCancel(): void }) {
+function NewHabit({
+  onCreate,
+  onCancel,
+}: {
+  onCreate(name: string): void | Promise<unknown>
+  onCancel(): void
+}) {
   const [name, setName] = useState('')
+  // 저장 중에는 다시 보내지 않는다(Enter 두 번에 둘 생기지 않도록)
+  const [saving, setSaving] = useState(false)
   return (
     <form
       className="hbp-new"
       onSubmit={(e) => {
         e.preventDefault()
-        if (name.trim()) onCreate(name.trim())
+        if (!name.trim() || saving) return
+        setSaving(true)
+        void Promise.resolve(onCreate(name.trim())).finally(() => setSaving(false))
       }}
     >
       <input
@@ -262,7 +272,7 @@ function NewHabit({ onCreate, onCancel }: { onCreate(name: string): void; onCanc
           }
         }}
       />
-      <button type="submit" className="pg-pill" disabled={!name.trim()}>
+      <button type="submit" className="pg-pill" disabled={!name.trim() || saving}>
         만들기
       </button>
       <button type="button" className="pg-pill" onClick={onCancel}>

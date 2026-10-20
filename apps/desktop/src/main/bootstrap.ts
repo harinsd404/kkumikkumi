@@ -91,7 +91,8 @@ export async function bootstrap(d: BootstrapDeps): Promise<AppCore> {
     // 일기에서 빠진 사진 파일 정리(최근 10분 안에 넣은 것은 저장 전일 수 있어 남긴다)
     const diaryPhotos = new DiaryPhotoStore(join(d.userDataDir, 'diary'))
     try {
-      await diaryPhotos.prune(repos.diary.photoHashes(), 10 * 60 * 1000, d.now())
+      const keep = repos.diary.photoHashes()
+      if (keep) await diaryPhotos.prune(keep, 10 * 60 * 1000, d.now())
     } catch {
       // 정리는 부가 작업이다
     }

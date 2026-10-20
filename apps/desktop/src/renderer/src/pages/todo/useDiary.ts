@@ -1,5 +1,5 @@
 import { ASSET_EXT_BY_MIME, type DiaryEntry, type DiaryPhoto } from '@kkumikkumi/schema'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import type { DiarySummary } from '../../../../shared/api'
 import { useKeyedAsync } from '../../board/useKeyedAsync'
 
@@ -39,10 +39,20 @@ export function useDiary(fromDate: string | undefined, toDate: string | undefine
   )
   const written = useMemo(() => new Set((summaries ?? []).map((s) => s.date)), [summaries])
 
-  const save = useCallback(async (d: string, patch: DiarySave) => {
-    const r = await window.kkumi.invoke('diary.save', { date: d, ...patch })
-    setVersion((v) => v + 1)
-    return r.ok
+  // 저장은 차례대로 보내고, 창을 열 때는 앞선 저장이 끝난 뒤 읽는다(닫자마자 다시 열어도 새 글이 보이도록)
+  const queue = useRef<Promise<unknown>>(Promise.resolve())
+  const save = useCallback((d: string, patch: DiarySave) => {
+    const p = queue.current.then(() => window.kkumi.invoke('diary.save', { date: d, ...patch }))
+    queue.current = p.catch(() => undefined)
+    return p.then((r) => {
+      setVersion((v) => v + 1)
+      return r.ok
+    })
+  }, [])
+  const load = useCallback(async (d: string) => {
+    await queue.current
+    const r = await window.kkumi.invoke('diary.get', { date: d })
+    return r.ok ? r.value : null
   }, [])
   const addPhoto = useCallback(
     async (src: { dialog: true } | { bytes: Uint8Array }): Promise<DiaryPhoto | null> => {
@@ -54,7 +64,7 @@ export function useDiary(fromDate: string | undefined, toDate: string | undefine
     },
     [],
   )
-  return { entry, moods, written, save, addPhoto }
+  return { entry, moods, written, save, load, addPhoto }
 }
 
 export type DiaryApi = ReturnType<typeof useDiary>

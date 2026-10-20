@@ -442,3 +442,23 @@ describe('SettingsRepo', () => {
     expect(() => repos.settings.get()).toThrow()
   })
 })
+
+describe('DiaryRepo.photoHashes', () => {
+  const H = (c: string) => c.repeat(64)
+  const put = (date: string, photos: string) =>
+    db
+      .prepare(
+        'INSERT INTO diary_entries (date, body, mood, photos, created_at, updated_at) VALUES (?, ?, NULL, ?, 1, 1)',
+      )
+      .run(date, '', photos)
+  it('일기가 쓰는 사진 해시를 모은다', () => {
+    put('2026-10-20', JSON.stringify([{ hash: H('a'), mime: 'image/png' }]))
+    put('2026-10-21', '[]')
+    expect(repos.diary.photoHashes()).toEqual(new Set([H('a')]))
+  })
+  it('읽지 못한 행이 있으면 null(정리하지 않는다)', () => {
+    put('2026-10-20', JSON.stringify([{ hash: H('a'), mime: 'image/png' }]))
+    put('2026-10-21', '{망가짐')
+    expect(repos.diary.photoHashes()).toBeNull()
+  })
+})

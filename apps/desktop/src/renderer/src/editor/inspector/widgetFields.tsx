@@ -1,4 +1,5 @@
-import type { GridBlock, ProgressPeriod } from '@kkumikkumi/schema'
+import { isRealDate, type GridBlock, type ProgressPeriod } from '@kkumikkumi/schema'
+import { useState } from 'react'
 import { localDate } from '../../board/calendar'
 import { Row, Segmented } from '../fields'
 
@@ -75,23 +76,15 @@ export function ProgressFields({
                 />
               </Row>
               <Row label="시작 ~ 끝">
-                <input
-                  className="ki-text"
-                  type="date"
+                <DateInput
                   value={p.start}
-                  onChange={(e) => {
-                    const start = e.target.value
-                    if (start) set(i, { ...p, start, end: p.end < start ? start : p.end })
-                  }}
+                  ok={(start) => start <= p.end}
+                  onCommit={(start) => set(i, { ...p, start })}
                 />
-                <input
-                  className="ki-text"
-                  type="date"
+                <DateInput
                   value={p.end}
-                  onChange={(e) => {
-                    const end = e.target.value
-                    if (end) set(i, { ...p, end, start: p.start > end ? end : p.start })
-                  }}
+                  ok={(end) => p.start <= end}
+                  onCommit={(end) => set(i, { ...p, end })}
                 />
               </Row>
             </>
@@ -161,5 +154,47 @@ export function ClockFields({
         onChange={(v) => onChange({ showDate: v === 'on' })}
       />
     </>
+  )
+}
+
+/** 쓸 수 있는 날짜(입력 중 연도가 0002처럼 지나가는 값은 거른다) */
+const usable = (d: string) => isRealDate(d) && d >= '1900-01-01'
+
+/**
+ * 날짜 입력: 연도를 한 자리씩 치는 동안 생기는 중간 값은 저장하지 않고, 쓸 수 있고 순서가 맞을 때만 반영한다.
+ * 다른 날짜를 대신 고치지 않는다. 벗어나면(blur) 마지막으로 저장된 값으로 돌아간다.
+ */
+function DateInput({
+  value,
+  ok,
+  onCommit,
+}: {
+  value: string
+  ok(d: string): boolean
+  onCommit(d: string): void
+}) {
+  const [draft, setDraft] = useState(value)
+  const [prev, setPrev] = useState(value)
+  if (prev !== value) {
+    setPrev(value)
+    setDraft(value)
+  }
+  const bad = draft !== value && usable(draft) && !ok(draft)
+  return (
+    <input
+      className="ki-text"
+      type="date"
+      min="1900-01-01"
+      max="9999-12-31"
+      value={draft}
+      aria-invalid={bad}
+      title={bad ? '끝 날짜가 시작 날짜보다 앞이에요' : undefined}
+      onChange={(e) => {
+        const d = e.target.value
+        setDraft(d)
+        if (usable(d) && ok(d) && d !== value) onCommit(d)
+      }}
+      onBlur={() => setDraft(value)}
+    />
   )
 }

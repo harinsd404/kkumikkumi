@@ -4,7 +4,7 @@ import {
   type DiaryEntry,
   type DiaryPhoto,
 } from '@kkumikkumi/schema'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ModalBackdrop } from '../../app/Modal'
 import { MOODS, moodEmoji, moodLabel } from '../../board/diary'
 import { ConfirmButton } from '../../ui/ConfirmButton'
@@ -86,17 +86,27 @@ export function DiaryDialog({
       pendingBody.current = null
     }
   }
-  useEffect(() => () => window.clearTimeout(timer.current), [])
+  // 창이 close 없이 사라져도(화면 전환 등) 남은 글을 저장한다
+  const flushRef = useRef(flushBody)
+  useLayoutEffect(() => {
+    flushRef.current = flushBody
+  })
+  useEffect(() => () => flushRef.current(), [])
   const close = () => {
     flushBody()
     onClose()
   }
 
+  const adding = useRef(false)
+  // 넣는 중에는 다음 사진을 받지 않는다(같은 목록에서 출발해 하나가 사라지지 않도록)
   const addPhoto = async (src: { dialog: true } | { bytes: Uint8Array }) => {
+    if (adding.current) return
     if (photos.length >= DIARY_MAX_PHOTOS) return setError(`사진은 ${DIARY_MAX_PHOTOS}장까지예요`)
+    adding.current = true
     setBusy(true)
     setError(null)
     const p = await api.addPhoto(src)
+    adding.current = false
     setBusy(false)
     if (!p) return 'dialog' in src ? undefined : setError('사진을 넣지 못했어요')
     if (photos.some((x) => x.hash === p.hash)) return

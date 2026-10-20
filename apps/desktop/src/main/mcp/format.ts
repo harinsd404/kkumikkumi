@@ -1,4 +1,10 @@
-import type { CalendarEvent, Memo, Sprint, TodoItem } from '@kkumikkumi/schema'
+import {
+  isRealDate,
+  type CalendarEvent,
+  type Memo,
+  type Sprint,
+  type TodoItem,
+} from '@kkumikkumi/schema'
 
 // MCP 도구 입출력 변환(순수 함수). 시각 일정은 앱 화면과 같게 시스템 타임존의 벽시계 시각으로 주고받는다.
 
@@ -33,14 +39,7 @@ export function localDayStart(date: string): number {
   return new Date(y, m - 1, d).getTime()
 }
 
-/** 날짜 문자열이 실제 있는 날인지(2026-02-30 거부) */
-export function isRealDate(date: string): boolean {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date)
-  if (!m) return false
-  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])]
-  const t = new Date(Date.UTC(y, mo - 1, d))
-  return t.getUTCFullYear() === y && t.getUTCMonth() === mo - 1 && t.getUTCDate() === d
-}
+export { isRealDate }
 
 export const LOCAL_DATETIME_RE = /^(\d{4}-\d{2}-\d{2})[T ]([01]\d|2[0-3]):([0-5]\d)$/
 

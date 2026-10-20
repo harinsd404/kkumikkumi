@@ -54,8 +54,11 @@ export function SprintBlock({ block }: { block: SprintBlockT }) {
   const pinned = block.props.sprintId
   let sprint: Sprint | null
   let items: TodoItem[]
-  if (!todos) ({ sprint, items } = sample(today))
-  else {
+  // 예시는 위젯 갤러리(동작 없음)에서만. 실제 보드는 읽기 전이면 비워 둔다
+  if (!todos) {
+    if (all) return <div className={`ksp ksp--${block.size}`} style={{ color: p.text }} />
+    ;({ sprint, items } = sample(today))
+  } else {
     sprint = pinned ? (sprints.find((s) => s.id === pinned) ?? null) : autoSprint(sprints, today)
     items = sprint ? sprintItems(todos.items, sprint.id) : []
   }

@@ -40,7 +40,9 @@ export function HabitBlock({ block }: { block: HabitBlockT }) {
   const actions = mode === 'use' ? all?.habits : undefined
   const p = theme.defaults.palette
   const today = localDate(now.getTime())
-  const d = data.habits ?? sample(today)
+  // 예시는 위젯 갤러리(동작 없음)에서만. 실제 보드는 읽기 전이면 비워 둔다
+  const d = data.habits ?? (all ? null : sample(today))
+  if (!d) return <div className={`khb khb--${block.size}`} style={{ color: p.text }} />
   const has = (id: string, date: string) => d.checked.has(checkKey(id, date))
   const todays = d.habits.filter((h) => isScheduled(h.days, today))
   const toggle = (h: Habit, date: string) => actions?.toggle(h.id, date, !has(h.id, date))
