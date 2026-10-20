@@ -49,9 +49,9 @@ export function useAssetImport(
     const bytes = new Uint8Array(await file.arrayBuffer())
     const r = await importAsset({ bytes })
     if (!r) return
+    const target = blockAt(ed.theme, at)
     // 이미지 블록 위에 놓으면 그 블록의 이미지로(블록마다 따로)
-    const target = imageBlockAt(ed.theme, at)
-    if (target) {
+    if (target?.type === 'image') {
       ed.dispatch({
         type: 'block/props',
         id: target.id,
@@ -61,6 +61,23 @@ export function useAssetImport(
       ed.adjust({ kind: 'block', id: target.id }) // 바로 끌어서 위치 잡기
       return
     }
+    // 다른 위젯 위에 놓은 사진(투명 없음)은 그 위젯의 배경 사진으로
+    if (target && !r.hasTransparency) {
+      ed.dispatch({
+        type: 'block/style',
+        id: target.id,
+        patch: {
+          bgImage: {
+            assetHash: r.asset.hash,
+            focus: { x: 0.5, y: 0.5 },
+            veil: target.style.bgImage?.veil ?? 0.35,
+          },
+        },
+      })
+      ed.select({ kind: 'block', id: target.id })
+      ed.adjust({ kind: 'blockBg', id: target.id })
+      return
+    }
     // 투명 영역이 있으면 스티커(잘리지 않게), 아니면 이미지
     addDecor(r.hasTransparency ? 'sticker' : 'image', r.asset, at)
   }
@@ -68,10 +85,9 @@ export function useAssetImport(
   return { importAsset, onDropFile }
 }
 
-/** 캔버스 좌표 아래의 이미지 블록(없으면 null) */
-function imageBlockAt(t: Theme, at: Point) {
+/** 캔버스 좌표 아래의 블록(없으면 null) */
+function blockAt(t: Theme, at: Point) {
   for (const b of t.blocks) {
-    if (b.type !== 'image') continue
     const r = blockRect(b)
     if (!r) continue
     const box = blockBox(r)

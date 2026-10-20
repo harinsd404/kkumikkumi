@@ -35,7 +35,10 @@ const pageOf = (type: GridBlock['type']): PageType | null => {
 const INTERACTIVE = 'button, input, select, textarea, a, label, [role="button"], [data-no-open]'
 
 export function BlockView({ block, box }: { block: GridBlock; box: Box }) {
-  const { theme, mode, actions } = useBoard()
+  const { theme, mode, actions, assetUrl } = useBoard()
+  // 배경 사진(이미지 블록은 자기 사진이 곧 내용이라 쓰지 않는다)
+  const bgImage = block.type === 'image' ? null : block.style.bgImage
+  const bgUrl = bgImage ? assetUrl(bgImage.assetHash) : null
   const page = pageOf(block.type)
   const opener = mode === 'use' && page ? actions?.pages?.[page] : undefined
   const openPage = opener && (() => opener(block))
@@ -65,12 +68,26 @@ export function BlockView({ block, box }: { block: GridBlock; box: Box }) {
 
   return (
     <section
-      className={`kb-abs kb-card ${openPage ? 'is-link' : ''}`}
+      className={`kb-abs kb-card ${openPage ? 'is-link' : ''} ${bgUrl ? 'has-bgimg' : ''}`}
       data-type={block.type}
       data-size={block.size}
       style={{ ...box, ...cardCss(block.style, theme.defaults) }}
       {...link}
     >
+      {bgImage && bgUrl && (
+        <div className="kb-bgimg" aria-hidden>
+          <img
+            src={bgUrl}
+            alt=""
+            draggable={false}
+            style={{ objectPosition: `${bgImage.focus.x * 100}% ${bgImage.focus.y * 100}%` }}
+          />
+          <div
+            className="kb-bgimg-veil"
+            style={{ background: block.style.bg ?? '#ffffff', opacity: bgImage.veil }}
+          />
+        </div>
+      )}
       {block.type === 'calendar' && <CalendarBlock block={block} />}
       {block.type === 'todo' && <TodoBlock block={block} />}
       {block.type === 'timer' && <TimerBlock block={block} />}

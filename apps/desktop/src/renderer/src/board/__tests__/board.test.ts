@@ -115,6 +115,7 @@ describe('style', () => {
     bg: null,
     fontId: null,
     textColor: null,
+    bgImage: null,
   }
   const defaults: Theme['defaults'] = { fontId: 'galmuri11', palette }
 

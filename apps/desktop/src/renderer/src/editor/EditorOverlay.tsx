@@ -25,7 +25,7 @@ import {
   type Corner,
   type Point,
 } from './state/geometry'
-import type { EditorApi, Selection } from './useEditor'
+import type { AdjustTarget, EditorApi } from './useEditor'
 
 /** 화면 좌표 → 캔버스 좌표(갤러리에서 끌어 올 때 부모가 쓴다) */
 export type ToCanvas = (client: { clientX: number; clientY: number }) => Point
@@ -72,8 +72,18 @@ export function EditorOverlay({ ed, scale, onDropFile, incoming, toCanvasRef }: 
   const items = gridItems(t.blocks)
 
   /** 사진 위치 조정 대상: 칸(캔버스 px), 회전, 지금 이미지 설정, 원본 크기. 사진이 없으면 null */
-  const panTarget = (s: Selection) => {
+  const panTarget = (s: AdjustTarget) => {
     if (!s) return null
+    if (s.kind === 'blockBg') {
+      // 블록 배경 사진: 늘 꽉 채우기, 확대 없음
+      const b = t.blocks.find((x) => x.id === s.id)
+      const r = b && blockRect(b)
+      const bg = b && b.type !== 'image' ? b.style.bgImage : null
+      if (!r || !bg) return null
+      const asset = t.assets.find((a) => a.hash === bg.assetHash)
+      const content = { focus: { ...bg.focus, zoom: 1 }, fit: 'cover' as const }
+      return asset && { box: blockBox(r), rotation: 0, content, asset }
+    }
     if (s.kind === 'block') {
       const b = t.blocks.find((x) => x.id === s.id)
       const r = b && blockRect(b)
@@ -115,7 +125,19 @@ export function EditorOverlay({ ed, scale, onDropFile, incoming, toCanvasRef }: 
         )
         const focus = { ...content.focus, ...next }
         const opts = { groupKey: `pan:${target.id}`, continuous: true }
-        if (target.kind === 'block')
+        if (target.kind === 'blockBg') {
+          const b = t.blocks.find((x) => x.id === target.id)
+          const bg = b?.style.bgImage
+          if (bg)
+            ed.dispatch(
+              {
+                type: 'block/style',
+                id: target.id,
+                patch: { bgImage: { ...bg, focus: { x: focus.x, y: focus.y } } },
+              },
+              opts,
+            )
+        } else if (target.kind === 'block')
           ed.dispatch({ type: 'block/props', id: target.id, patch: { focus } }, opts)
         else ed.dispatch({ type: 'free/content', id: target.id, patch: { focus } }, opts)
       },
@@ -311,6 +333,9 @@ export function EditorOverlay({ ed, scale, onDropFile, incoming, toCanvasRef }: 
             onDoubleClick={() => {
               // 이미지 블록은 두 번 누르면 사진 위치 조정
               if (b.type === 'image' && b.props.assetHash) ed.adjust({ kind: 'block', id: b.id })
+              // 다른 블록은 배경 사진이 있으면 그 사진 위치 조정
+              else if (b.type !== 'image' && b.style.bgImage)
+                ed.adjust({ kind: 'blockBg', id: b.id })
             }}
             aria-label={`${b.type} 블록`}
           />

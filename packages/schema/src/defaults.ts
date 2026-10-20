@@ -12,6 +12,7 @@ const cardStyle = (): Style => ({
   bg: '#ffffff',
   fontId: null,
   textColor: null,
+  bgImage: null,
 })
 
 const bannerStyle = (): Style => ({ ...cardStyle(), radius: 15, bg: null })
@@ -203,7 +204,10 @@ export function referencedAssetHashes(t: Theme): Set<string> {
     if (h !== null) out.add(h)
   }
   if (t.background.type === 'image') add(t.background.assetHash)
-  for (const b of t.blocks) if (b.type === 'image') add(b.props.assetHash)
+  for (const b of t.blocks) {
+    if (b.type === 'image') add(b.props.assetHash)
+    if (b.style.bgImage) add(b.style.bgImage.assetHash)
+  }
   for (const f of t.freeItems) {
     if (f.kind === 'image') add(f.content.assetHash)
     else if (f.source.type === 'asset') add(f.source.hash)

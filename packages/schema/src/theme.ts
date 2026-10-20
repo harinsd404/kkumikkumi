@@ -94,11 +94,23 @@ const decorShape = {
 export const DecorSchema = z.strictObject(decorShape)
 
 /** 그리드 블록용 */
+/**
+ * 블록 배경 사진(2026-10-20). veil은 사진 위에 블록 배경색(없으면 흰색)을 얼마나 덮을지(글자 읽기 쉽게).
+ * 이미지 블록에는 쓰지 않는다.
+ */
+export const BlockBgImageSchema = z.strictObject({
+  assetHash: Sha256,
+  focus: z.strictObject({ x: z.number().min(0).max(1), y: z.number().min(0).max(1) }),
+  veil: z.number().min(0).max(0.8),
+})
+
 export const StyleSchema = z.strictObject({
   ...decorShape,
   bg: HexColor.nullable(), // null = 투명
   fontId: FontId.nullable(), // null = 테마 기본
   textColor: HexColor.nullable(), // null = 테마 팔레트 text
+  // 배경 사진이 생기기 전에 저장한 테마는 키가 없으므로 null로 읽는다
+  bgImage: BlockBgImageSchema.nullable().default(null),
 })
 
 /* ───────── 이미지 콘텐츠 (그리드 image 블록 / 자유 image 아이템 공용) ───────── */
@@ -414,6 +426,7 @@ export const ThemeSchema = ThemeBase.superRefine((t, ctx) => {
   }
   t.blocks.forEach((b, i) => {
     if (b.type === 'image') needAsset(b.props.assetHash, ['blocks', i, 'props', 'assetHash'])
+    if (b.style.bgImage) needAsset(b.style.bgImage.assetHash, ['blocks', i, 'style', 'bgImage'])
   })
   t.freeItems.forEach((f, i) => {
     if (f.kind === 'image') {
@@ -441,5 +454,6 @@ export type BlockSize = z.infer<typeof SizeSchema>
 export type Palette = z.infer<typeof PaletteSchema>
 export type Pattern = z.infer<typeof PatternSchema>
 export type ProgressPeriod = z.infer<typeof ProgressPeriodSchema>
+export type BlockBgImage = z.infer<typeof BlockBgImageSchema>
 
 export const parseTheme = (raw: unknown) => ThemeSchema.safeParse(raw)

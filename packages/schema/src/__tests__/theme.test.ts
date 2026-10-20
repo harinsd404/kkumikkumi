@@ -85,6 +85,52 @@ describe('ThemeSchema', () => {
       expectBad(t, '쓸 수 없음')
     })
 
+    it('블록 배경 사진: 없던 테마는 null로 읽고, 매니페스트에 있는 에셋만, 덮개 0~0.8', () => {
+      const t = baseTheme()
+      const i = t.blocks.findIndex((b: { type: string }) => b.type === 'todo')
+      delete t.blocks[i].style.bgImage
+      const r = parseTheme(t)
+      expect(r.success && r.data.blocks[i]!.style.bgImage).toBeNull()
+      const hash = t.assets[0].hash
+      t.blocks[i].style.bgImage = { assetHash: hash, focus: { x: 0.2, y: 0.8 }, veil: 0.35 }
+      expectOk(t)
+      t.blocks[i].style.bgImage.veil = 0.9
+      expectBad(t)
+      t.blocks[i].style.bgImage = { assetHash: H('9'), focus: { x: 0.5, y: 0.5 }, veil: 0 }
+      expectBad(t, '매니페스트')
+    })
+
+    it('새 위젯 블록: 공부 통계·진행률·시계 설정 검증', () => {
+      const t = baseTheme()
+      const i = t.blocks.findIndex((b: { type: string }) => b.type === 'todo')
+      t.blocks[i] = { ...t.blocks[i], type: 'studyStats', size: 'M', props: {} }
+      expectOk(t)
+      t.blocks[i] = {
+        ...t.blocks[i],
+        type: 'progress',
+        props: {
+          periods: [
+            { kind: 'week' },
+            { kind: 'custom', label: '2학기', start: '2026-09-01', end: '2026-12-31' },
+          ],
+          weekStartsOn: 1,
+        },
+      }
+      expectOk(t)
+      t.blocks[i].props.periods[1].end = '2026-08-01' // 끝이 시작보다 앞
+      expectBad(t)
+      t.blocks[i].props.periods = []
+      expectBad(t)
+      t.blocks[i] = {
+        ...t.blocks[i],
+        type: 'clock',
+        props: { face: 'analog', hour12: true, showDate: false },
+      }
+      expectOk(t)
+      t.blocks[i].props.face = 'flip'
+      expectBad(t)
+    })
+
     it('디데이 블록: eventId(null 또는 UUID)만, 크기는 S/M', () => {
       const t = baseTheme()
       const i = t.blocks.findIndex((b: { type: string }) => b.type === 'todo')

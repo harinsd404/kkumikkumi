@@ -15,6 +15,8 @@ import {
 import { reduce, type EditorAction, type ReduceError } from './state/reducer'
 
 export type Selection = { kind: 'block' | 'free'; id: string } | null
+/** 사진 위치를 끌어서 조정하는 대상: 이미지 블록 / 꾸미기 사진 / 블록 배경 사진 */
+export type AdjustTarget = { kind: 'block' | 'free' | 'blockBg'; id: string } | null
 
 const ERROR_TEXT: Record<ReduceError, string> = {
   not_found: '대상을 찾을 수 없어요',
@@ -32,8 +34,8 @@ export interface EditorApi {
   selection: Selection
   select(s: Selection): void
   /** 사진 위치를 끌어서 조정하는 중인 이미지 블록/꾸미기(없으면 null) */
-  adjusting: Selection
-  adjust(s: Selection): void
+  adjusting: AdjustTarget
+  adjust(s: AdjustTarget): void
   /** 실패하면 false(안내 문구를 띄움) */
   dispatch(a: EditorAction, o?: CommitOptions): boolean
   /** 드래그 등 연속 조작이 끝났을 때 */
@@ -59,7 +61,7 @@ export function useEditor(initial: Theme, deps: EditorDeps): EditorApi {
   const [h, setH] = useState<History<Theme>>(() => createHistory(initial))
   const hist = useRef(h)
   const [selection, setSelection] = useState<Selection>(null)
-  const [adjusting, setAdjusting] = useState<Selection>(null)
+  const [adjusting, setAdjusting] = useState<AdjustTarget>(null)
   const [status, setStatus] = useState<SaveStatus>({ state: 'idle' })
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -112,9 +114,9 @@ export function useEditor(initial: Theme, deps: EditorDeps): EditorApi {
 
   const theme = h.present
   // 실행 취소 등으로 선택한 요소가 사라졌으면 선택 해제로 본다
-  const exists = (s: Selection) =>
-    !!s && (s.kind === 'block' ? theme.blocks : theme.freeItems).some((x) => x.id === s.id)
-  const live = exists(selection) ? selection : null
+  const exists = (s: AdjustTarget) =>
+    !!s && (s.kind === 'free' ? theme.freeItems : theme.blocks).some((x) => x.id === s.id)
+  const live: Selection = exists(selection) ? selection : null
   const liveAdjust = exists(adjusting) ? adjusting : null
 
   // 내용이 같으면 같은 객체(분 단위 시계 등으로 다시 그려질 때 [ed] 의존 콜백이 매번 바뀌지 않도록)
