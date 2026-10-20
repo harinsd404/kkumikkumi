@@ -1870,3 +1870,159 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+/* ── 일기 (2026-10-21) ── */
+.tdo-day {
+  position: relative;
+}
+.tdo-day-mood {
+  position: absolute;
+  top: 0;
+  right: 2px;
+  font-size: 13px;
+  line-height: 1;
+}
+.tdo-diary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed color-mix(in srgb, var(--t-sub) 35%, transparent);
+}
+.tdo-diary-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tdo-diary-preview {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--t-surface);
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.tdo-diary-mood {
+  flex: none;
+  font-size: 22px;
+  line-height: 1.1;
+}
+.tdo-diary-text {
+  display: -webkit-box;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  white-space: pre-line;
+}
+.tdo-diary-thumbs {
+  display: flex;
+  flex: none;
+  gap: 4px;
+}
+.tdo-diary-thumbs img {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+.dlg.tdo-diary-dlg {
+  gap: 14px;
+  width: min(620px, calc(100vw - 40px));
+  max-height: calc(100vh - 60px);
+  overflow-y: auto;
+}
+.tdo-moods {
+  display: flex;
+  gap: 8px;
+}
+.tdo-moods button {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  background: var(--t-surface);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.tdo-moods button[aria-checked='true'] {
+  border-color: var(--t-accent);
+  background: color-mix(in srgb, var(--t-accent) 22%, #ffffff);
+}
+.tdo-mood-emoji {
+  font-size: 26px;
+  line-height: 1;
+}
+.tdo-mood-label {
+  color: var(--t-sub);
+  font-size: 12px;
+  font-weight: 700;
+}
+.tdo-diary-body {
+  min-height: 180px;
+  resize: vertical;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.tdo-diary-photos {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.tdo-diary-photos figure {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 1;
+}
+.tdo-diary-photos img {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  object-fit: cover;
+}
+.tdo-diary-photos figure button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.55);
+  color: #ffffff;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.tdo-diary-add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  aspect-ratio: 1;
+  border: 1.5px dashed color-mix(in srgb, var(--t-sub) 45%, transparent);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--t-sub);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tdo-diary-add span {
+  font-size: 11px;
+  font-weight: 500;
+}

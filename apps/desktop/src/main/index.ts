@@ -84,7 +84,7 @@ void app.whenReady().then(async () => {
     app.quit()
     return
   }
-  handleAssetProtocol(core.themes)
+  handleAssetProtocol(core.themes, core.diaryPhotos)
   timer = startTimerService(core)
   const c = core
   const handlers = createHandlers({

@@ -1,5 +1,14 @@
 import { z } from 'zod'
-import { DateStr, EpochMs, HexColor, Name, PaletteSchema, PatternSchema, Uuid } from './theme'
+import {
+  DateStr,
+  EpochMs,
+  HexColor,
+  Name,
+  PaletteSchema,
+  PatternSchema,
+  Sha256,
+  Uuid,
+} from './theme'
 
 /* ════════════════════════════════════════════════════════════
  * 사용자 데이터 스키마 (테마와 독립, 내보내기 제외)
@@ -38,6 +47,28 @@ export const TodoItemSchema = z.strictObject({
   order: z.number().int(),
   /** 속한 스프린트(없으면 null). 스프린트를 지우면 null이 된다 */
   sprintId: Uuid.nullable().default(null),
+  createdAt: EpochMs,
+  updatedAt: EpochMs,
+})
+
+/* ───────── 일기(날짜마다 하나, 2026-10-21) ───────── */
+
+export const DIARY_MAX_CHARS = 20000
+export const DIARY_MAX_PHOTOS = 4
+
+/** 일기 사진: 사용자 데이터 폴더 diary/<hash>.<ext>(재인코딩한 PNG/JPEG) */
+export const DiaryPhotoSchema = z.strictObject({
+  hash: Sha256,
+  mime: z.enum(['image/png', 'image/jpeg']),
+})
+
+export const DiaryEntrySchema = z.strictObject({
+  date: DateStr,
+  /** 메모와 같은 간단 서식 원문 */
+  body: z.string().max(DIARY_MAX_CHARS),
+  /** 기분 1(힘듦)~5(최고), 고르지 않으면 null */
+  mood: z.number().int().min(1).max(5).nullable(),
+  photos: z.array(DiaryPhotoSchema).max(DIARY_MAX_PHOTOS),
   createdAt: EpochMs,
   updatedAt: EpochMs,
 })
@@ -371,5 +402,7 @@ export type TimerSession = z.infer<typeof TimerSessionSchema>
 export type ThemeRule = z.infer<typeof ThemeRuleSchema>
 export type Settings = z.infer<typeof SettingsSchema>
 export type Sprint = z.infer<typeof SprintSchema>
+export type DiaryEntry = z.infer<typeof DiaryEntrySchema>
+export type DiaryPhoto = z.infer<typeof DiaryPhotoSchema>
 export type LookColors = z.infer<typeof LookColorsSchema>
 export type ColorCombo = z.infer<typeof ColorComboSchema>

@@ -10,6 +10,7 @@ import type { Channel } from '../../../shared/channels'
 import type { PipelineOptions } from '../../assets/pipeline'
 import type { Db } from '../../db/connection'
 import { NotFoundError, type Repos } from '../../db/repos'
+import type { DiaryPhotoStore } from '../../diary/photoStore'
 import type { ThemeStore } from '../../themes/themeStore'
 import type { TimerService } from '../../timer/timerService'
 
@@ -17,6 +18,8 @@ export interface HandlerDeps {
   db: Db
   repos: Repos
   themes: ThemeStore
+  /** 일기 사진 파일 */
+  diaryPhotos: DiaryPhotoStore
   now(): number
   newId(): string
   /** 파일 선택 대화상자 → 파일 바이트. 취소하면 null. (electron 의존이라 주입) */

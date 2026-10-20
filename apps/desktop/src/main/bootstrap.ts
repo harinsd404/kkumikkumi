@@ -4,12 +4,14 @@ import { openDb, transaction, type Db } from './db/connection'
 import { migrate } from './db/migrate'
 import { migrations } from './db/migrations'
 import { createRepos, type Repos } from './db/repos'
+import { DiaryPhotoStore } from './diary/photoStore'
 import { ThemeStore } from './themes/themeStore'
 
 export interface AppCore {
   db: Db
   repos: Repos
   themes: ThemeStore
+  diaryPhotos: DiaryPhotoStore
 }
 
 export interface BootstrapDeps {
@@ -86,7 +88,14 @@ export async function bootstrap(d: BootstrapDeps): Promise<AppCore> {
         })
       }
     })
-    return { db, repos, themes }
+    // 일기에서 빠진 사진 파일 정리(최근 10분 안에 넣은 것은 저장 전일 수 있어 남긴다)
+    const diaryPhotos = new DiaryPhotoStore(join(d.userDataDir, 'diary'))
+    try {
+      await diaryPhotos.prune(repos.diary.photoHashes(), 10 * 60 * 1000, d.now())
+    } catch {
+      // 정리는 부가 작업이다
+    }
+    return { db, repos, themes, diaryPhotos }
   } catch (err) {
     db.close()
     throw err

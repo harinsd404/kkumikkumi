@@ -1,4 +1,4 @@
-import type { CalendarEvent, Sprint, TodoItem } from '@kkumikkumi/schema'
+import type { CalendarEvent, DiaryEntry, Sprint, TodoItem } from '@kkumikkumi/schema'
 import { useMemo, useState } from 'react'
 import './pages.css'
 import type { BoardActions, TodoData } from '../board/BoardContext'
@@ -12,6 +12,8 @@ import { sprintBadge, sprintItems, sprintProgress, sprintsOn } from '../board/sp
 import { CategoryList } from './todo/CategoryList'
 import { MiniMonth } from './todo/MiniMonth'
 import { SprintList } from './todo/SprintList'
+import { DiaryCard, DiaryDialog } from './todo/Diary'
+import { useDiary } from './todo/useDiary'
 import { dueForView, remainingByDay, VIEW_LABEL, viewSections, type TodoView } from './todoView'
 
 interface Props {
@@ -136,6 +138,9 @@ function SplitView({
   const sections = todos ? viewSections(todos.lists, todos.items, view, date, today, query) : []
   const dayEvents = dayData.events.get(date) ?? []
   const sprints = todos?.sprints ?? []
+  const diary = useDiary(days[0], days[days.length - 1], date)
+  /** 일기 창: 열 때의 일기를 잡아 둔다(저장할 때마다 다시 읽어도 창이 새로 만들어지지 않도록) */
+  const [diaryDlg, setDiaryDlg] = useState<{ date: string; entry: DiaryEntry | null } | null>(null)
   const empty = view !== 'sprint' && sections.every((s) => s.items.length === 0)
 
   return (
@@ -166,6 +171,7 @@ function SplitView({
           </div>
         </header>
         <MiniMonth
+          moods={diary.moods}
           sprints={sprints}
           month={month}
           selected={date}
@@ -175,6 +181,20 @@ function SplitView({
           events={dayData.events}
           onSelect={onPick}
         />
+        <DiaryCard
+          date={date}
+          entry={diary.entry}
+          onOpen={() => diary.entry !== undefined && setDiaryDlg({ date, entry: diary.entry })}
+        />
+        {diaryDlg && (
+          <DiaryDialog
+            key={diaryDlg.date}
+            date={diaryDlg.date}
+            entry={diaryDlg.entry}
+            api={diary}
+            onClose={() => setDiaryDlg(null)}
+          />
+        )}
         <button type="button" className="pg-pill tdo-big" onClick={() => onBig(true)}>
           달력 크게 보기 (월·주·일)
         </button>

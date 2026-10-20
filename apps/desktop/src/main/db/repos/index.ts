@@ -1,5 +1,6 @@
 import type { Db } from '../connection'
 import { CalendarRepo } from './calendar'
+import { DiaryRepo } from './diary'
 import { MemoRepo } from './memos'
 import { SettingsRepo } from './settings'
 import { SprintRepo } from './sprints'
@@ -14,6 +15,7 @@ export interface Repos {
   todo: TodoRepo
   sprints: SprintRepo
   calendar: CalendarRepo
+  diary: DiaryRepo
   timer: TimerRepo
   timerSessions: TimerSessionRepo
   memos: MemoRepo
@@ -28,6 +30,7 @@ export const createRepos = (db: Db): Repos => ({
   todo: new TodoRepo(db),
   sprints: new SprintRepo(db),
   calendar: new CalendarRepo(db),
+  diary: new DiaryRepo(db),
   timer: new TimerRepo(db),
   timerSessions: new TimerSessionRepo(db),
   memos: new MemoRepo(db),

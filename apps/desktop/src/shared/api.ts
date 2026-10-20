@@ -5,6 +5,8 @@ import type {
   ThemeLook,
   ThemeTemplateId,
   CalendarEvent,
+  DiaryEntry,
+  DiaryPhoto,
   ColorCombo,
   LookColors,
   McpMode,
@@ -71,6 +73,14 @@ export interface ImportedAsset {
 
 type Id = { id: string }
 type CalendarInput = Record<string, unknown>
+
+/** 달력에 표시할 일기 요약 */
+export interface DiarySummary {
+  date: string
+  mood: number | null
+  hasText: boolean
+  photoCount: number
+}
 
 /** 스프린트 만들기/고치기 입력 */
 export interface SprintFields {
@@ -139,6 +149,24 @@ export interface IpcSpec {
   }
   'todo.items.delete': { in: Id; out: null }
   'todo.items.reorder': { in: { listId: string; ids: string[] }; out: null }
+  /** 그날 일기(없으면 null) */
+  'diary.get': { in: { date: string }; out: DiaryEntry | null }
+  /** 기간 안 일기 요약(달력 표시용, 최대 400일) */
+  'diary.range': { in: { fromDate: string; toDate: string }; out: DiarySummary[] }
+  /** 준 값만 바꾼다. 글·기분·사진이 모두 비면 지우고 null */
+  'diary.save': {
+    in: {
+      date: string
+      body?: string
+      mood?: number | null
+      photos?: DiaryPhoto[]
+    }
+    out: DiaryEntry | null
+  }
+  'diary.delete': { in: { date: string }; out: null }
+  /** 사진 고르기 → 재인코딩해 일기 사진 폴더에. 취소하면 null(아직 일기에 붙지 않음) */
+  'diary.photoFromDialog': { in: undefined; out: DiaryPhoto | null }
+  'diary.photoFromBytes': { in: { bytes: Uint8Array }; out: DiaryPhoto }
   /** 스프린트(시작 날짜 순) */
   'sprints.list': { in: undefined; out: Sprint[] }
   /** 최대 50개, 넘으면 conflict */

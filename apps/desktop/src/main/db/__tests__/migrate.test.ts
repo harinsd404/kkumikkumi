@@ -18,6 +18,7 @@ describe('migrate', () => {
     expect(getUserVersion(db)).toBe(migrations.length)
     expect(tables(db)).toEqual([
       'calendar_events',
+      'diary_entries',
       'memos',
       'settings',
       'sprints',

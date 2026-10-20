@@ -1,4 +1,5 @@
 import type { CalendarEvent, Sprint } from '@kkumikkumi/schema'
+import { moodEmoji } from '../../board/diary'
 import { sprintsOn } from '../../board/sprint'
 import { monthGrid, weekdayLabels } from '../../board/calendar'
 import { dateParts } from '../dateText'
@@ -15,6 +16,7 @@ export function MiniMonth({
   counts,
   events,
   sprints,
+  moods,
   onSelect,
 }: {
   /** 보여 줄 달의 아무 날짜 */
@@ -27,6 +29,8 @@ export function MiniMonth({
   events: ReadonlyMap<string, readonly CalendarEvent[]>
   /** 기간이 걸친 날 아래에 색 줄 */
   sprints: readonly Sprint[]
+  /** 날짜 → 일기 기분(1~5) */
+  moods: ReadonlyMap<string, number>
   onSelect(date: string): void
 }) {
   const [y, m] = dateParts(month)
@@ -56,6 +60,11 @@ export function MiniMonth({
             aria-label={`${c.day}일${n ? `, 할 일 ${n}개` : ''}${evs.length ? `, 일정 ${evs.length}개` : ''}`}
             onClick={() => onSelect(c.date)}
           >
+            {moods.has(c.date) && (
+              <span className="tdo-day-mood" aria-hidden>
+                {moodEmoji(moods.get(c.date))}
+              </span>
+            )}
             <span className={`tdo-badge ${n ? 'has-count' : ''}`} aria-hidden>
               {n > 0 ? (n > 99 ? '99+' : n) : ''}
             </span>

@@ -12,6 +12,14 @@ describe('parseAssetUrl', () => {
       ext: 'png',
     })
   })
+  it('일기 사진 URL', () => {
+    expect(parseAssetUrl(`kkumi-asset://diary/${hash}.jpg`)).toEqual({
+      themeId: 'diary',
+      hash,
+      ext: 'jpg',
+    })
+    expect(parseAssetUrl(`kkumi-asset://diaries/${hash}.jpg`)).toBeNull()
+  })
   it.each([
     [`kkumi-asset://${id}/../${hash}.png`, '상위 경로'],
     [`kkumi-asset://${id}/%2e%2e/${hash}.png`, '인코딩된 상위 경로'],

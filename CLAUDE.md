@@ -250,7 +250,10 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
   - IPC sprints.list/create/update/delete, todo.items.create/update의 sprintId(zod 재검증). MCP list_sprints/create_sprint/update_sprint/delete_sprint, add_todo·update_todo·list_todos의 sprintId.
   - 화면: 할 일 화면 "스프린트" 탭(진행 중→예정→끝남 카드: 기간, D-N, 목표, 진행률, 남은 일·끝낸 일, + 할 일(카테고리 고르기), 수정·삭제), "이 날" 보기에 그날 걸친 스프린트, 작은 달력에 기간 색 줄, 할 일 상세 스프린트 고르기.
   - sprint 블록(S 한 줄 / M 남은 일 체크): props.sprintId null = 진행 중 먼저 끝나는 것(없으면 가장 가까운 예정). 계산은 순수 함수(board/sprint.ts) + 테스트.
-- [ ] **캘린더 일기 (2026-10-20 사용자 지시)** — 날짜마다 글(간단 서식) + 기분(5단계) + 사진. 사진은 사용자 데이터 폴더에 재인코딩해 저장. 달력 칸에 기분 표시.
+- [x] **캘린더 일기 (2026-10-20 사용자 지시)** — 날짜마다 글 + 기분(5단계) + 사진(최대 4장).
+  - 데이터: diary_entries(날짜 PK, 글 최대 2만 자, 기분 1~5, 사진 목록 JSON, 마이그레이션 008). 사진은 userData/diary/<hash>.<ext>(sharp 재인코딩, 폴더 0700), kkumi-asset://diary/로 표시. 앱이 저장한 사진만 참조 가능, 쓰지 않는 사진은 시작할 때 정리(10분 유예). 글·기분·사진이 모두 비면 지운다. 테마/내보내기와 무관.
+  - IPC diary.get/range(최대 400일)/save(준 값만)/delete/photoFromDialog/photoFromBytes(zod 재검증). AI 연결(MCP)에는 열지 않는다(개인적인 내용, AI 서비스로 전송되므로).
+  - 화면: 할 일 화면 왼쪽 작은 달력 아래 일기 카드(기분, 글 3줄, 사진), 일기 창(기분 5개, 글 자동 저장, 사진 넣기·빼기·끌어 놓기, 지우기), 작은 달력 칸에 기분 이모지.
 - [ ] **습관 체크 (2026-10-20 사용자 지시)** — 매일 체크, 연속 기록, 이번 주 칸. 위젯 + 페이지.
 
 - [ ] **M0 펫 프로토타입(스파이크)** — 코드 품질이 아니라 "되는가"를 검증. 수동 확인이 끝나기 전에는 체크하지 않는다.

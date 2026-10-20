@@ -6,6 +6,7 @@ import { m004Memos } from './004_memos'
 import { m005Timetable } from './005_timetable'
 import { m006Timetables } from './006_timetables'
 import { m007Sprints } from './007_sprints'
+import { m008Diary } from './008_diary'
 
 export const migrations: readonly Migration[] = [
   m001Init,
@@ -15,4 +16,5 @@ export const migrations: readonly Migration[] = [
   m005Timetable,
   m006Timetables,
   m007Sprints,
+  m008Diary,
 ]

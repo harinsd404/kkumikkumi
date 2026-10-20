@@ -56,6 +56,8 @@ claude mcp add kkumikkumi -- /usr/bin/nc -U "/Users/<사용자>/Library/Applicat
 | `get_timetable`, `get_timer`                                                | `set_timetable`(시간표 생성/전체 교체)                                 |
 | `list_sprints`(상태, 남은 날, 끝낸 일/전체)                                 | `create_sprint`, `update_sprint`, `delete_sprint`(할 일은 남음)        |
 
+일기(캘린더 일기)는 개인적인 내용이라 도구로 열지 않는다(읽기만 모드에서도).
+
 지우기 도구와 전체 교체 도구 `set_timetable`에는 `destructiveHint: true`를 단다. 확인 UI를 띄울지는 AI 앱이 결정한다. 테마, 에셋, 앱 설정은 열지 않는다.
 
 ### 시간표 저장

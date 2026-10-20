@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   CalendarEventSchema,
+  DiaryEntrySchema,
   DEFAULT_POMODORO,
   PomodoroSettingsSchema,
   ThemeRuleSchema,
@@ -116,4 +117,30 @@ describe('ThemeRuleSchema', () => {
     ).toBe(false))
   it('요일 중복 거부', () =>
     expect(ThemeRuleSchema.safeParse(rule({ weekdays: [1, 1] })).success).toBe(false))
+})
+
+describe('일기', () => {
+  const ok = {
+    date: '2026-10-20',
+    body: '시험 끝',
+    mood: 5,
+    photos: [{ hash: 'a'.repeat(64), mime: 'image/jpeg' }],
+    createdAt: 1,
+    updatedAt: 1,
+  }
+  it('기분 1~5 또는 null, 사진 4장까지, 사진은 해시와 PNG/JPEG만', () => {
+    expect(DiaryEntrySchema.safeParse(ok).success).toBe(true)
+    expect(DiaryEntrySchema.safeParse({ ...ok, mood: null }).success).toBe(true)
+    expect(DiaryEntrySchema.safeParse({ ...ok, mood: 0 }).success).toBe(false)
+    expect(DiaryEntrySchema.safeParse({ ...ok, photos: Array(5).fill(ok.photos[0]) }).success).toBe(
+      false,
+    )
+    expect(
+      DiaryEntrySchema.safeParse({
+        ...ok,
+        photos: [{ hash: 'a'.repeat(64), mime: 'image/svg+xml' }],
+      }).success,
+    ).toBe(false)
+    expect(DiaryEntrySchema.safeParse({ ...ok, path: '/etc/passwd' }).success).toBe(false)
+  })
 })

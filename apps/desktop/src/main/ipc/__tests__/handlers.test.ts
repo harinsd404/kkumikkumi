@@ -715,3 +715,53 @@ describe('sprints', () => {
     expect(items.find((x) => x.id === t.id)?.sprintId).toBeNull()
   })
 })
+
+describe('diary', () => {
+  const png = () =>
+    sharp({ create: { width: 40, height: 30, channels: 3, background: '#3a7bd5' } })
+      .png()
+      .toBuffer()
+      .then((b) => new Uint8Array(b))
+  it('준 값만 바꾸고, 다 비우면 지운다', async () => {
+    const a = await h['diary.save']({ date: '2026-10-21', body: '시험 끝!', mood: 5 })
+    expect(a).toMatchObject({ body: '시험 끝!', mood: 5, photos: [] })
+    const b = await h['diary.save']({ date: '2026-10-21', mood: 3 })
+    expect(b).toMatchObject({ body: '시험 끝!', mood: 3, createdAt: a!.createdAt })
+    expect(await h['diary.save']({ date: '2026-10-21', body: '  ', mood: null })).toBeNull()
+    expect(await h['diary.get']({ date: '2026-10-21' })).toBeNull()
+  })
+  it('사진은 앱이 저장한 것만, 기간 요약, 잘못된 입력 거부', async () => {
+    const photo = await h['diary.photoFromBytes']({ bytes: await png() })
+    expect(photo.mime).toMatch(/image\/(png|jpeg)/)
+    expect(await stat(env.core.diaryPhotos.path(photo))).toBeTruthy()
+    await h['diary.save']({ date: '2026-10-20', photos: [photo] })
+    expect(
+      await codeOf(
+        h['diary.save']({
+          date: '2026-10-20',
+          photos: [{ hash: 'f'.repeat(64), mime: 'image/png' }],
+        }),
+      ),
+    ).toBe('not_found')
+    expect(await codeOf(h['diary.save']({ date: '2026-10-20', photos: [photo, photo] }))).toBe(
+      'invalid_input',
+    )
+    expect(await codeOf(h['diary.save']({ date: '2026-10-20', mood: 9 }))).toBe('invalid_input')
+    await h['diary.save']({ date: '2026-10-22', body: '맑음' })
+    expect(await h['diary.range']({ fromDate: '2026-10-01', toDate: '2026-10-31' })).toEqual([
+      { date: '2026-10-20', mood: null, hasText: false, photoCount: 1 },
+      { date: '2026-10-22', mood: null, hasText: true, photoCount: 0 },
+    ])
+    expect(await codeOf(h['diary.range']({ fromDate: '2026-01-01', toDate: '2027-12-31' }))).toBe(
+      'invalid_input',
+    )
+  })
+  it('일기에서 빠진 사진 파일은 유예 시간이 지나면 정리된다', async () => {
+    const photo = await h['diary.photoFromBytes']({ bytes: await png() })
+    const store = env.core.diaryPhotos
+    expect(await store.prune(new Set(), 10 * 60 * 1000, Date.now())).toBe(0) // 방금 만든 파일은 남긴다
+    expect(await store.prune(new Set([photo.hash]), 0, Date.now() + 1000)).toBe(0)
+    expect(await store.prune(new Set(), 0, Date.now() + 1000)).toBe(1)
+    expect(await store.exists(photo)).toBe(false)
+  })
+})
