@@ -16,7 +16,7 @@ import {
 import { localDate, localDayStart, timeLabel, addDays, weekOf } from '../board/calendar'
 import { useSecondClock } from '../board/useSecondClock'
 import { dateParts, monthDay, weekdayLabel } from './dateText'
-import { focusByDay, formatDuration, lastDays, summarize } from './timerStats'
+import { focusByDay, formatDuration, lastDays, summarize } from '../board/timerStats'
 import './pages.css'
 
 interface Props {

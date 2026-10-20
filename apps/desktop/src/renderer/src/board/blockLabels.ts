@@ -11,6 +11,9 @@ export const WIDGET_LABEL: Record<GridBlock['type'], string> = {
   memo: '메모',
   timetable: '시간표',
   dday: '디데이',
+  studyStats: '공부 통계',
+  progress: '진행률',
+  clock: '시계',
 }
 
 /** 인스펙터 제목("투두 블록") */
@@ -22,4 +25,7 @@ export const BLOCK_TYPE_LABEL: Record<GridBlock['type'], string> = {
   memo: '메모',
   timetable: '시간표',
   dday: '디데이',
+  studyStats: '공부 통계',
+  progress: '진행률',
+  clock: '시계',
 }

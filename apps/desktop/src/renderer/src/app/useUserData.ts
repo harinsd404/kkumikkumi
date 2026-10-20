@@ -187,6 +187,10 @@ export function useUserData(onError: (text: string) => void): UserData {
             else onError(errText(r.error.code))
           })()
         },
+        sessions: async (fromMs, toMs) => {
+          const r = await window.kkumi.invoke('timer.sessions', { fromMs, toMs })
+          return r.ok ? r.value : []
+        },
       },
     }),
     [run, runOk, onError],

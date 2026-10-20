@@ -5,6 +5,7 @@ import type {
   Memo,
   PomodoroSettings,
   Theme,
+  TimerSession,
   TimerState,
   TodoItem,
   TodoList,
@@ -74,6 +75,8 @@ export interface BoardActions {
   }
   timer: {
     command(c: TimerCommand): void
+    /** 끝난 시각이 [fromMs, toMs) 안인 타이머 기록(공부 통계 블록). 불러오지 못하면 빈 배열 */
+    sessions?(fromMs: number, toMs: number): Promise<TimerSession[]>
   }
   /** 메모 체크리스트 한 줄 토글(없으면 메모 블록은 읽기 전용) */
   memo?: {

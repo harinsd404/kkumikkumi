@@ -3,6 +3,7 @@ import { Row, Section, Segmented } from '../fields'
 import type { EditorApi } from '../useEditor'
 import { ImageContentFields } from './decor'
 import { groupOf } from './group'
+import { ClockFields, ProgressFields } from './widgetFields'
 import {
   DdayFields,
   MemoFields,
@@ -150,6 +151,31 @@ export function BlockProps({
             자동은 오늘 이후 가장 가까운 일정을 보여 주고, 지나면 다음 일정으로 넘어가요. 고정한
             일정은 지난 뒤에도 D+로 계속 세요. 일정은 캘린더에서 만들어요.
           </p>
+        </Section>
+      )
+    case 'studyStats':
+      return (
+        <Section title="공부 통계">
+          <p className="ki-note">
+            타이머의 집중 기록으로 오늘·이번 주 집중 시간과 연속 공부한 날을 보여 줘요. 누르면
+            타이머 화면이 열려요.
+          </p>
+        </Section>
+      )
+    case 'progress':
+      return (
+        <Section title="진행률">
+          <ProgressFields
+            props={block.props}
+            small={block.size === 'S'}
+            onChange={(patch, key) => set(patch, key)}
+          />
+        </Section>
+      )
+    case 'clock':
+      return (
+        <Section title="시계">
+          <ClockFields props={block.props} onChange={(patch) => set(patch)} />
         </Section>
       )
     case 'image':

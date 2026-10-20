@@ -1,12 +1,11 @@
 import { z } from 'zod'
-import { EpochMs, HexColor, Name, PaletteSchema, PatternSchema, Uuid } from './theme'
+import { DateStr, EpochMs, HexColor, Name, PaletteSchema, PatternSchema, Uuid } from './theme'
 
 /* ════════════════════════════════════════════════════════════
  * 사용자 데이터 스키마 (테마와 독립, 내보내기 제외)
  * 저장소: SQLite 권장. 아래는 행 단위 검증 + 타입 용도.
  * ════════════════════════════════════════════════════════════ */
 
-export const DateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/) // 로컬 날짜 (타임존 무관)
 export const TimeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)
 
 const isValidTz = (tz: string) => {

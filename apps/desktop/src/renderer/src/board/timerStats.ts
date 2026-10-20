@@ -1,4 +1,4 @@
-import { addDays, localDate } from '../board/calendar'
+import { addDays, localDate } from './calendar'
 
 // 타이머 기록 통계(순수 함수). 기록은 끝난 시각의 로컬 날짜로 센다(자정을 넘긴 집중은 끝난 날에 들어간다).
 
@@ -54,4 +54,21 @@ export function formatDuration(ms: number): string {
   const m = min % 60
   if (h === 0) return `${m}분`
   return m === 0 ? `${h}시간` : `${h}시간 ${m}분`
+}
+
+/**
+ * 연속 공부한 날 수: 오늘부터 거꾸로 집중 기록이 있는 날을 센다.
+ * 오늘 아직 안 했으면 어제부터 센다(아침에 0으로 끊기지 않도록).
+ */
+export function studyStreak(sessions: readonly SessionLike[], today: string): number {
+  const days = new Set(
+    sessions.filter((s) => s.kind === 'focus' && s.actualMs > 0).map((s) => localDate(s.endedAt)),
+  )
+  let d = days.has(today) ? today : addDays(today, -1)
+  let n = 0
+  while (days.has(d)) {
+    n++
+    d = addDays(d, -1)
+  }
+  return n
 }

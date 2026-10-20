@@ -18,7 +18,7 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
 - 스택: Electron + React + TypeScript(strict), Vite 기반, pnpm 모노레포.
 - 보드는 일반 창이다(바탕화면 레벨 아님). 펫은 별도 창이다.
 - 레이아웃
-  - 그리드 블록: 크기는 S/M/L(+ image 전용 W 배너), 퍼즐처럼 배치. 타입은 calendar, todo, timer, image, memo, timetable, dday. 셀 수는 타입별 크기표(packages/schema BLOCK_SIZES, 2026-10-12 시안 기준).
+  - 그리드 블록: 크기는 S/M/L(+ image 전용 W 배너), 퍼즐처럼 배치. 타입은 calendar, todo, timer, image, memo, timetable, dday, studyStats, progress, clock. 셀 수는 타입별 크기표(packages/schema BLOCK_SIZES, 2026-10-12 시안 기준).
   - 디자인 시안: Figma 파일 mJL2BsO51Ir9l9z4wK1lDI (3:1079 푸딩 아침, 6:2384 코튼캔디). 시안 1280x800(+타이틀바 36) = 논리 캔버스 1600x1000의 0.8배. 블록 바깥 여백/간격 25(논리 px)는 렌더러에서만 적용.
   - 기본 테마(2026-10-14 사용자 지시): 푸딩 아침, 코튼캔디는 앱 내장 테마로 항상 있다(고정 ID, 없으면 시작 시 생성). 이름 바꾸기/삭제 불가, 색·글꼴·배치는 수정 가능하고 "처음 상태로 되돌리기" 제공. 새 테마는 프리셋 복사가 아니라 "새로 만들기" 창(이름, 색, 무늬, 글꼴, 배치 템플릿)으로 만든다.
   - 테마 색은 defaults.palette(text, subText, accent, check, surface, control), 배경은 색 + 내장 무늬(stars/dots). 블록 style의 null 값은 팔레트로 대체.
@@ -46,7 +46,7 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
 ## 가정 (미확정, 변경 가능)
 
 - 창 비율 전역 고정(16:10).
-- 크기표(2026-10-12 시안 반영): 8x5 그리드(1칸 200px). calendar M=2x2/L=4x3, todo S=2x2/M=2x3/L=4x3, timer S=2x1/M=2x2, image S=2x1/M=2x2/L=4x3/W=8x1, memo S=2x2/M=2x3/L=4x3, timetable S=2x2/M=2x3/L=4x3, dday S=2x1/M=2x2. 단일 출처는 packages/schema의 BLOCK_SIZES.
+- 크기표(2026-10-12 시안 반영): 8x5 그리드(1칸 200px). calendar M=2x2/L=4x3, todo S=2x2/M=2x3/L=4x3, timer S=2x1/M=2x2, image S=2x1/M=2x2/L=4x3/W=8x1, memo S=2x2/M=2x3/L=4x3, timetable S=2x2/M=2x3/L=4x3, dday S=2x1/M=2x2, studyStats·progress·clock S=2x1/M=2x2. 단일 출처는 packages/schema의 BLOCK_SIZES.
 - 창: 앱이 그리는 타이틀바 36px(titleBarStyle hiddenInset) + 보드 16:10. setAspectRatio(16/10, { height: 36 }).
 - 이미지 블록/스티커 업로드는 PNG/JPG/WebP 허용, 펫 이미지는 PNG만.
 - 펫 이동 방식(작은 창 이동 vs 하단 오버레이)은 M0 스파이크 결과로 결정.
@@ -234,6 +234,16 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
   - 타이틀바 톱니 탭(아이콘만) + 앱 메뉴 "설정…"(⌘,). 보드 창 안 세부 페이지, 테마 팔레트/글꼴.
   - 구역: 테마(실제 보드 미리보기 카드로 고르기 — 지금 데이터, 지금 테마는 저장 전 변경까지, 새로 만들기, 관리), 타이머(뽀모도로 설정 — 타이머 페이지와 같은 상태, 미니 타이머 항상 위), AI 연결(기존 "AI 연결…" 창을 옮김, 메뉴는 이 구역으로 스크롤), 정보(버전, 오류 기록/데이터 폴더 열기 — IPC app.info, app.openFolder는 logs/userData만).
   - 펫 켜기/끄기(M5), 테마 자동 전환(M6)은 기능이 생길 때 이 페이지에 붙인다.
+
+- [x] **위젯 3종: 공부 통계, 진행률, 시계 (2026-10-20 사용자 지시)**
+  - studyStats(설정 없음): 타이머 기록으로 오늘·이번 주(최근 7일) 집중 시간, 오늘 완료 횟수, 연속 공부한 날(오늘 아직이면 어제부터), M은 7일 막대. 누르면 타이머 화면. BoardActions.timer.sessions로 읽고 타이머가 바뀌면 다시 읽는다.
+  - progress: 기간 1~3개(오늘/이번 주/이번 달/올해/직접 지정 이름·시작~끝), 주 시작 요일. S는 첫 기간. 테마 파일에 저장하는 블록 설정이라 가져올 때 치환할 참조 없음.
+  - clock: 디지털(24시간/오전·오후)·아날로그, 날짜 보이기. 보드 분 단위 시계로 갱신.
+  - 계산은 순수 함수(board/progress.ts, board/timerStats.ts) + 테스트. 위젯 갤러리(데이터 없으면 예시), 인스펙터 설정.
+
+- [ ] **스프린트(기간 할 일) (2026-10-20 사용자 지시)** — "중간고사 대비 10/20~11/2"처럼 기간·목표를 만들고 그 안에 할 일을 넣는다. 진행률(끝낸 일/전체), 남은 날, 위젯·달력에 기간 표시. 사용자 데이터 + 마이그레이션 + IPC + MCP.
+- [ ] **캘린더 일기 (2026-10-20 사용자 지시)** — 날짜마다 글(간단 서식) + 기분(5단계) + 사진. 사진은 사용자 데이터 폴더에 재인코딩해 저장. 달력 칸에 기분 표시.
+- [ ] **습관 체크 (2026-10-20 사용자 지시)** — 매일 체크, 연속 기록, 이번 주 칸. 위젯 + 페이지.
 
 - [ ] **M0 펫 프로토타입(스파이크)** — 코드 품질이 아니라 "되는가"를 검증. 수동 확인이 끝나기 전에는 체크하지 않는다.
   - spikes/pet-proto/ 에 독립 Electron 프로젝트. 키 내용/키 코드는 읽지도 로깅하지도 않는다.

@@ -34,6 +34,9 @@ export const BLOCK_SIZES = {
   memo: { S: { w: 2, h: 2 }, M: { w: 2, h: 3 }, L: { w: 4, h: 3 } },
   timetable: { S: { w: 2, h: 2 }, M: { w: 2, h: 3 }, L: { w: 4, h: 3 } },
   dday: { S: { w: 2, h: 1 }, M: { w: 2, h: 2 } },
+  studyStats: { S: { w: 2, h: 1 }, M: { w: 2, h: 2 } },
+  progress: { S: { w: 2, h: 1 }, M: { w: 2, h: 2 } },
+  clock: { S: { w: 2, h: 1 }, M: { w: 2, h: 2 } },
 } as const satisfies Record<
   string,
   Partial<Record<'S' | 'M' | 'L' | 'W', { w: number; h: number }>>
@@ -72,6 +75,7 @@ export const HexColor = z.string().regex(/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/)
 export const FontId = z.string().regex(/^[a-z0-9-]{1,40}$/)
 export const BuiltinId = z.string().regex(/^[a-z0-9-]{1,40}$/)
 export const EpochMs = z.number().int().nonnegative()
+export const DateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/) // 로컬 날짜 (타임존 무관)
 export const Name = z.string().trim().min(1).max(40)
 
 /* ───────── 스타일 (구조화된 값만 허용, 원시 CSS 문자열 금지) ───────── */
@@ -109,6 +113,20 @@ export const ImageContentSchema = z.strictObject({
   }),
   shape: z.enum(['rect', 'circle']), // 둥근 모서리는 style/decor.radius 사용
 })
+
+/* ───────── 진행률 블록의 기간 ───────── */
+
+export const ProgressPeriodSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.enum(['day', 'week', 'month', 'year']) }),
+  z
+    .strictObject({
+      kind: z.literal('custom'),
+      label: z.string().trim().min(1).max(20),
+      start: DateStr,
+      end: DateStr,
+    })
+    .refine((p) => p.start <= p.end, '끝 날짜가 시작 날짜보다 앞이에요'),
+])
 
 /* ───────── 그리드 블록 ───────── */
 
@@ -168,6 +186,30 @@ export const BlockSchema = z.discriminatedUnion('type', [
       // 사용자 데이터(시간표) 참조. null = 고른 시간표 따라가기. 가져올 때 null로 치환.
       // 시간표가 하나뿐이던 때 저장한 블록({})은 null로 읽는다.
       timetableId: Uuid.nullable().default(null),
+    }),
+  }),
+  z.strictObject({
+    ...blockBase,
+    type: z.literal('studyStats'),
+    // 타이머 기록(사용자 데이터)으로 계산만 한다. 설정 없음.
+    props: z.strictObject({}),
+  }),
+  z.strictObject({
+    ...blockBase,
+    type: z.literal('progress'),
+    props: z.strictObject({
+      /** 보여 줄 기간(S는 첫 번째만). 직접 지정은 이름과 시작~끝 날짜(끝 날 포함) */
+      periods: z.array(ProgressPeriodSchema).min(1).max(3),
+      weekStartsOn: z.union([z.literal(0), z.literal(1)]),
+    }),
+  }),
+  z.strictObject({
+    ...blockBase,
+    type: z.literal('clock'),
+    props: z.strictObject({
+      face: z.enum(['digital', 'analog']),
+      hour12: z.boolean(),
+      showDate: z.boolean(),
     }),
   }),
   z.strictObject({
@@ -398,5 +440,6 @@ export type Asset = z.infer<typeof AssetSchema>
 export type BlockSize = z.infer<typeof SizeSchema>
 export type Palette = z.infer<typeof PaletteSchema>
 export type Pattern = z.infer<typeof PatternSchema>
+export type ProgressPeriod = z.infer<typeof ProgressPeriodSchema>
 
 export const parseTheme = (raw: unknown) => ThemeSchema.safeParse(raw)

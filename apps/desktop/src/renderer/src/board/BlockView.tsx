@@ -1,7 +1,7 @@
 import type { GridBlock } from '@kkumikkumi/schema'
 import { useRef, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react'
 import { WIDGET_LABEL } from './blockLabels'
-import { useBoard } from './BoardContext'
+import { useBoard, type PageType } from './BoardContext'
 import { CalendarBlock } from './blocks/CalendarBlock'
 import { ImageBlock } from './blocks/ImageBlock'
 import { DdayBlock } from './blocks/DdayBlock'
@@ -9,12 +9,27 @@ import { MemoBlock } from './blocks/MemoBlock'
 import { TimerBlock } from './blocks/TimerBlock'
 import { TimetableBlock } from './blocks/TimetableBlock'
 import { TodoBlock } from './blocks/TodoBlock'
+import { ClockBlock } from './blocks/ClockBlock'
+import { ProgressBlock } from './blocks/ProgressBlock'
+import { StudyStatsBlock } from './blocks/StudyStatsBlock'
 import type { Box } from './layout'
 import { cardCss } from './style'
 
-/** 블록 → 누르면 열 세부 페이지(디데이는 캘린더) */
-const pageOf = (type: GridBlock['type']) =>
-  type === 'image' ? null : type === 'dday' ? 'calendar' : type
+/** 블록 → 누르면 열 세부 페이지(디데이는 캘린더, 공부 통계는 타이머, 진행률·시계·이미지는 없음) */
+const pageOf = (type: GridBlock['type']): PageType | null => {
+  switch (type) {
+    case 'image':
+    case 'progress':
+    case 'clock':
+      return null
+    case 'dday':
+      return 'calendar'
+    case 'studyStats':
+      return 'timer'
+    default:
+      return type
+  }
+}
 
 /** 블록 안에서 자기 동작이 있는 요소(누르면 세부 페이지를 열지 않는다) */
 const INTERACTIVE = 'button, input, select, textarea, a, label, [role="button"], [data-no-open]'
@@ -63,6 +78,9 @@ export function BlockView({ block, box }: { block: GridBlock; box: Box }) {
       {block.type === 'memo' && <MemoBlock block={block} />}
       {block.type === 'timetable' && <TimetableBlock block={block} />}
       {block.type === 'dday' && <DdayBlock block={block} />}
+      {block.type === 'studyStats' && <StudyStatsBlock block={block} />}
+      {block.type === 'progress' && <ProgressBlock block={block} />}
+      {block.type === 'clock' && <ClockBlock block={block} />}
     </section>
   )
 }

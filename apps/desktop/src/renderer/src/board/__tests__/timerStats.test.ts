@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { localDateTime } from '../../board/calendar'
-import { focusByDay, formatDuration, lastDays, summarize } from '../timerStats'
+import { localDateTime } from '../calendar'
+import { focusByDay, formatDuration, lastDays, studyStreak, summarize } from '../timerStats'
 
 declare const process: { env: Record<string, string | undefined> }
 const prev = process.env['TZ']
@@ -67,5 +67,21 @@ describe('타이머 통계', () => {
     expect(formatDuration(25 * MIN + 59_000)).toBe('25분')
     expect(formatDuration(60 * MIN)).toBe('1시간')
     expect(formatDuration(125 * MIN)).toBe('2시간 5분')
+  })
+})
+
+describe('studyStreak', () => {
+  const at = (date: string, ms = 25 * 60_000, kind: 'focus' | 'break' = 'focus') => ({
+    kind,
+    endedAt: localDateTime(date, '20:00'),
+    actualMs: ms,
+    completed: true,
+  })
+  it('오늘부터 거꾸로 이어진 날, 오늘 아직이면 어제부터, 휴식은 세지 않는다', () => {
+    const s = [at('2026-10-18'), at('2026-10-19'), at('2026-10-20'), at('2026-10-16')]
+    expect(studyStreak(s, '2026-10-20')).toBe(3)
+    expect(studyStreak(s, '2026-10-21')).toBe(3)
+    expect(studyStreak(s, '2026-10-22')).toBe(0)
+    expect(studyStreak([at('2026-10-20', 60_000, 'break')], '2026-10-20')).toBe(0)
   })
 })

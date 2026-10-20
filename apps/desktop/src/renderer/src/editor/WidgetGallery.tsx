@@ -70,6 +70,30 @@ const GALLERY: readonly GalleryGroup[] = [
     ],
   },
   {
+    type: 'studyStats',
+    label: WIDGET_LABEL.studyStats,
+    sizes: [
+      { size: 'S', label: '한 줄' },
+      { size: 'M', label: '이번 주' },
+    ],
+  },
+  {
+    type: 'progress',
+    label: WIDGET_LABEL.progress,
+    sizes: [
+      { size: 'S', label: '한 줄' },
+      { size: 'M', label: '세 기간' },
+    ],
+  },
+  {
+    type: 'clock',
+    label: WIDGET_LABEL.clock,
+    sizes: [
+      { size: 'S', label: '한 줄' },
+      { size: 'M', label: '크게' },
+    ],
+  },
+  {
     type: 'image',
     label: WIDGET_LABEL.image,
     sizes: [

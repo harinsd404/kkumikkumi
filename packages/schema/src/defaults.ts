@@ -230,6 +230,9 @@ const defaultProps = {
   memo: { memoId: null },
   timetable: { timetableId: null },
   dday: { eventId: null },
+  studyStats: {},
+  progress: { periods: [{ kind: 'week' }, { kind: 'month' }, { kind: 'year' }], weekStartsOn: 1 },
+  clock: { face: 'digital', hour12: false, showDate: true },
 } as const
 
 /** 새 그리드 블록(시안의 흰 카드 스타일). 위치/크기 유효성은 호출 측(에디터 리듀서)이 확인한다. */

@@ -916,3 +916,186 @@ button.kc-chip {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ── 공부 통계 ── */
+.kst {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  padding: 25px;
+  font-weight: 500;
+}
+.kst--M {
+  justify-content: flex-start;
+  gap: 10px;
+}
+.kst-head {
+  margin: 0;
+  color: var(--kb-sub);
+  font-size: 15px;
+  font-weight: 700;
+}
+.kst-main {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.kst-label {
+  color: var(--kb-sub);
+  font-size: 16px;
+  font-weight: 700;
+}
+.kst-today {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+}
+.kst-sub {
+  margin: 0;
+  color: var(--kb-sub);
+  font-size: 15px;
+}
+.kst-bars {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+  min-height: 0;
+  margin-top: 6px;
+}
+.kst-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-height: 0;
+}
+.kst-bar-track {
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  width: 100%;
+  min-height: 0;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--kb-check) 35%, transparent);
+  overflow: hidden;
+}
+.kst-bar-fill {
+  width: 100%;
+  border-radius: 8px;
+  background: var(--kb-check);
+}
+.kst-bar.is-today .kst-bar-fill {
+  background: var(--kb-accent);
+}
+.kst-bar-day {
+  color: var(--kb-sub);
+  font-size: 13px;
+  font-weight: 600;
+}
+.kst-bar.is-today .kst-bar-day {
+  font-weight: 800;
+}
+
+/* ── 진행률 ── */
+.kpr {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+  height: 100%;
+  padding: 25px;
+  font-weight: 500;
+}
+.kpr--M {
+  justify-content: flex-start;
+}
+.kpr-head {
+  margin: 0;
+  color: var(--kb-sub);
+  font-size: 15px;
+  font-weight: 700;
+}
+.kpr-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kpr-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.kpr-label {
+  overflow: hidden;
+  font-size: 17px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.kpr-pct {
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.kpr-track {
+  height: 14px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--kb-check) 40%, transparent);
+  overflow: hidden;
+}
+.kpr-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--kb-accent);
+}
+.kpr-detail {
+  color: var(--kb-sub);
+  font-size: 13px;
+}
+
+/* ── 시계 ── */
+.kck {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  padding: 20px;
+}
+.kck--S.kck--digital {
+  gap: 2px;
+}
+.kck--S.kck--analog {
+  flex-direction: row;
+  gap: 20px;
+}
+.kck-time {
+  font-size: 64px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.kck--M .kck-time {
+  font-size: 84px;
+}
+.kck-date {
+  color: var(--kb-sub);
+  font-size: 18px;
+  font-weight: 700;
+}
+.kck-dial {
+  width: 140px;
+  height: 140px;
+}
+.kck--M .kck-dial {
+  width: 240px;
+  height: 240px;
+}
