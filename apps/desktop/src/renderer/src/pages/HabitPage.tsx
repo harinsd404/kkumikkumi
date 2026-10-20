@@ -25,14 +25,23 @@ const PICK_ORDER = [1, 2, 3, 4, 5, 6, 0]
 const MAX_WEEKS_BACK = 52
 
 /** 습관 화면(2026-10-21): 이번 주 표(체크), 연속 기록, 이름·색·요일 고치기, 오른쪽에 오늘·이번 주 요약 */
-export function HabitPage({ store, now }: { store: HabitStore; now: Date }) {
+export function HabitPage({
+  store,
+  now,
+  weekStartsOn,
+}: {
+  store: HabitStore
+  now: Date
+  /** 주 시작 요일(할 일·캘린더 화면과 같게) */
+  weekStartsOn: 0 | 1
+}) {
   const today = localDate(now.getTime())
   const [back, setBack] = useState(0)
   const [openId, setOpenId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const data = store.data
   const { y, m0, d } = parseDate(addDays(today, -7 * back))
-  const week = weekOf(y, m0, d, 1).map((c) => c.date)
+  const week = weekOf(y, m0, d, weekStartsOn).map((c) => c.date)
   const habits = data?.habits ?? []
   const has = (id: string, date: string) => !!data?.checked.has(checkKey(id, date))
 
@@ -74,15 +83,11 @@ export function HabitPage({ store, now }: { store: HabitStore; now: Date }) {
           {monthDay(week[0]!)} ~ {monthDay(week[6]!)}
         </p>
 
-        <div className="hbp-table" role="grid" aria-label="이번 주 습관">
-          <div className="hbp-row hbp-row--head" role="row">
+        <div className="hbp-table" role="group" aria-label="이번 주 습관">
+          <div className="hbp-row hbp-row--head">
             <span />
             {week.map((w) => (
-              <span
-                key={w}
-                role="columnheader"
-                className={`hbp-dow ${w === today ? 'is-today' : ''}`}
-              >
+              <span key={w} className={`hbp-dow ${w === today ? 'is-today' : ''}`}>
                 {WEEKDAY[new Date(...ymd(w)).getDay()]}
                 <small>{parseDate(w).d}</small>
               </span>
@@ -91,7 +96,7 @@ export function HabitPage({ store, now }: { store: HabitStore; now: Date }) {
           </div>
           {habits.map((h) => (
             <div key={h.id} className="hbp-item">
-              <div className="hbp-row" role="row">
+              <div className="hbp-row">
                 <button
                   type="button"
                   className="hbp-name"
@@ -109,7 +114,6 @@ export function HabitPage({ store, now }: { store: HabitStore; now: Date }) {
                     <button
                       key={w}
                       type="button"
-                      role="gridcell"
                       className={`hbp-cell ${on ? 'is-done' : ''} ${due ? '' : 'is-off'}`}
                       style={on ? { background: h.color } : { borderColor: h.color }}
                       aria-pressed={on}
@@ -164,7 +168,7 @@ export function HabitPage({ store, now }: { store: HabitStore; now: Date }) {
         )}
       </section>
 
-      <Summary habits={habits} has={has} today={today} />
+      <Summary habits={habits} has={has} today={today} weekStartsOn={weekStartsOn} />
     </div>
   )
 }
@@ -179,14 +183,16 @@ function Summary({
   habits,
   has,
   today,
+  weekStartsOn,
 }: {
   habits: readonly Habit[]
   has(id: string, date: string): boolean
   today: string
+  weekStartsOn: 0 | 1
 }) {
   const td = dayProgress(habits, has, today)
   const { y, m0, d } = parseDate(today)
-  const week = weekOf(y, m0, d, 1)
+  const week = weekOf(y, m0, d, weekStartsOn)
     .map((c) => c.date)
     .filter((w) => w <= today)
   const wk = week.reduce(
@@ -314,13 +320,13 @@ function HabitEdit({
         <div className="pg-field">
           <span>색</span>
           <div className="tdo-sprint-colors" role="radiogroup" aria-label="습관 색">
-            {SPRINT_COLORS.map((c) => (
+            {SPRINT_COLORS.map((c, n) => (
               <button
                 key={c}
                 type="button"
                 role="radio"
                 aria-checked={h.color === c}
-                aria-label={c}
+                aria-label={`색 ${n + 1}`}
                 style={{ background: c }}
                 onClick={() => void store.update(h.id, { color: c })}
               />

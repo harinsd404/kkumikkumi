@@ -2,7 +2,7 @@ import type { GridBlock } from '@kkumikkumi/schema'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { TimetableData } from '../../../../shared/api'
 import { useBoard } from '../BoardContext'
-import { paletteVars } from '../style'
+import { blockPalette, paletteVars } from '../style'
 import {
   autoColors,
   cellEntry,
@@ -29,7 +29,7 @@ type TimetableBlockT = Extract<GridBlock, { type: 'timetable' }>
  */
 export function TimetableBlock({ block }: { block: TimetableBlockT }) {
   const { theme, data, now } = useBoard()
-  const p = theme.defaults.palette
+  const p = blockPalette(theme, block)
   const vars = paletteVars(p)
   const all = data.timetable
   const tt = all && pickTimetable(all, block.props.timetableId)

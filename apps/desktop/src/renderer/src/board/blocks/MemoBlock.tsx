@@ -2,6 +2,7 @@ import type { GridBlock } from '@kkumikkumi/schema'
 import type { CSSProperties } from 'react'
 import { useBoard } from '../BoardContext'
 import { MemoView } from '../MemoView'
+import { blockPalette } from '../style'
 
 type MemoBlockT = Extract<GridBlock, { type: 'memo' }>
 
@@ -11,7 +12,7 @@ type MemoBlockT = Extract<GridBlock, { type: 'memo' }>
  */
 export function MemoBlock({ block }: { block: MemoBlockT }) {
   const { theme, data, actions, mode } = useBoard()
-  const p = theme.defaults.palette
+  const p = blockPalette(theme, block)
   const vars = {
     '--mm-accent': p.accent,
     '--mm-check': p.check,

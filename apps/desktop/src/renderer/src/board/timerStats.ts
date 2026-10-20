@@ -72,3 +72,27 @@ export function studyStreak(sessions: readonly SessionLike[], today: string): nu
   }
   return n
 }
+
+/**
+ * 읽어 온 기록 범위의 첫날(fromDate)까지 연속이 이어지면 그보다 길 수 있다("N일+"로 보인다).
+ * 기록이 상한(limit)만큼 왔으면 가장 오래된 기록의 날부터만 안다.
+ */
+export function streakMayBeLonger(
+  sessions: readonly SessionLike[],
+  today: string,
+  streak: number,
+  fromDate: string,
+  limit: number,
+): boolean {
+  if (streak === 0) return false
+  let known = fromDate
+  if (sessions.length >= limit) {
+    const oldest = Math.min(...sessions.map((s) => s.endedAt))
+    known = localDate(oldest) > known ? localDate(oldest) : known
+  }
+  const days = new Set(
+    sessions.filter((s) => s.kind === 'focus' && s.actualMs > 0).map((s) => localDate(s.endedAt)),
+  )
+  const last = days.has(today) ? today : addDays(today, -1)
+  return addDays(last, -(streak - 1)) <= known
+}

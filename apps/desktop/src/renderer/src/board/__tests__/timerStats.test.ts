@@ -1,6 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { localDateTime } from '../calendar'
-import { focusByDay, formatDuration, lastDays, studyStreak, summarize } from '../timerStats'
+import {
+  focusByDay,
+  formatDuration,
+  lastDays,
+  streakMayBeLonger,
+  studyStreak,
+  summarize,
+} from '../timerStats'
 
 declare const process: { env: Record<string, string | undefined> }
 const prev = process.env['TZ']
@@ -83,5 +90,20 @@ describe('studyStreak', () => {
     expect(studyStreak(s, '2026-10-21')).toBe(3)
     expect(studyStreak(s, '2026-10-22')).toBe(0)
     expect(studyStreak([at('2026-10-20', 60_000, 'break')], '2026-10-20')).toBe(0)
+  })
+})
+
+describe('연속 기록 범위 끝', () => {
+  const T = '2026-10-12'
+  const run = [s('2026-10-10', '09:00', 30), s('2026-10-11', '09:00', 30), s(T, '09:00', 30)]
+  it('읽어 온 첫날까지 이어지면 더 길 수 있다', () => {
+    expect(streakMayBeLonger(run, T, 3, '2026-10-10', 1000)).toBe(true)
+    expect(streakMayBeLonger(run, T, 3, '2026-10-01', 1000)).toBe(false)
+  })
+  it('기록이 상한만큼 왔으면 가장 오래된 기록의 날까지만 안다', () => {
+    expect(streakMayBeLonger(run, T, 3, '2026-10-01', 3)).toBe(true)
+  })
+  it('연속이 0이면 아니다', () => {
+    expect(streakMayBeLonger([], T, 0, '2026-10-01', 1000)).toBe(false)
   })
 })

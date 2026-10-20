@@ -1,3 +1,4 @@
+import type { Theme } from '@kkumikkumi/schema'
 export interface DayCell {
   /** YYYY-MM-DD (로컬 날짜) */
   date: string
@@ -233,4 +234,10 @@ export function eventToForm(e: EventInput): EventForm {
     startTime: timeLabel(e.startUtc),
     endTime: timeLabel(e.endUtc),
   }
+}
+
+/** 화면의 주 시작 요일: 보드의 첫 캘린더 블록 설정을 따른다(없으면 일요일) */
+export function weekStartsOf(t: Theme): 0 | 1 {
+  for (const b of t.blocks) if (b.type === 'calendar') return b.props.weekStartsOn
+  return 0
 }

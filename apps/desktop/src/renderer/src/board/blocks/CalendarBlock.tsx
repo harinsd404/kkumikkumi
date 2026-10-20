@@ -16,7 +16,7 @@ import {
   weekOf,
   type DayCell,
 } from '../calendar'
-import { maskCss } from '../style'
+import { blockPalette, maskCss } from '../style'
 
 type CalendarBlockT = Extract<GridBlock, { type: 'calendar' }>
 
@@ -27,7 +27,7 @@ type CalendarBlockT = Extract<GridBlock, { type: 'calendar' }>
  */
 export function CalendarBlock({ block }: { block: CalendarBlockT }) {
   const { theme, now, actions, mode, data } = useBoard()
-  const p = theme.defaults.palette
+  const p = blockPalette(theme, block)
   const { weekStartsOn } = block.props
   const mini = block.size === 'M'
   const week = !mini && block.props.view === 'week'

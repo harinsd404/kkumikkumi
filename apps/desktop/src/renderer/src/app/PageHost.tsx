@@ -1,4 +1,5 @@
 import type { Theme } from '@kkumikkumi/schema'
+import { weekStartsOf } from '../board/calendar'
 import { themeTones } from '../board/timetable'
 import { MemoPage } from '../pages/MemoPage'
 import { SettingsPage } from '../pages/SettingsPage'
@@ -28,6 +29,8 @@ interface Props {
   /** 할 일 화면에서 달력을 크게 보는 중 */
   todoBig: boolean
   onTodoBig(big: boolean): void
+  /** 할 일 화면을 스프린트 탭으로 연다 */
+  todoSprint: boolean
   themeMenu: ThemeMenu | undefined
   /** 보드와 같은 데이터(설정 페이지 테마 미리보기) */
   boardData: BoardData
@@ -59,6 +62,7 @@ function pageContent({
   now,
   todoBig,
   onTodoBig,
+  todoSprint,
   themeMenu,
   boardData,
   settingsSection,
@@ -94,10 +98,11 @@ function pageContent({
           updateEvent={user.events.update}
           big={todoBig}
           onBig={onTodoBig}
+          initialView={todoSprint ? 'sprint' : 'day'}
         />
       )
     case 'habits':
-      return <HabitPage store={habits} now={now} />
+      return <HabitPage store={habits} now={now} weekStartsOn={weekStartsOf(theme)} />
     case 'timer':
       return (
         <TimerPage
@@ -118,10 +123,4 @@ function pageContent({
         <TimetablePage store={timetable} now={now} tones={themeTones(theme.defaults.palette)} />
       )
   }
-}
-
-/** 페이지의 주 시작 요일: 보드의 첫 캘린더 블록 설정을 따른다(없으면 일요일) */
-function weekStartsOf(t: Theme): 0 | 1 {
-  for (const b of t.blocks) if (b.type === 'calendar') return b.props.weekStartsOn
-  return 0
 }

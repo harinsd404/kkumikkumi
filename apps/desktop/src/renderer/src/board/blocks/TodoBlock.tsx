@@ -6,7 +6,7 @@ import { useBoard, type BoardActions } from '../BoardContext'
 import { addDays, localDate } from '../calendar'
 import { sectionTone } from '../colors'
 import { usePointerTrack } from '../pointerTrack'
-import { paletteVars } from '../style'
+import { blockPalette, paletteVars } from '../style'
 import { blockCategories, dueText, isOverdue, reorderIds } from '../todo'
 
 type TodoBlockT = Extract<GridBlock, { type: 'todo' }>
@@ -20,7 +20,7 @@ type TodoBlockT = Extract<GridBlock, { type: 'todo' }>
 export function TodoBlock({ block }: { block: TodoBlockT }) {
   const { theme, data, actions: all, mode, now } = useBoard()
   const actions = mode === 'use' ? all : undefined // 편집 모드에서는 내용을 바꾸지 않는다
-  const p = theme.defaults.palette
+  const p = blockPalette(theme, block)
   const todos = data.todos
   const today = localDate(now.getTime())
   const sections = todos

@@ -16,6 +16,7 @@ import { TodoCheck } from '../../ui/TodoCheck'
 import { ItemDetail } from './CategoryList'
 import { monthDay } from '../dateText'
 import { dragRow, DropZone, type TodoDnd } from './dnd'
+import { matchesQuery } from '../todoView'
 
 /** 스프린트 보기: 진행 중 → 예정 → 끝남. 카드마다 기간·목표·진행률·안의 할 일 */
 export function SprintList({
@@ -26,6 +27,7 @@ export function SprintList({
   actions,
   api,
   dnd,
+  query,
 }: {
   sprints: readonly Sprint[]
   items: Readonly<Record<string, readonly TodoItem[]>>
@@ -34,8 +36,19 @@ export function SprintList({
   actions: BoardActions
   api: UserData['sprints']
   dnd: TodoDnd
+  /** 검색어: 스프린트 이름·목표가 맞으면 그 카드 전부, 아니면 맞는 할 일만 */
+  query: string
 }) {
   const [creating, setCreating] = useState(false)
+  const q = query.trim()
+  const shown = sortSprints(sprints, today).flatMap(
+    (s): { s: Sprint; all: TodoItem[]; only: ReadonlySet<string> | null }[] => {
+      const all = sprintItems(items, s.id)
+      if (!q || matchesQuery({ title: s.name, note: s.goal }, q)) return [{ s, all, only: null }]
+      const hit = all.filter((i) => matchesQuery(i, q))
+      return hit.length > 0 ? [{ s, all, only: new Set(hit.map((i) => i.id)) }] : []
+    },
+  )
   return (
     <div className="tdo-sprints">
       {creating ? (
@@ -60,12 +73,14 @@ export function SprintList({
           "중간고사 대비 · 2주"처럼 기간을 정하고, 그동안 끝낼 할 일을 모아 보세요.
         </p>
       )}
-      {sortSprints(sprints, today).map((s) => (
+      {q && shown.length === 0 && <p className="pg-empty">찾는 스프린트나 할 일이 없어요</p>}
+      {shown.map(({ s, all, only }) => (
         <SprintCard
           key={s.id}
           sprint={s}
           sprints={sprints}
-          items={sprintItems(items, s.id)}
+          items={all}
+          only={only}
           lists={lists}
           today={today}
           actions={actions}
@@ -160,13 +175,13 @@ function SprintForm({
         <div className="pg-field">
           <span>색</span>
           <div className="tdo-sprint-colors" role="radiogroup" aria-label="스프린트 색">
-            {SPRINT_COLORS.map((c) => (
+            {SPRINT_COLORS.map((c, n) => (
               <button
                 key={c}
                 type="button"
                 role="radio"
                 aria-checked={f.color === c}
-                aria-label={c}
+                aria-label={`색 ${n + 1}`}
                 style={{ background: c }}
                 onClick={() => set({ color: c })}
               />
@@ -203,6 +218,7 @@ function SprintCard({
   actions,
   api,
   dnd,
+  only,
 }: {
   sprint: Sprint
   /** 할 일 상세에서 다른 스프린트로 옮길 때 */
@@ -213,6 +229,8 @@ function SprintCard({
   actions: BoardActions
   api: UserData['sprints']
   dnd: TodoDnd
+  /** 검색에 맞는 할 일만 보일 때 그 id(진행률은 전체로 센다) */
+  only: ReadonlySet<string> | null
 }) {
   const status = sprintStatus(s, today)
   const [editing, setEditing] = useState(false)
@@ -223,8 +241,9 @@ function SprintCard({
   /** 펼친(고치는 중인) 할 일 */
   const [openId, setOpenId] = useState<string | null>(null)
   const p = sprintProgress(items)
-  const remaining = items.filter((i) => !i.done)
-  const done = items.filter((i) => i.done)
+  const visible = only ? items.filter((i) => only.has(i.id)) : items
+  const remaining = visible.filter((i) => !i.done)
+  const done = visible.filter((i) => i.done)
   const listName = (id: string) => lists.find((l) => l.id === id)?.name ?? ''
 
   if (editing)
@@ -334,7 +353,8 @@ function SprintCard({
           {p.done} / {p.total} 끝냄
         </span>
       </div>
-      {open && (
+      {/* 검색 중에는 맞는 할 일이 보이도록 펼친다 */}
+      {(open || only) && (
         <>
           {remaining.length > 0 && <ul className="pg-list">{remaining.map(row)}</ul>}
           {adding ? (
@@ -385,7 +405,7 @@ function SprintCard({
               >
                 끝낸 일 {done.length}개 {showDone ? '접기' : '보기'}
               </button>
-              {showDone && <ul className="pg-list">{done.map(row)}</ul>}
+              {(showDone || only) && <ul className="pg-list">{done.map(row)}</ul>}
             </>
           )}
         </>

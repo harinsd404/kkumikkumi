@@ -3,7 +3,7 @@ import checkUrl from '../icons/check.svg'
 import { useBoard } from '../BoardContext'
 import { addDays, localDate, monthDay } from '../calendar'
 import { autoSprint, sprintBadge, sprintItems, sprintProgress } from '../sprint'
-import { paletteVars } from '../style'
+import { blockPalette, paletteVars } from '../style'
 
 type SprintBlockT = Extract<GridBlock, { type: 'sprint' }>
 
@@ -47,7 +47,7 @@ const range = (s: Sprint) => {
 export function SprintBlock({ block }: { block: SprintBlockT }) {
   const { theme, data, actions: all, mode, now } = useBoard()
   const actions = mode === 'use' ? all : undefined
-  const p = theme.defaults.palette
+  const p = blockPalette(theme, block)
   const today = localDate(now.getTime())
   const todos = data.todos
   const sprints = todos?.sprints ?? []

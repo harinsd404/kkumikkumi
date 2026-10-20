@@ -2,7 +2,7 @@ import type { CalendarEvent, GridBlock } from '@kkumikkumi/schema'
 import { useBoard, type BoardActions } from '../BoardContext'
 import { addDays, localDate } from '../calendar'
 import { ddayDateLabel, ddayOf } from '../dday'
-import { paletteVars } from '../style'
+import { blockPalette, paletteVars } from '../style'
 import { useKeyedAsync } from '../useKeyedAsync'
 
 type DdayBlockT = Extract<GridBlock, { type: 'dday' }>
@@ -65,7 +65,7 @@ function useDday(
 /** 디데이: 일정까지 남은 날(D-N), 오늘(D-DAY), 지난 날(D+N). S는 한 줄, M은 크게 + 다음 일정 2개. */
 export function DdayBlock({ block }: { block: DdayBlockT }) {
   const { theme, now, actions, data, mode } = useBoard()
-  const p = theme.defaults.palette
+  const p = blockPalette(theme, block)
   const today = localDate(now.getTime())
   const eventId = block.props.eventId
   const d = useDday(eventId, actions, data.version ?? 0, today)

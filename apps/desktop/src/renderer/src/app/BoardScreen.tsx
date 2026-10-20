@@ -84,6 +84,8 @@ export function BoardScreen({
   )
   /** 할 일 화면에서 달력을 크게 보는 중(캘린더·디데이 블록에서 들어오면 크게) */
   const [todoBig, setTodoBig] = useState(false)
+  /** 할 일 화면을 열 때의 보기(스프린트 위젯에서 열면 스프린트 탭) */
+  const [todoSprint, setTodoSprint] = useState(false)
   const themes = useThemes()
   /** 메모 블록에서 들어오면 그 메모를 연다 */
   const [memoOpen, setMemoOpen] = useState<string | null>(null)
@@ -98,12 +100,14 @@ export function BoardScreen({
       timetable: { select: (id) => void timetableSelect(id) },
       habits: { toggle: habitToggle },
       pages: {
-        todo: () => {
+        todo: (b) => {
           setTodoBig(false)
+          setTodoSprint(b.type === 'sprint')
           setPage('todo')
         },
         calendar: () => {
           setTodoBig(true)
+          setTodoSprint(false)
           setPage('todo')
         },
         timer: () => setPage('timer'),
@@ -129,6 +133,7 @@ export function BoardScreen({
   const navigate = useCallback((p: AppPage) => {
     setMemoOpen(null)
     setSettingsSection(null)
+    setTodoSprint(false)
     setPage(p)
   }, [])
   const assetUrl = useMemo(() => makeAssetUrl(theme), [theme])
@@ -186,6 +191,7 @@ export function BoardScreen({
           now={now}
           todoBig={todoBig}
           onTodoBig={setTodoBig}
+          todoSprint={todoSprint}
           themeMenu={themeActions.themeMenu}
           boardData={boardData}
           settingsSection={settingsSection}

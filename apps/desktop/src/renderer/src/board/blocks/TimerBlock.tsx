@@ -4,6 +4,7 @@ import { phaseText } from '../../../../shared/pomodoro'
 import { DEFAULT_TIMER, formatClock, remainingMs, type TimerMode } from '../../../../shared/timer'
 import { useBoard } from '../BoardContext'
 import { useSecondClock } from '../useSecondClock'
+import { blockPalette } from '../style'
 
 type TimerBlockT = Extract<GridBlock, { type: 'timer' }>
 
@@ -17,7 +18,7 @@ const RING_C = 2 * Math.PI * 44
 export function TimerBlock({ block }: { block: TimerBlockT }) {
   const { theme, data, actions: all, mode: boardMode } = useBoard()
   const actions = boardMode === 'use' ? all : undefined
-  const p = theme.defaults.palette
+  const p = blockPalette(theme, block)
   const presets = block.props.presetsMin
   const t: TimerState = data.timer ?? { ...DEFAULT_TIMER, updatedAt: 0 }
   const running = t.status === 'running'

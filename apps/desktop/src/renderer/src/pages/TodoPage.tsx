@@ -31,6 +31,8 @@ interface Props {
   /** 달력 크게 보기(참고: 2026-10-16 사용자 지시 이미지 2) */
   big: boolean
   onBig(big: boolean): void
+  /** 처음 보기(스프린트 위젯에서 열면 'sprint') */
+  initialView?: TodoView
 }
 
 const VIEWS: TodoView[] = ['day', 'all', 'done', 'sprint']
@@ -51,7 +53,7 @@ export function TodoPage(p: Props) {
   const [date, setDate] = useState(today)
   /** 작은 달력이 보여 주는 달(그 달의 아무 날짜) */
   const [month, setMonth] = useState(today)
-  const [view, setView] = useState<TodoView>('day')
+  const [view, setView] = useState<TodoView>(p.initialView ?? 'day')
   const [query, setQuery] = useState('')
   const [openId, setOpenId] = useState<string | null>(null)
 
@@ -266,6 +268,7 @@ function SplitView({
               actions={actions}
               api={sprintApi}
               dnd={dnd}
+              query={query}
             />
           )}
           {view !== 'sprint' && todos && (

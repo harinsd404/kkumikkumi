@@ -1,14 +1,23 @@
 import type { GridBlock, TimerSession } from '@kkumikkumi/schema'
 import { useBoard } from '../BoardContext'
 import { addDays, localDate, localDateTime, localDayStart, parseDate } from '../calendar'
-import { paletteVars } from '../style'
-import { focusByDay, formatDuration, lastDays, studyStreak, summarize } from '../timerStats'
+import { blockPalette, paletteVars } from '../style'
+import {
+  focusByDay,
+  formatDuration,
+  lastDays,
+  streakMayBeLonger,
+  studyStreak,
+  summarize,
+} from '../timerStats'
 import { useKeyedAsync } from '../useKeyedAsync'
 
 type StudyStatsBlockT = Extract<GridBlock, { type: 'studyStats' }>
 
 /** 연속 기록을 셀 때 거슬러 보는 날 수 */
-const HISTORY_DAYS = 60
+const HISTORY_DAYS = 366
+/** main timer.sessions가 한 번에 주는 최대 기록 수(main/db/repos/timerSessions.ts endedBetween) */
+const SESSION_LIMIT = 1000
 const WEEKDAY = '일월화수목금토'
 
 /** 미리보기(데이터 통로 없음)용 예시 기록: 최근 며칠 집중 */
@@ -38,7 +47,7 @@ function sampleSessions(today: string): TimerSession[] {
  */
 export function StudyStatsBlock({ block }: { block: StudyStatsBlockT }) {
   const { theme, data, actions, now } = useBoard()
-  const p = theme.defaults.palette
+  const p = blockPalette(theme, block)
   const today = localDate(now.getTime())
   const week = lastDays(today, 7)
   const load = actions?.timer.sessions
@@ -53,6 +62,11 @@ export function StudyStatsBlock({ block }: { block: StudyStatsBlockT }) {
   const sum = sessions ? summarize(sessions, today, week) : null
   const byDay = sessions ? focusByDay(sessions, week) : null
   const streak = sessions ? studyStreak(sessions, today) : 0
+  // 읽어 온 범위 끝까지 이어지면 더 길 수 있으니 "N일+"로
+  const more =
+    !!load &&
+    !!sessions &&
+    streakMayBeLonger(sessions, today, streak, addDays(today, -HISTORY_DAYS), SESSION_LIMIT)
   const max = byDay ? Math.max(1, ...byDay.values()) : 1
 
   return (
@@ -65,7 +79,7 @@ export function StudyStatsBlock({ block }: { block: StudyStatsBlockT }) {
       {sum && (
         <p className="kst-sub">
           {block.size === 'M' && <>이번 주 {formatDuration(sum.weekMs)} · </>}
-          {sum.todayDone}회 · 연속 {streak}일
+          {sum.todayDone}회 · 연속 {streak}일{more ? '+' : ''}
         </p>
       )}
       {block.size === 'M' && byDay && (

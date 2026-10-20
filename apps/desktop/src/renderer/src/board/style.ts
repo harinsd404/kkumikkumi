@@ -56,6 +56,12 @@ export function imageCss(c: ImageContent): { frame: CSSProperties; img: CSSPrope
 }
 
 /** 블록 안 CSS에서 쓰는 팔레트 변수(--kb-accent / --kb-check / --kb-sub) */
+/** 블록이 쓰는 팔레트: 인스펙터 "글자색"(style.textColor)을 정하면 글자색만 그 색으로 */
+export function blockPalette(theme: Theme, block: GridBlock): Palette {
+  const p = theme.defaults.palette
+  return block.style.textColor ? { ...p, text: block.style.textColor } : p
+}
+
 export function paletteVars(p: Palette): CSSProperties {
   return {
     '--kb-accent': p.accent,

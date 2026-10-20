@@ -2,8 +2,8 @@ import type { GridBlock, Habit } from '@kkumikkumi/schema'
 import { checkKey, habitStreak, isScheduled } from '../../../../shared/habits'
 import checkUrl from '../icons/check.svg'
 import { useBoard, type HabitData } from '../BoardContext'
-import { addDays, localDate, weekOf, parseDate } from '../calendar'
-import { paletteVars } from '../style'
+import { addDays, localDate, weekOf, weekStartsOf, parseDate } from '../calendar'
+import { blockPalette, paletteVars } from '../style'
 
 type HabitBlockT = Extract<GridBlock, { type: 'habits' }>
 
@@ -38,7 +38,7 @@ const WEEKDAY = '일월화수목금토'
 export function HabitBlock({ block }: { block: HabitBlockT }) {
   const { theme, data, actions: all, mode, now } = useBoard()
   const actions = mode === 'use' ? all?.habits : undefined
-  const p = theme.defaults.palette
+  const p = blockPalette(theme, block)
   const today = localDate(now.getTime())
   // 예시는 위젯 갤러리(동작 없음)에서만. 실제 보드는 읽기 전이면 비워 둔다
   const d = data.habits ?? (all ? null : sample(today))
@@ -115,9 +115,9 @@ export function HabitBlock({ block }: { block: HabitBlockT }) {
     )
   }
 
-  // L: 이번 주 표(월요일 시작)
+  // L: 이번 주 표(캘린더와 같은 주 시작 요일)
   const { y, m0, d: day } = parseDate(today)
-  const week = weekOf(y, m0, day, 1).map((c) => c.date)
+  const week = weekOf(y, m0, day, weekStartsOf(theme)).map((c) => c.date)
   return (
     <div className="khb khb--L" style={vars}>
       <p className="khb-head">이번 주 습관</p>

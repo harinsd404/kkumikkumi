@@ -1,6 +1,6 @@
 import type { GridBlock } from '@kkumikkumi/schema'
 import { useBoard } from '../BoardContext'
-import { paletteVars } from '../style'
+import { blockPalette, paletteVars } from '../style'
 
 type ClockBlockT = Extract<GridBlock, { type: 'clock' }>
 
@@ -17,7 +17,7 @@ export function clockText(now: Date, hour12: boolean): string {
 /** 시계·날짜(꾸미기용). 보드의 분 단위 시계로 다시 그린다(초침 없음). */
 export function ClockBlock({ block }: { block: ClockBlockT }) {
   const { theme, now } = useBoard()
-  const p = theme.defaults.palette
+  const p = blockPalette(theme, block)
   const { face, hour12, showDate } = block.props
   const date = `${now.getMonth() + 1}월 ${now.getDate()}일 ${WEEKDAY[now.getDay()]}`
 
