@@ -100,7 +100,15 @@ function SprintForm({
       className="tdo-sprint tdo-sprint-form"
       onSubmit={(e) => {
         e.preventDefault()
-        if (ok) onSave({ ...f, name: f.name.trim(), goal: f.goal.trim() })
+        // 정해진 칸만 보낸다(main은 모르는 항목이 섞이면 거부한다)
+        if (ok)
+          onSave({
+            name: f.name.trim(),
+            goal: f.goal.trim(),
+            startDate: f.startDate,
+            endDate: f.endDate,
+            color: f.color,
+          })
       }}
     >
       <input
@@ -204,7 +212,13 @@ function SprintCard({
   if (editing)
     return (
       <SprintForm
-        initial={{ ...s }}
+        initial={{
+          name: s.name,
+          goal: s.goal,
+          startDate: s.startDate,
+          endDate: s.endDate,
+          color: s.color,
+        }}
         today={today}
         onSave={async (f) => {
           if (await api.update(s.id, f)) setEditing(false)
