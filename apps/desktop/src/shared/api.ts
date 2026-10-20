@@ -6,6 +6,8 @@ import type {
   ThemeTemplateId,
   CalendarEvent,
   DiaryEntry,
+  Habit,
+  HabitCheck,
   DiaryPhoto,
   ColorCombo,
   LookColors,
@@ -73,6 +75,14 @@ export interface ImportedAsset {
 
 type Id = { id: string }
 type CalendarInput = Record<string, unknown>
+
+/** 습관 만들기/고치기 입력 */
+export interface HabitFields {
+  name: string
+  color?: string
+  /** 하는 요일 비트(1 << 요일, 0=일). 127 = 매일 */
+  days?: number
+}
 
 /** 달력에 표시할 일기 요약 */
 export interface DiarySummary {
@@ -149,6 +159,17 @@ export interface IpcSpec {
   }
   'todo.items.delete': { in: Id; out: null }
   'todo.items.reorder': { in: { listId: string; ids: string[] }; out: null }
+  /** 습관(순서대로) */
+  'habits.list': { in: undefined; out: Habit[] }
+  /** 최대 30개, 넘으면 conflict. days 생략하면 매일(127) */
+  'habits.create': { in: HabitFields; out: Habit }
+  'habits.update': { in: { id: string; patch: Partial<HabitFields> }; out: Habit }
+  /** 체크 기록도 함께 지워진다 */
+  'habits.delete': { in: Id; out: null }
+  'habits.reorder': { in: { ids: string[] }; out: null }
+  /** 기간 안 체크(최대 400일) */
+  'habits.checks': { in: { fromDate: string; toDate: string }; out: HabitCheck[] }
+  'habits.check': { in: { habitId: string; date: string; done: boolean }; out: null }
   /** 그날 일기(없으면 null) */
   'diary.get': { in: { date: string }; out: DiaryEntry | null }
   /** 기간 안 일기 요약(달력 표시용, 최대 400일) */
@@ -296,7 +317,7 @@ export type AppFolder = 'logs' | 'userData'
 export type SettingsSection = 'mcp'
 
 /** 외부(MCP)에서 사용자 데이터가 바뀌었을 때 renderer가 다시 읽을 영역 */
-export type DataDomain = 'todo' | 'calendar' | 'memos' | 'timetable'
+export type DataDomain = 'todo' | 'calendar' | 'memos' | 'timetable' | 'habits'
 
 export interface TimerDoneInfo {
   mode: TimerMode

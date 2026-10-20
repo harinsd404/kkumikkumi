@@ -18,7 +18,7 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
 - 스택: Electron + React + TypeScript(strict), Vite 기반, pnpm 모노레포.
 - 보드는 일반 창이다(바탕화면 레벨 아님). 펫은 별도 창이다.
 - 레이아웃
-  - 그리드 블록: 크기는 S/M/L(+ image 전용 W 배너), 퍼즐처럼 배치. 타입은 calendar, todo, timer, image, memo, timetable, dday, studyStats, progress, clock, sprint. 셀 수는 타입별 크기표(packages/schema BLOCK_SIZES, 2026-10-12 시안 기준).
+  - 그리드 블록: 크기는 S/M/L(+ image 전용 W 배너), 퍼즐처럼 배치. 타입은 calendar, todo, timer, image, memo, timetable, dday, studyStats, progress, clock, sprint, habits. 셀 수는 타입별 크기표(packages/schema BLOCK_SIZES, 2026-10-12 시안 기준).
   - 디자인 시안: Figma 파일 mJL2BsO51Ir9l9z4wK1lDI (3:1079 푸딩 아침, 6:2384 코튼캔디). 시안 1280x800(+타이틀바 36) = 논리 캔버스 1600x1000의 0.8배. 블록 바깥 여백/간격 25(논리 px)는 렌더러에서만 적용.
   - 기본 테마(2026-10-14 사용자 지시): 푸딩 아침, 코튼캔디는 앱 내장 테마로 항상 있다(고정 ID, 없으면 시작 시 생성). 이름 바꾸기/삭제 불가, 색·글꼴·배치는 수정 가능하고 "처음 상태로 되돌리기" 제공. 새 테마는 프리셋 복사가 아니라 "새로 만들기" 창(이름, 색, 무늬, 글꼴, 배치 템플릿)으로 만든다.
   - 테마 색은 defaults.palette(text, subText, accent, check, surface, control), 배경은 색 + 내장 무늬(stars/dots). 블록 style의 null 값은 팔레트로 대체.
@@ -46,7 +46,7 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
 ## 가정 (미확정, 변경 가능)
 
 - 창 비율 전역 고정(16:10).
-- 크기표(2026-10-12 시안 반영): 8x5 그리드(1칸 200px). calendar M=2x2/L=4x3, todo S=2x2/M=2x3/L=4x3, timer S=2x1/M=2x2, image S=2x1/M=2x2/L=4x3/W=8x1, memo S=2x2/M=2x3/L=4x3, timetable S=2x2/M=2x3/L=4x3, dday S=2x1/M=2x2, studyStats·progress·clock·sprint S=2x1/M=2x2. 단일 출처는 packages/schema의 BLOCK_SIZES.
+- 크기표(2026-10-12 시안 반영): 8x5 그리드(1칸 200px). calendar M=2x2/L=4x3, todo S=2x2/M=2x3/L=4x3, timer S=2x1/M=2x2, image S=2x1/M=2x2/L=4x3/W=8x1, memo S=2x2/M=2x3/L=4x3, timetable S=2x2/M=2x3/L=4x3, dday S=2x1/M=2x2, studyStats·progress·clock·sprint S=2x1/M=2x2, habits S=2x1/M=2x2/L=4x3. 단일 출처는 packages/schema의 BLOCK_SIZES.
 - 창: 앱이 그리는 타이틀바 36px(titleBarStyle hiddenInset) + 보드 16:10. setAspectRatio(16/10, { height: 36 }).
 - 이미지 블록/스티커 업로드는 PNG/JPG/WebP 허용, 펫 이미지는 PNG만.
 - 펫 이동 방식(작은 창 이동 vs 하단 오버레이)은 M0 스파이크 결과로 결정.
@@ -254,7 +254,11 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
   - 데이터: diary_entries(날짜 PK, 글 최대 2만 자, 기분 1~5, 사진 목록 JSON, 마이그레이션 008). 사진은 userData/diary/<hash>.<ext>(sharp 재인코딩, 폴더 0700), kkumi-asset://diary/로 표시. 앱이 저장한 사진만 참조 가능, 쓰지 않는 사진은 시작할 때 정리(10분 유예). 글·기분·사진이 모두 비면 지운다. 테마/내보내기와 무관.
   - IPC diary.get/range(최대 400일)/save(준 값만)/delete/photoFromDialog/photoFromBytes(zod 재검증). AI 연결(MCP)에는 열지 않는다(개인적인 내용, AI 서비스로 전송되므로).
   - 화면: 할 일 화면 왼쪽 작은 달력 아래 일기 카드(기분, 글 3줄, 사진), 일기 창(기분 5개, 글 자동 저장, 사진 넣기·빼기·끌어 놓기, 지우기), 작은 달력 칸에 기분 이모지.
-- [ ] **습관 체크 (2026-10-20 사용자 지시)** — 매일 체크, 연속 기록, 이번 주 칸. 위젯 + 페이지.
+- [x] **습관 체크 (2026-10-20 사용자 지시)** — 매일 체크, 연속 기록, 이번 주 칸. 위젯 + 페이지.
+  - 데이터: habits(이름, 색, 하는 요일 비트 1~127, 순서, 최대 30) + habit_checks(습관, 날짜) — 마이그레이션 009, 습관을 지우면 체크도 지워짐. IPC habits.list/create/update/delete/reorder/checks(최대 400일)/check.
+  - 계산은 shared/habits.ts(main MCP와 화면 공용): 하는 요일, 연속 기록(하지 않는 요일 건너뜀, 오늘 아직이면 어제부터), 그날 진행.
+  - "습관" 탭: 이번 주 표(지난주 52주까지), 칸 체크, 이름 눌러 이름·색·요일·삭제, 오른쪽 오늘·이번 주 달성률·가장 긴 연속·오늘 남은 습관. habits 블록 S 오늘 칩 / M 오늘 목록+연속 / L 이번 주 표(사용 모드에서 체크).
+  - MCP list_habits, check_habit(읽기·쓰기).
 
 - [ ] **M0 펫 프로토타입(스파이크)** — 코드 품질이 아니라 "되는가"를 검증. 수동 확인이 끝나기 전에는 체크하지 않는다.
   - spikes/pet-proto/ 에 독립 Electron 프로젝트. 키 내용/키 코드는 읽지도 로깅하지도 않는다.

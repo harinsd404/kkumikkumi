@@ -51,6 +51,23 @@ export const TodoItemSchema = z.strictObject({
   updatedAt: EpochMs,
 })
 
+/* ───────── 습관(매일 체크, 2026-10-21) ───────── */
+
+export const MAX_HABITS = 30
+
+export const HabitSchema = z.strictObject({
+  id: Uuid,
+  name: z.string().trim().min(1).max(30),
+  color: HexColor,
+  /** 하는 요일 비트(1 << 요일, 0=일 … 6=토). 127 = 매일 */
+  days: z.number().int().min(1).max(127),
+  order: z.number().int(),
+  createdAt: EpochMs,
+  updatedAt: EpochMs,
+})
+
+export const HabitCheckSchema = z.strictObject({ habitId: Uuid, date: DateStr })
+
 /* ───────── 일기(날짜마다 하나, 2026-10-21) ───────── */
 
 export const DIARY_MAX_CHARS = 20000
@@ -403,6 +420,8 @@ export type ThemeRule = z.infer<typeof ThemeRuleSchema>
 export type Settings = z.infer<typeof SettingsSchema>
 export type Sprint = z.infer<typeof SprintSchema>
 export type DiaryEntry = z.infer<typeof DiaryEntrySchema>
+export type Habit = z.infer<typeof HabitSchema>
+export type HabitCheck = z.infer<typeof HabitCheckSchema>
 export type DiaryPhoto = z.infer<typeof DiaryPhotoSchema>
 export type LookColors = z.infer<typeof LookColorsSchema>
 export type ColorCombo = z.infer<typeof ColorComboSchema>

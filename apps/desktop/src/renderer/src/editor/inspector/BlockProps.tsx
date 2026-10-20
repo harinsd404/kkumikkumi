@@ -168,6 +168,15 @@ export function BlockProps({
           />
         </Section>
       )
+    case 'habits':
+      return (
+        <Section title="습관">
+          <p className="ki-note">
+            습관은 "습관" 화면에서 만들어요. 작게는 오늘 칩, 중간은 오늘 목록과 연속 기록, 크게는
+            이번 주 표예요. 사용 모드에서 눌러 체크해요.
+          </p>
+        </Section>
+      )
     case 'studyStats':
       return (
         <Section title="공부 통계">

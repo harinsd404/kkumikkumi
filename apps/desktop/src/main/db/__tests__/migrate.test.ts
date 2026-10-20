@@ -19,6 +19,8 @@ describe('migrate', () => {
     expect(tables(db)).toEqual([
       'calendar_events',
       'diary_entries',
+      'habit_checks',
+      'habits',
       'memos',
       'settings',
       'sprints',

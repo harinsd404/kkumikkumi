@@ -3,6 +3,7 @@ import { assetHandlers } from './handlers/assets'
 import { calendarHandlers } from './handlers/calendar'
 import { colorComboHandlers } from './handlers/colorCombos'
 import { diaryHandlers } from './handlers/diary'
+import { habitHandlers } from './handlers/habits'
 import type { HandlerDeps, Handlers } from './handlers/deps'
 import { mcpHandlers } from './handlers/mcp'
 import { memoHandlers } from './handlers/memos'
@@ -31,6 +32,7 @@ export function createHandlers(d: HandlerDeps): Handlers {
     ...themeRuleHandlers(d),
     ...colorComboHandlers(d),
     ...diaryHandlers(d),
+    ...habitHandlers(d),
     ...mcpHandlers(d),
     ...appHandlers(d),
   }

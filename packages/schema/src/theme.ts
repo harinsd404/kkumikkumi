@@ -38,6 +38,7 @@ export const BLOCK_SIZES = {
   progress: { S: { w: 2, h: 1 }, M: { w: 2, h: 2 } },
   clock: { S: { w: 2, h: 1 }, M: { w: 2, h: 2 } },
   sprint: { S: { w: 2, h: 1 }, M: { w: 2, h: 2 } },
+  habits: { S: { w: 2, h: 1 }, M: { w: 2, h: 2 }, L: { w: 4, h: 3 } },
 } as const satisfies Record<
   string,
   Partial<Record<'S' | 'M' | 'L' | 'W', { w: number; h: number }>>
@@ -223,6 +224,12 @@ export const BlockSchema = z.discriminatedUnion('type', [
       // 사용자 데이터(스프린트) 참조. null = 진행 중 중 먼저 끝나는 것(자동). 가져올 때 null로 치환
       sprintId: Uuid.nullable(),
     }),
+  }),
+  z.strictObject({
+    ...blockBase,
+    type: z.literal('habits'),
+    // 사용자 데이터(습관)를 보여 주기만 한다. 설정 없음
+    props: z.strictObject({}),
   }),
   z.strictObject({
     ...blockBase,

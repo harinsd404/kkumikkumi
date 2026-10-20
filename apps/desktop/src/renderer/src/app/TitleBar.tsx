@@ -17,7 +17,7 @@ interface EditTools {
 
 /** 보드 창 안에서 보여 줄 화면 */
 /** 화면. 할 일과 캘린더는 한 화면(할 일)이다(2026-10-16). */
-export type AppPage = 'board' | 'todo' | 'timer' | 'memo' | 'timetable' | 'settings'
+export type AppPage = 'board' | 'todo' | 'habits' | 'timer' | 'memo' | 'timetable' | 'settings'
 
 export interface PageNav {
   current: AppPage

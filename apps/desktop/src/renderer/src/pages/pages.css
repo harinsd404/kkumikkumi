@@ -2026,3 +2026,196 @@
   font-size: 11px;
   font-weight: 500;
 }
+
+/* ── 습관 화면 (2026-10-21) ── */
+.hbp {
+  grid-template-columns: minmax(0, 1fr) 280px;
+}
+.hbp-main {
+  gap: 12px;
+  overflow-y: auto;
+}
+.hbp-range {
+  margin: -6px 0 0;
+  color: var(--t-sub);
+  font-size: 14px;
+  font-weight: 600;
+}
+.hbp-table {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hbp-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) repeat(7, 44px) 64px;
+  align-items: center;
+  gap: 6px;
+}
+.hbp-row--head {
+  padding-bottom: 4px;
+}
+.hbp-dow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--t-sub);
+  font-size: 13px;
+  font-weight: 700;
+}
+.hbp-dow small {
+  font-size: 11px;
+  font-weight: 500;
+}
+.hbp-dow.is-today {
+  color: var(--t-text);
+}
+.hbp-streak-head {
+  color: var(--t-sub);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+.hbp-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 6px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.hbp-name:hover {
+  background: var(--t-surface);
+}
+.hbp-name-text {
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.hbp-name small {
+  flex: none;
+  color: var(--t-sub);
+  font-size: 12px;
+}
+.hbp-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.hbp-cell {
+  position: relative;
+  justify-self: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 2px solid;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+.hbp-cell.is-done {
+  border-color: transparent;
+}
+.hbp-cell.is-off:not(.is-done) {
+  border-style: dashed;
+  opacity: 0.35;
+}
+.hbp-cell:disabled {
+  cursor: default;
+  opacity: 0.25;
+}
+.hbp-cell img {
+  position: absolute;
+  inset: 20%;
+  width: 60%;
+  height: 60%;
+}
+.hbp-streak {
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+.hbp-edit {
+  margin: 4px 0 10px 18px;
+}
+.hbp-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.hbp-days button {
+  min-width: 36px;
+  padding: 6px 8px;
+  border: 1.5px solid color-mix(in srgb, var(--t-sub) 35%, transparent);
+  border-radius: 999px;
+  background: #ffffff;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.hbp-days button[aria-pressed='true'] {
+  border-color: var(--t-accent);
+  background: var(--t-accent);
+}
+.hbp-days button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.hbp-new {
+  display: flex;
+  gap: 8px;
+}
+.hbp-new input {
+  flex: 1;
+}
+.hbp-side {
+  gap: 12px;
+  overflow-y: auto;
+}
+.hbp-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--t-surface);
+}
+.hbp-stat span {
+  color: var(--t-sub);
+  font-size: 13px;
+  font-weight: 700;
+}
+.hbp-stat strong {
+  font-size: 26px;
+  font-weight: 800;
+}
+.hbp-stat small {
+  color: var(--t-sub);
+  font-size: 13px;
+  font-weight: 600;
+}
+.hbp-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.hbp-left li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}

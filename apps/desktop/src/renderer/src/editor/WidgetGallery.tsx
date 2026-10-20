@@ -70,6 +70,15 @@ const GALLERY: readonly GalleryGroup[] = [
     ],
   },
   {
+    type: 'habits',
+    label: WIDGET_LABEL.habits,
+    sizes: [
+      { size: 'S', label: '오늘 칩' },
+      { size: 'M', label: '오늘 목록' },
+      { size: 'L', label: '이번 주' },
+    ],
+  },
+  {
     type: 'sprint',
     label: WIDGET_LABEL.sprint,
     sizes: [

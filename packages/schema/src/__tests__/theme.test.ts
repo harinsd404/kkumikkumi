@@ -100,6 +100,15 @@ describe('ThemeSchema', () => {
       expectBad(t, '매니페스트')
     })
 
+    it('습관 블록: 설정 없음, 크기 S/M/L', () => {
+      const t = baseTheme()
+      const i = t.blocks.findIndex((b: { type: string }) => b.type === 'todo')
+      t.blocks[i] = { ...t.blocks[i], type: 'habits', size: 'M', props: {} }
+      expectOk(t)
+      t.blocks[i].props = { habitId: U(1) }
+      expectBad(t)
+    })
+
     it('스프린트 블록: sprintId(null 또는 UUID)만', () => {
       const t = baseTheme()
       const i = t.blocks.findIndex((b: { type: string }) => b.type === 'todo')

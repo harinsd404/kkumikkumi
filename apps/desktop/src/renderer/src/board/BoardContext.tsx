@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react'
 import type {
   CalendarEvent,
   GridBlock,
+  Habit,
   Memo,
   PomodoroSettings,
   Theme,
@@ -27,9 +28,16 @@ export interface TodoData {
   items: Readonly<Record<string, readonly TodoItem[]>>
 }
 
+/** 습관과 체크(키: checkKey(habitId, date)) */
+export interface HabitData {
+  habits: readonly Habit[]
+  checked: ReadonlySet<string>
+}
+
 /** 블록이 표시할 사용자 데이터(테마와 독립). 없으면 빈 상태로 그린다. */
 export interface BoardData {
   todos?: TodoData
+  habits?: HabitData
   timer?: TimerState
   /** 뽀모도로 설정(단계 표시 "집중 2/4"에 필요) */
   pomodoro?: PomodoroSettings
@@ -55,7 +63,7 @@ export type TodoPatch = {
 export type EditorTarget = { date: string; time?: string } | { event: CalendarEvent }
 
 /** 세부 페이지가 있는 블록 타입 */
-export type PageType = 'todo' | 'calendar' | 'timer' | 'memo' | 'timetable'
+export type PageType = 'todo' | 'calendar' | 'timer' | 'memo' | 'timetable' | 'habits'
 
 /**
  * 블록이 사용자 데이터를 바꾸는 통로. 앱이 IPC로 구현해 주입한다(보드는 electron에 의존하지 않음).
@@ -95,6 +103,10 @@ export interface BoardActions {
   /** 고른 시간표 바꾸기(따라가는 시간표 블록 머리에서). 없으면 이름만 보여 준다. */
   timetable?: {
     select(id: string): void
+  }
+  /** 습관 체크(없으면 습관 블록은 읽기 전용) */
+  habits?: {
+    toggle(habitId: string, date: string, done: boolean): void
   }
   /** 블록의 세부 페이지 열기(사용 모드에서 블록 빈 곳 클릭). 없는 타입은 열지 않는다. 메모는 블록의 메모를 연다. */
   pages?: Partial<Record<PageType, (block: GridBlock) => void>>

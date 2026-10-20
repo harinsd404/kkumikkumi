@@ -5,6 +5,8 @@ import { SettingsPage } from '../pages/SettingsPage'
 import { TimerPage } from '../pages/TimerPage'
 import { TimetablePage } from '../pages/TimetablePage'
 import { TodoPage } from '../pages/TodoPage'
+import { HabitPage } from '../pages/HabitPage'
+import type { HabitStore } from './useHabits'
 import { themeVars } from './themeVars'
 import type { SettingsSection } from '../../../shared/api'
 import type { AppPage, ThemeMenu } from './TitleBar'
@@ -21,6 +23,7 @@ interface Props {
   /** 메모 블록에서 들어오면 그 메모를 연다 */
   memoOpen: string | null
   timetable: TimetableStore
+  habits: HabitStore
   now: Date
   /** 할 일 화면에서 달력을 크게 보는 중 */
   todoBig: boolean
@@ -52,6 +55,7 @@ function pageContent({
   memos,
   memoOpen,
   timetable,
+  habits,
   now,
   todoBig,
   onTodoBig,
@@ -92,6 +96,8 @@ function pageContent({
           onBig={onTodoBig}
         />
       )
+    case 'habits':
+      return <HabitPage store={habits} now={now} />
     case 'timer':
       return (
         <TimerPage

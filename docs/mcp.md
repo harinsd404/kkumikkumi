@@ -55,6 +55,7 @@ claude mcp add kkumikkumi -- /usr/bin/nc -U "/Users/<사용자>/Library/Applicat
 | `list_memos`, `get_memo`                                                    | `control_timer`(start/pause/resume/reset/뽀모도로)                     |
 | `get_timetable`, `get_timer`                                                | `set_timetable`(시간표 생성/전체 교체)                                 |
 | `list_sprints`(상태, 남은 날, 끝낸 일/전체)                                 | `create_sprint`, `update_sprint`, `delete_sprint`(할 일은 남음)        |
+| `list_habits`(그날 할 날·했는지·연속 기록)                                  | `check_habit`(했음/안 했음)                                            |
 
 일기(캘린더 일기)는 개인적인 내용이라 도구로 열지 않는다(읽기만 모드에서도).
 

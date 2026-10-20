@@ -15,6 +15,7 @@ export const WIDGET_LABEL: Record<GridBlock['type'], string> = {
   progress: '진행률',
   clock: '시계',
   sprint: '스프린트',
+  habits: '습관',
 }
 
 /** 인스펙터 제목("투두 블록") */
@@ -30,4 +31,5 @@ export const BLOCK_TYPE_LABEL: Record<GridBlock['type'], string> = {
   progress: '진행률',
   clock: '시계',
   sprint: '스프린트',
+  habits: '습관',
 }

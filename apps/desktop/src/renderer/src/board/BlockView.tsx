@@ -11,6 +11,7 @@ import { TimetableBlock } from './blocks/TimetableBlock'
 import { TodoBlock } from './blocks/TodoBlock'
 import { ClockBlock } from './blocks/ClockBlock'
 import { SprintBlock } from './blocks/SprintBlock'
+import { HabitBlock } from './blocks/HabitBlock'
 import { ProgressBlock } from './blocks/ProgressBlock'
 import { StudyStatsBlock } from './blocks/StudyStatsBlock'
 import type { Box } from './layout'
@@ -29,6 +30,8 @@ const pageOf = (type: GridBlock['type']): PageType | null => {
       return 'timer'
     case 'sprint':
       return 'todo'
+    case 'habits':
+      return 'habits'
     default:
       return type
   }
@@ -102,6 +105,7 @@ export function BlockView({ block, box }: { block: GridBlock; box: Box }) {
       {block.type === 'progress' && <ProgressBlock block={block} />}
       {block.type === 'clock' && <ClockBlock block={block} />}
       {block.type === 'sprint' && <SprintBlock block={block} />}
+      {block.type === 'habits' && <HabitBlock block={block} />}
     </section>
   )
 }

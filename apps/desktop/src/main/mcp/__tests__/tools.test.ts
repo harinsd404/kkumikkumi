@@ -399,3 +399,30 @@ describe('MCP 스프린트', () => {
     expect(names).not.toContain('create_sprint')
   })
 })
+
+describe('MCP 습관', () => {
+  it('목록(오늘 할 날·했는지·연속) → 체크하면 연속이 는다', async () => {
+    env.clock.now = new Date(2026, 9, 21, 9).getTime() // 수요일
+    const { call } = await connect('readwrite')
+    const created = await env.core.repos.habits.insert({
+      id: env.newId(),
+      name: '영단어',
+      color: '#93c9a1',
+      days: 127,
+      order: 0,
+      createdAt: 1,
+      updatedAt: 1,
+    })
+    env.core.repos.habits.setCheck(created.id, '2026-10-20', true, 1)
+    const before = await call('list_habits')
+    expect(before.data[0]).toMatchObject({
+      dueOnDate: true,
+      doneOnDate: false,
+      streak: 1,
+      days: '매일',
+    })
+    const after = await call('check_habit', { habitId: created.id })
+    expect(after.data).toMatchObject({ doneOnDate: true, streak: 2 })
+    expect(changed).toContain('habits')
+  })
+})

@@ -765,3 +765,30 @@ describe('diary', () => {
     expect(await store.exists(photo)).toBe(false)
   })
 })
+
+describe('habits', () => {
+  it('만들기(기본 매일)·고치기·체크·기간 조회·지우면 체크도 사라짐', async () => {
+    const a = await h['habits.create']({ name: '물 2L' })
+    expect(a).toMatchObject({ name: '물 2L', days: 127, order: 0 })
+    const b = await h['habits.create']({ name: '운동', days: 0b0111110, color: '#e58f8f' })
+    expect(b.order).toBe(1)
+    expect(await codeOf(h['habits.create']({ name: 'x', days: 0 }))).toBe('invalid_input')
+    expect(await codeOf(h['habits.create']({ name: 'x', days: 128 }))).toBe('invalid_input')
+    await h['habits.update']({ id: a.id, patch: { name: '물 1.5L' } })
+    await h['habits.check']({ habitId: a.id, date: '2026-10-20', done: true })
+    await h['habits.check']({ habitId: a.id, date: '2026-10-20', done: true }) // 두 번 켜도 하나
+    await h['habits.check']({ habitId: b.id, date: '2026-10-21', done: true })
+    expect(await h['habits.checks']({ fromDate: '2026-10-01', toDate: '2026-10-31' })).toEqual([
+      { habitId: a.id, date: '2026-10-20' },
+      { habitId: b.id, date: '2026-10-21' },
+    ])
+    await h['habits.check']({ habitId: a.id, date: '2026-10-20', done: false })
+    expect(
+      await codeOf(h['habits.check']({ habitId: env.newId(), date: '2026-10-20', done: true })),
+    ).toBe('not_found')
+    await h['habits.reorder']({ ids: [b.id, a.id] })
+    expect((await h['habits.list'](undefined)).map((x) => x.name)).toEqual(['운동', '물 1.5L'])
+    await h['habits.delete']({ id: b.id })
+    expect(await h['habits.checks']({ fromDate: '2026-10-01', toDate: '2026-10-31' })).toEqual([])
+  })
+})

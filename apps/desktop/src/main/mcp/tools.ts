@@ -14,6 +14,7 @@ import { APP_INTERNAL_NAME } from '../../shared/identity'
 import type { Handlers } from '../ipc/handlers'
 import { toErrorCode } from '../ipc/errors'
 import { SetTimetableInput } from '../ipc/handlers/timetable'
+import { checkKey, daysLabel, habitStreak, isScheduled } from '../../shared/habits'
 import {
   addDays,
   eventView,
@@ -341,6 +342,33 @@ export function createMcpServer(d: McpToolDeps): McpServer {
       }),
   )
 
+  /** 습관 요약: 오늘 할 날인지, 오늘 했는지, 연속 기록 */
+  const habitsView = async (date: string) => {
+    const habits = await h['habits.list'](undefined)
+    const checks = await h['habits.checks']({ fromDate: addDays(date, -400), toDate: date })
+    const done = new Set(checks.map((c) => checkKey(c.habitId, c.date)))
+    return habits.map((x) => ({
+      id: x.id,
+      name: x.name,
+      days: daysLabel(x.days),
+      dueOnDate: isScheduled(x.days, date),
+      doneOnDate: done.has(checkKey(x.id, date)),
+      streak: habitStreak(x.days, (d2) => done.has(checkKey(x.id, d2)), date),
+    }))
+  }
+
+  server.registerTool(
+    'list_habits',
+    {
+      title: '습관 목록',
+      description:
+        '습관과 그날(date, 생략하면 오늘) 할 날인지, 했는지, 연속 기록(하지 않는 요일은 건너뜀).',
+      inputSchema: { date: DateIn.optional() },
+      annotations: read,
+    },
+    (a) => run(async () => habitsView(a.date ?? localDateOf(d.now()))),
+  )
+
   server.registerTool(
     'get_timer',
     {
@@ -557,6 +585,23 @@ export function createMcpServer(d: McpToolDeps): McpServer {
       writing('todo', async () => {
         await h['sprints.delete'](a)
         return { deleted: a.id }
+      }),
+  )
+
+  server.registerTool(
+    'check_habit',
+    {
+      title: '습관 체크',
+      description:
+        '습관을 그날(date, 생략하면 오늘) 했음/안 했음으로 표시합니다. list_habits로 id를 찾으세요.',
+      inputSchema: { habitId: Id, date: DateIn.optional(), done: z.boolean().default(true) },
+      annotations: { ...write, idempotentHint: true },
+    },
+    (a) =>
+      writing('habits', async () => {
+        const date = a.date ?? localDateOf(d.now())
+        await h['habits.check']({ habitId: a.habitId, date, done: a.done })
+        return (await habitsView(date)).find((x) => x.id === a.habitId)
       }),
   )
 

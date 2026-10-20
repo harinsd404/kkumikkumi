@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   CalendarEventSchema,
   DiaryEntrySchema,
+  HabitSchema,
   DEFAULT_POMODORO,
   PomodoroSettingsSchema,
   ThemeRuleSchema,
@@ -142,5 +143,23 @@ describe('일기', () => {
       }).success,
     ).toBe(false)
     expect(DiaryEntrySchema.safeParse({ ...ok, path: '/etc/passwd' }).success).toBe(false)
+  })
+})
+
+describe('습관', () => {
+  const ok = {
+    id: '00000000-0000-7000-8000-000000000001',
+    name: '물 2L',
+    color: '#8fb8de',
+    days: 127,
+    order: 0,
+    createdAt: 1,
+    updatedAt: 1,
+  }
+  it('요일 비트 1~127, 이름 30자', () => {
+    expect(HabitSchema.safeParse(ok).success).toBe(true)
+    expect(HabitSchema.safeParse({ ...ok, days: 0 }).success).toBe(false)
+    expect(HabitSchema.safeParse({ ...ok, days: 128 }).success).toBe(false)
+    expect(HabitSchema.safeParse({ ...ok, name: 'x'.repeat(31) }).success).toBe(false)
   })
 })

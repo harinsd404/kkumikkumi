@@ -25,12 +25,14 @@ import { useThemeActions } from './useThemeActions'
 import { useThemes } from './useThemes'
 import { useTimetable } from './useTimetable'
 import { useUserData } from './useUserData'
+import { useHabits } from './useHabits'
 import { useWidgetDrag } from './useWidgetDrag'
 
 /** 구현된 화면(세부 페이지는 단계별로 추가) */
 const PAGES: PageNav['pages'] = [
   { id: 'board', label: '보드' },
   { id: 'todo', label: '할 일' },
+  { id: 'habits', label: '습관' },
   { id: 'timer', label: '타이머' },
   { id: 'memo', label: '메모' },
   { id: 'timetable', label: '시간표' },
@@ -57,6 +59,7 @@ export function BoardScreen({
   const user = useUserData(ed.showNotice)
   const memos = useMemos(ed.showNotice)
   const timetable = useTimetable(ed.showNotice)
+  const habits = useHabits(ed.showNotice)
   const now = useMinuteClock()
   const theme = ed.theme
   const cmd = useEditorCommands(ed)
@@ -87,11 +90,13 @@ export function BoardScreen({
   // 블록의 "크게 보기" 버튼이 세부 페이지로 보낸다
   const memoToggle = memos.toggle
   const timetableSelect = timetable.select
+  const habitToggle = habits.toggle
   const boardActions = useMemo<BoardActions>(
     () => ({
       ...user.actions,
       memo: { toggle: memoToggle },
       timetable: { select: (id) => void timetableSelect(id) },
+      habits: { toggle: habitToggle },
       pages: {
         todo: () => {
           setTodoBig(false)
@@ -102,6 +107,7 @@ export function BoardScreen({
           setPage('todo')
         },
         timer: () => setPage('timer'),
+        habits: () => setPage('habits'),
         timetable: () => setPage('timetable'),
         memo: (b) => {
           setMemoOpen(b.type === 'memo' ? b.props.memoId : null)
@@ -109,15 +115,16 @@ export function BoardScreen({
         },
       },
     }),
-    [user.actions, memoToggle, timetableSelect],
+    [user.actions, memoToggle, timetableSelect, habitToggle],
   )
   const boardData = useMemo(
     () => ({
       ...user.data,
       ...(memos.memos ? { memos: memos.memos } : {}),
       ...(timetable.data ? { timetable: timetable.data } : {}),
+      ...(habits.data ? { habits: habits.data } : {}),
     }),
-    [user.data, memos.memos, timetable.data],
+    [user.data, memos.memos, timetable.data, habits.data],
   )
   const navigate = useCallback((p: AppPage) => {
     setMemoOpen(null)
@@ -175,6 +182,7 @@ export function BoardScreen({
           memos={memos}
           memoOpen={memoOpen}
           timetable={timetable}
+          habits={habits}
           now={now}
           todoBig={todoBig}
           onTodoBig={setTodoBig}
