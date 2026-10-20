@@ -2,11 +2,12 @@ import type { CategorySection } from '../board/todo'
 
 // 할 일 페이지(할 일 + 캘린더)의 보기·검색·카테고리 묶기·날짜별 개수(순수 함수).
 
-export type TodoView = 'day' | 'all' | 'done'
+export type TodoView = 'day' | 'all' | 'done' | 'sprint'
 export const VIEW_LABEL: Record<TodoView, string> = {
   day: '이 날',
   all: '전체',
   done: '완료',
+  sprint: '스프린트',
 }
 
 interface ItemLike {
@@ -51,6 +52,7 @@ export function viewItems<T extends ItemLike>(
         )
         .sort((a, b) => Number(a.done) - Number(b.done) || byOrder(a, b))
     case 'all':
+    case 'sprint': // 스프린트 보기는 카테고리 목록 대신 스프린트 카드를 그린다
       return hit.filter((i) => !i.done).sort(byOrder)
     case 'done':
       return hit

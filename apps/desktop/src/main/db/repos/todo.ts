@@ -21,6 +21,7 @@ const toItem = (r: Row): TodoItem =>
     dueDate: r['due_date'],
     note: r['note'],
     order: r['ord'],
+    sprintId: r['sprint_id'] ?? null,
     createdAt: r['created_at'],
     updatedAt: r['updated_at'],
   })
@@ -114,8 +115,8 @@ export class TodoRepo {
     const i = TodoItemSchema.parse(item)
     this.db
       .prepare(
-        `INSERT INTO todo_items (id, list_id, title, done, completed_at, due_date, note, ord, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO todo_items (id, list_id, title, done, completed_at, due_date, note, ord, sprint_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         i.id,
@@ -126,6 +127,7 @@ export class TodoRepo {
         i.dueDate,
         i.note,
         i.order,
+        i.sprintId,
         i.createdAt,
         i.updatedAt,
       )
@@ -136,7 +138,7 @@ export class TodoRepo {
     const i = TodoItemSchema.parse(item)
     const { changes } = this.db
       .prepare(
-        `UPDATE todo_items SET list_id = ?, title = ?, done = ?, completed_at = ?, due_date = ?, note = ?, ord = ?, updated_at = ?
+        `UPDATE todo_items SET list_id = ?, title = ?, done = ?, completed_at = ?, due_date = ?, note = ?, ord = ?, sprint_id = ?, updated_at = ?
          WHERE id = ?`,
       )
       .run(
@@ -147,6 +149,7 @@ export class TodoRepo {
         i.dueDate,
         i.note,
         i.order,
+        i.sprintId,
         i.updatedAt,
         i.id,
       )

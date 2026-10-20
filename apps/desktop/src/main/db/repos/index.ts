@@ -2,6 +2,7 @@ import type { Db } from '../connection'
 import { CalendarRepo } from './calendar'
 import { MemoRepo } from './memos'
 import { SettingsRepo } from './settings'
+import { SprintRepo } from './sprints'
 import { ThemeRuleRepo } from './themeRules'
 import { TimerRepo } from './timer'
 import { TimetableRepo } from './timetable'
@@ -11,6 +12,7 @@ import { WindowStateRepo } from './windowState'
 
 export interface Repos {
   todo: TodoRepo
+  sprints: SprintRepo
   calendar: CalendarRepo
   timer: TimerRepo
   timerSessions: TimerSessionRepo
@@ -24,6 +26,7 @@ export interface Repos {
 
 export const createRepos = (db: Db): Repos => ({
   todo: new TodoRepo(db),
+  sprints: new SprintRepo(db),
   calendar: new CalendarRepo(db),
   timer: new TimerRepo(db),
   timerSessions: new TimerSessionRepo(db),

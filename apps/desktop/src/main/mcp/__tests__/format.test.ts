@@ -13,6 +13,7 @@ import {
 const item = (over: Partial<TodoItem>): TodoItem => ({
   id: '00000000-0000-7000-8000-000000000001',
   listId: '00000000-0000-7000-8000-0000000000aa',
+  sprintId: null,
   title: '할 일',
   done: false,
   completedAt: null,

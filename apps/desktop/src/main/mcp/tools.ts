@@ -1,5 +1,12 @@
 import type { CalendarEvent, McpMode, TodoItem, TodoList } from '@kkumikkumi/schema'
-import { DateStr, MEMO_MAX_CHARS, TodoItemSchema, TodoListSchema, Uuid } from '@kkumikkumi/schema'
+import {
+  DateStr,
+  MEMO_MAX_CHARS,
+  SprintSchema,
+  TodoItemSchema,
+  TodoListSchema,
+  Uuid,
+} from '@kkumikkumi/schema'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import type { DataDomain, TimetableData } from '../../shared/api'
@@ -18,6 +25,7 @@ import {
   memoSummary,
   memoTitle,
   parseLocalDateTime,
+  sprintView,
   todoView,
 } from './format'
 
@@ -227,6 +235,7 @@ export function createMcpServer(d: McpToolDeps): McpServer {
         '할 일을 조건으로 찾습니다. status 기본은 open(안 한 것). dueFrom/dueTo를 주면 마감일이 그 구간(포함)인 것만.',
       inputSchema: {
         categoryId: Id.optional().describe('이 카테고리만(생략하면 전체)'),
+        sprintId: Id.optional().describe('이 스프린트에 속한 것만'),
         status: z.enum(['open', 'done', 'all']).default('open'),
         dueFrom: DateIn.optional(),
         dueTo: DateIn.optional(),
@@ -240,7 +249,11 @@ export function createMcpServer(d: McpToolDeps): McpServer {
         const { lists, items } = await allTodos()
         if (a.categoryId && !lists.some((l) => l.id === a.categoryId))
           throw new ToolInputError('not_found', HINTS['not_found']!)
-        const scoped = a.categoryId ? items.filter((t) => t.listId === a.categoryId) : items
+        const scoped = items.filter(
+          (t) =>
+            (!a.categoryId || t.listId === a.categoryId) &&
+            (!a.sprintId || t.sprintId === a.sprintId),
+        )
         const found = filterTodos(scoped, a)
         return { total: found.length, items: found.slice(0, a.limit).map(nameOf(lists)) }
       }),
@@ -313,6 +326,22 @@ export function createMcpServer(d: McpToolDeps): McpServer {
   )
 
   server.registerTool(
+    'list_sprints',
+    {
+      title: '스프린트 목록',
+      description:
+        '스프린트(기간 동안 끝낼 일 묶음)와 상태(upcoming/active/ended), 남은 날, 끝낸 할 일/전체. 안의 할 일은 list_todos의 sprintId로.',
+      annotations: read,
+    },
+    () =>
+      run(async () => {
+        const today = localDateOf(d.now())
+        const { items } = await allTodos()
+        return (await h['sprints.list'](undefined)).map((s) => sprintView(s, items, today))
+      }),
+  )
+
+  server.registerTool(
     'get_timer',
     {
       title: '타이머 상태',
@@ -348,6 +377,7 @@ export function createMcpServer(d: McpToolDeps): McpServer {
         categoryId: Id.optional(),
         dueDate: DateIn.optional().describe("마감일 'YYYY-MM-DD'(생략하면 없음)"),
         note: TodoItemSchema.shape.note.optional(),
+        sprintId: Id.optional().describe('이 스프린트에 넣기(list_sprints로 찾기)'),
       },
       annotations: write,
     },
@@ -357,6 +387,7 @@ export function createMcpServer(d: McpToolDeps): McpServer {
           listId: a.categoryId ?? null,
           title: a.title,
           dueDate: a.dueDate ?? null,
+          sprintId: a.sprintId ?? null,
         })
         if (a.note) item = await h['todo.items.update']({ id: item.id, patch: { note: a.note } })
         return viewOne(item)
@@ -368,7 +399,7 @@ export function createMcpServer(d: McpToolDeps): McpServer {
     {
       title: '할 일 수정/완료',
       description:
-        '할 일의 제목, 완료 여부, 마감일(null이면 지움), 메모, 카테고리를 바꿉니다. 준 값만 바뀝니다.',
+        '할 일의 제목, 완료 여부, 마감일(null이면 지움), 메모, 카테고리, 스프린트(null이면 빼기)를 바꿉니다. 준 값만 바뀝니다.',
       inputSchema: {
         id: Id,
         title: TodoItemSchema.shape.title.optional(),
@@ -376,6 +407,7 @@ export function createMcpServer(d: McpToolDeps): McpServer {
         dueDate: DateIn.nullable().optional(),
         note: TodoItemSchema.shape.note.optional(),
         categoryId: Id.optional(),
+        sprintId: Id.nullable().optional(),
       },
       annotations: { ...write, idempotentHint: true },
     },
@@ -467,6 +499,66 @@ export function createMcpServer(d: McpToolDeps): McpServer {
       tzid: Intl.DateTimeFormat().resolvedOptions().timeZone,
     }
   }
+
+  const sprintSummary = async (id: string) => {
+    const { items } = await allTodos()
+    const s = (await h['sprints.list'](undefined)).find((x) => x.id === id)
+    if (!s) throw new ToolInputError('not_found', HINTS['not_found']!)
+    return sprintView(s, items, localDateOf(d.now()))
+  }
+
+  server.registerTool(
+    'create_sprint',
+    {
+      title: '스프린트 만들기',
+      description:
+        "기간(시작~끝, 끝 날 포함 'YYYY-MM-DD')과 목표가 있는 할 일 묶음을 만듭니다. 할 일은 add_todo/update_todo의 sprintId로 넣습니다.",
+      inputSchema: {
+        name: SprintSchema.shape.name,
+        startDate: DateIn,
+        endDate: DateIn,
+        goal: SprintSchema.shape.goal.optional(),
+      },
+      annotations: write,
+    },
+    (a) => writing('todo', async () => sprintSummary((await h['sprints.create'](a)).id)),
+  )
+
+  server.registerTool(
+    'update_sprint',
+    {
+      title: '스프린트 고치기',
+      description: '이름, 목표, 기간을 바꿉니다. 준 값만 바뀝니다.',
+      inputSchema: {
+        id: Id,
+        name: SprintSchema.shape.name.optional(),
+        goal: SprintSchema.shape.goal.optional(),
+        startDate: DateIn.optional(),
+        endDate: DateIn.optional(),
+      },
+      annotations: { ...write, idempotentHint: true },
+    },
+    ({ id, ...patch }) =>
+      writing('todo', async () => {
+        await h['sprints.update']({ id, patch })
+        return sprintSummary(id)
+      }),
+  )
+
+  server.registerTool(
+    'delete_sprint',
+    {
+      title: '스프린트 지우기',
+      description: '스프린트를 지웁니다. 안의 할 일은 지워지지 않고 스프린트에서만 빠집니다.',
+      inputSchema: { id: Id },
+      annotations: destroy,
+    },
+    (a) =>
+      writing('todo', async () => {
+        await h['sprints.delete'](a)
+        return { deleted: a.id }
+      }),
+  )
 
   server.registerTool(
     'add_event',

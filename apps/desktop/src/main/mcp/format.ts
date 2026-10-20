@@ -1,4 +1,4 @@
-import type { CalendarEvent, Memo, TodoItem } from '@kkumikkumi/schema'
+import type { CalendarEvent, Memo, Sprint, TodoItem } from '@kkumikkumi/schema'
 
 // MCP 도구 입출력 변환(순수 함수). 시각 일정은 앱 화면과 같게 시스템 타임존의 벽시계 시각으로 주고받는다.
 
@@ -65,6 +65,8 @@ export interface TodoView {
   note: string
   categoryId: string
   categoryName: string
+  /** 속한 스프린트(없으면 null) */
+  sprintId: string | null
   completedAt: string | null
 }
 
@@ -76,6 +78,7 @@ export const todoView = (t: TodoItem, categoryName: string): TodoView => ({
   note: t.note,
   categoryId: t.listId,
   categoryName,
+  sprintId: t.sprintId,
   completedAt: t.completedAt === null ? null : localIso(t.completedAt),
 })
 
@@ -140,4 +143,40 @@ export function filterTodos<T extends TodoItem>(items: readonly T[], f: TodoFilt
     if (q && !t.title.toLowerCase().includes(q) && !t.note.toLowerCase().includes(q)) return false
     return true
   })
+}
+
+export interface SprintView {
+  id: string
+  name: string
+  goal: string
+  startDate: string
+  endDate: string
+  status: 'upcoming' | 'active' | 'ended'
+  /** 진행 중이면 끝 날까지 남은 날(오늘 제외), 아니면 null */
+  daysLeft: number | null
+  done: number
+  total: number
+}
+
+/** 스프린트 요약: 상태(오늘 기준), 남은 날, 끝낸 할 일/전체 */
+export function sprintView(
+  s: Sprint,
+  items: readonly Pick<TodoItem, 'sprintId' | 'done'>[],
+  today: string,
+): SprintView {
+  const mine = items.filter((t) => t.sprintId === s.id)
+  const status = today < s.startDate ? 'upcoming' : today > s.endDate ? 'ended' : 'active'
+  const days = (a: string, b: string) =>
+    Math.round((localDayStart(b) - localDayStart(a)) / 86_400_000)
+  return {
+    id: s.id,
+    name: s.name,
+    goal: s.goal,
+    startDate: s.startDate,
+    endDate: s.endDate,
+    status,
+    daysLeft: status === 'active' ? days(today, s.endDate) : null,
+    done: mine.filter((t) => t.done).length,
+    total: mine.length,
+  }
 }

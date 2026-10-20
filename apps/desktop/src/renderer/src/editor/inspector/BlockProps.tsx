@@ -1,4 +1,7 @@
-import type { GridBlock } from '@kkumikkumi/schema'
+import type { GridBlock, Sprint } from '@kkumikkumi/schema'
+import { sortSprints, sprintBadge } from '../../board/sprint'
+import { localDate } from '../../board/calendar'
+import { useMinuteClock } from '../../board/useMinuteClock'
 import { Row, Section, Segmented } from '../fields'
 import type { EditorApi } from '../useEditor'
 import { ImageContentFields } from './decor'
@@ -28,13 +31,15 @@ export interface BlockDataApis {
   timetables?: TimetablePick | undefined
   /** 일정 조회(디데이 블록에서 일정 고르기). 없으면 일정 선택을 숨긴다. */
   events?: EventPickApi | undefined
+  /** 스프린트 목록(스프린트 블록에서 고르기). 없으면 자동만 */
+  sprints?: readonly Sprint[] | undefined
 }
 
 /** 블록 종류별 설정(props) */
 export function BlockProps({
   ed,
   block,
-  apis: { pickImage, todoLists, memos, timetables, events },
+  apis: { pickImage, todoLists, memos, timetables, events, sprints },
 }: {
   ed: EditorApi
   block: GridBlock
@@ -153,6 +158,16 @@ export function BlockProps({
           </p>
         </Section>
       )
+    case 'sprint':
+      return (
+        <Section title="스프린트">
+          <SprintPickFields
+            sprints={sprints ?? []}
+            sprintId={block.props.sprintId}
+            onSelect={(sprintId) => set({ sprintId })}
+          />
+        </Section>
+      )
     case 'studyStats':
       return (
         <Section title="공부 통계">
@@ -209,4 +224,39 @@ export function BlockProps({
         </Section>
       )
   }
+}
+
+/** 스프린트 블록: 자동(진행 중 먼저 끝나는 것) 또는 특정 스프린트 */
+function SprintPickFields({
+  sprints,
+  sprintId: id,
+  onSelect,
+}: {
+  sprints: readonly Sprint[]
+  sprintId: string | null
+  onSelect(id: string | null): void
+}) {
+  const today = localDate(useMinuteClock().getTime())
+  const list = sortSprints(sprints, today)
+  const missing = id !== null && !list.some((s) => s.id === id)
+  return (
+    <>
+      <Row label="보여 줄 스프린트">
+        <select
+          className="ki-select"
+          value={missing ? '' : (id ?? '')}
+          onChange={(e) => onSelect(e.target.value || null)}
+        >
+          <option value="">진행 중 · 먼저 끝나는 것 (자동)</option>
+          {list.map((s) => (
+            <option key={s.id} value={s.id}>
+              {`${s.name} · ${sprintBadge(s, today)}`}
+            </option>
+          ))}
+        </select>
+      </Row>
+      {missing && <p className="ki-note">고정했던 스프린트가 지워졌어요.</p>}
+      <p className="ki-note">스프린트는 할 일 화면의 "스프린트" 탭에서 만들어요.</p>
+    </>
+  )
 }

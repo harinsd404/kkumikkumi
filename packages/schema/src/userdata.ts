@@ -36,9 +36,30 @@ export const TodoItemSchema = z.strictObject({
   dueDate: DateStr.nullable(), // 캘린더 표시용 (시각 없는 날짜)
   note: z.string().max(2000),
   order: z.number().int(),
+  /** 속한 스프린트(없으면 null). 스프린트를 지우면 null이 된다 */
+  sprintId: Uuid.nullable().default(null),
   createdAt: EpochMs,
   updatedAt: EpochMs,
 })
+
+/* ───────── 스프린트(기간 동안 끝낼 일 묶음, 2026-10-20) ───────── */
+
+export const MAX_SPRINTS = 50
+
+export const SprintSchema = z
+  .strictObject({
+    id: Uuid,
+    name: z.string().trim().min(1).max(40),
+    /** 목표 한두 줄(비어도 된다) */
+    goal: z.string().trim().max(200),
+    startDate: DateStr,
+    /** 끝 날 포함 */
+    endDate: DateStr,
+    color: HexColor,
+    createdAt: EpochMs,
+    updatedAt: EpochMs,
+  })
+  .refine((s) => s.startDate <= s.endDate, '끝 날짜가 시작 날짜보다 앞이에요')
 
 /* ───────── 메모 ───────── */
 
@@ -349,5 +370,6 @@ export type PomodoroPhase = z.infer<typeof PomodoroPhaseSchema>
 export type TimerSession = z.infer<typeof TimerSessionSchema>
 export type ThemeRule = z.infer<typeof ThemeRuleSchema>
 export type Settings = z.infer<typeof SettingsSchema>
+export type Sprint = z.infer<typeof SprintSchema>
 export type LookColors = z.infer<typeof LookColorsSchema>
 export type ColorCombo = z.infer<typeof ColorComboSchema>

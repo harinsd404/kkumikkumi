@@ -48,12 +48,13 @@ claude mcp add kkumikkumi -- /usr/bin/nc -U "/Users/<사용자>/Library/Applicat
 
 | 읽기                                                                        | 쓰기(읽기·쓰기 모드)                                                   |
 | --------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `get_overview` 지금 시각, 오늘/지난 할 일, 오늘 일정, 다가오는 일정, 타이머 | `add_todo`, `update_todo`(완료 포함), `delete_todo`                    |
+| `get_overview` 지금 시각, 오늘/지난 할 일, 오늘 일정, 다가오는 일정, 타이머 | `add_todo`, `update_todo`(완료, 스프린트 포함), `delete_todo`          |
 | `list_todo_categories`                                                      | `create_todo_category`, `rename_todo_category`, `delete_todo_category` |
-| `list_todos`(상태, 카테고리, 마감 구간, 검색)                               | `add_event`, `update_event`, `delete_event`                            |
+| `list_todos`(상태, 카테고리, 스프린트, 마감 구간, 검색)                     | `add_event`, `update_event`, `delete_event`                            |
 | `list_events`(최대 366일)                                                   | `create_memo`, `update_memo`, `delete_memo`                            |
 | `list_memos`, `get_memo`                                                    | `control_timer`(start/pause/resume/reset/뽀모도로)                     |
 | `get_timetable`, `get_timer`                                                | `set_timetable`(시간표 생성/전체 교체)                                 |
+| `list_sprints`(상태, 남은 날, 끝낸 일/전체)                                 | `create_sprint`, `update_sprint`, `delete_sprint`(할 일은 남음)        |
 
 지우기 도구와 전체 교체 도구 `set_timetable`에는 `destructiveHint: true`를 단다. 확인 UI를 띄울지는 AI 앱이 결정한다. 테마, 에셋, 앱 설정은 열지 않는다.
 

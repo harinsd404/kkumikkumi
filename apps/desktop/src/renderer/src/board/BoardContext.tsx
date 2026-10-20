@@ -9,6 +9,7 @@ import type {
   TimerState,
   TodoItem,
   TodoList,
+  Sprint,
 } from '@kkumikkumi/schema'
 import type { TimetableData } from '../../../shared/api'
 import type { TimerCommand } from '../../../shared/timer'
@@ -19,6 +20,8 @@ export type BoardMode = 'use' | 'edit'
 
 export interface TodoData {
   lists: readonly TodoList[]
+  /** 스프린트(시작 날짜 순). 없으면 빈 것으로 본다 */
+  sprints?: readonly Sprint[]
   defaultListId: string
   /** listId → 항목(order 순) */
   items: Readonly<Record<string, readonly TodoItem[]>>
@@ -44,6 +47,8 @@ export type TodoPatch = {
   dueDate?: string | null
   note?: string
   listId?: string
+  /** 스프린트에 넣기/빼기(null) */
+  sprintId?: string | null
 }
 
 /** 일정 입력 창 대상: 새 일정(날짜, 시간 칸에서 열면 시각도) 또는 기존 일정 */
@@ -58,7 +63,12 @@ export type PageType = 'todo' | 'calendar' | 'timer' | 'memo' | 'timetable'
  */
 export interface BoardActions {
   todo: {
-    create(listId: string, title: string, dueDate: string | null): Promise<boolean>
+    create(
+      listId: string,
+      title: string,
+      dueDate: string | null,
+      sprintId?: string | null,
+    ): Promise<boolean>
     update(id: string, patch: TodoPatch): Promise<boolean>
     remove(id: string): Promise<boolean>
     reorder(listId: string, ids: string[]): Promise<boolean>

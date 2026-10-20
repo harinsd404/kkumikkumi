@@ -18,7 +18,7 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
 - 스택: Electron + React + TypeScript(strict), Vite 기반, pnpm 모노레포.
 - 보드는 일반 창이다(바탕화면 레벨 아님). 펫은 별도 창이다.
 - 레이아웃
-  - 그리드 블록: 크기는 S/M/L(+ image 전용 W 배너), 퍼즐처럼 배치. 타입은 calendar, todo, timer, image, memo, timetable, dday, studyStats, progress, clock. 셀 수는 타입별 크기표(packages/schema BLOCK_SIZES, 2026-10-12 시안 기준).
+  - 그리드 블록: 크기는 S/M/L(+ image 전용 W 배너), 퍼즐처럼 배치. 타입은 calendar, todo, timer, image, memo, timetable, dday, studyStats, progress, clock, sprint. 셀 수는 타입별 크기표(packages/schema BLOCK_SIZES, 2026-10-12 시안 기준).
   - 디자인 시안: Figma 파일 mJL2BsO51Ir9l9z4wK1lDI (3:1079 푸딩 아침, 6:2384 코튼캔디). 시안 1280x800(+타이틀바 36) = 논리 캔버스 1600x1000의 0.8배. 블록 바깥 여백/간격 25(논리 px)는 렌더러에서만 적용.
   - 기본 테마(2026-10-14 사용자 지시): 푸딩 아침, 코튼캔디는 앱 내장 테마로 항상 있다(고정 ID, 없으면 시작 시 생성). 이름 바꾸기/삭제 불가, 색·글꼴·배치는 수정 가능하고 "처음 상태로 되돌리기" 제공. 새 테마는 프리셋 복사가 아니라 "새로 만들기" 창(이름, 색, 무늬, 글꼴, 배치 템플릿)으로 만든다.
   - 테마 색은 defaults.palette(text, subText, accent, check, surface, control), 배경은 색 + 내장 무늬(stars/dots). 블록 style의 null 값은 팔레트로 대체.
@@ -46,7 +46,7 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
 ## 가정 (미확정, 변경 가능)
 
 - 창 비율 전역 고정(16:10).
-- 크기표(2026-10-12 시안 반영): 8x5 그리드(1칸 200px). calendar M=2x2/L=4x3, todo S=2x2/M=2x3/L=4x3, timer S=2x1/M=2x2, image S=2x1/M=2x2/L=4x3/W=8x1, memo S=2x2/M=2x3/L=4x3, timetable S=2x2/M=2x3/L=4x3, dday S=2x1/M=2x2, studyStats·progress·clock S=2x1/M=2x2. 단일 출처는 packages/schema의 BLOCK_SIZES.
+- 크기표(2026-10-12 시안 반영): 8x5 그리드(1칸 200px). calendar M=2x2/L=4x3, todo S=2x2/M=2x3/L=4x3, timer S=2x1/M=2x2, image S=2x1/M=2x2/L=4x3/W=8x1, memo S=2x2/M=2x3/L=4x3, timetable S=2x2/M=2x3/L=4x3, dday S=2x1/M=2x2, studyStats·progress·clock·sprint S=2x1/M=2x2. 단일 출처는 packages/schema의 BLOCK_SIZES.
 - 창: 앱이 그리는 타이틀바 36px(titleBarStyle hiddenInset) + 보드 16:10. setAspectRatio(16/10, { height: 36 }).
 - 이미지 블록/스티커 업로드는 PNG/JPG/WebP 허용, 펫 이미지는 PNG만.
 - 펫 이동 방식(작은 창 이동 vs 하단 오버레이)은 M0 스파이크 결과로 결정.
@@ -61,7 +61,7 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
 ## 보안/프라이버시 규칙
 
 - contextIsolation: true, nodeIntegration: false, sandbox: true, 엄격한 CSP, 외부 URL 탐색/새 창 차단.
-- 가져오기 파일은 신뢰할 수 없는 입력: zip-slip, 엔트리 수/용량/압축비 제한, 확장자 허용 목록, 스키마 검증, 이미지 디코딩 후 재인코딩 + 해시 재계산, 모든 ID 재발급, todo.listId, memo.memoId, timetable.timetableId, dday.eventId는 null로 치환, 원시 CSS/HTML 금지, SVG 금지. 전부 성공했을 때만 원자적으로 저장.
+- 가져오기 파일은 신뢰할 수 없는 입력: zip-slip, 엔트리 수/용량/압축비 제한, 확장자 허용 목록, 스키마 검증, 이미지 디코딩 후 재인코딩 + 해시 재계산, 모든 ID 재발급, todo.listId, memo.memoId, timetable.timetableId, dday.eventId, sprint.sprintId는 null로 치환, 원시 CSS/HTML 금지, SVG 금지. 전부 성공했을 때만 원자적으로 저장.
 - 키 입력 내용은 어디에도 기록하지 않는다. 로그에 사용자 데이터(할 일 제목, 일정, 이미지 경로)를 남기지 않는다.
 
 ## 불확실 항목 (구현 전에 공식 문서로 확인)
@@ -245,7 +245,11 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
   - 블록 style.bgImage(에셋 해시, 위치, 덮개 0~0.8) — 없던 테마는 null로 읽는다(.default). 이미지 블록에는 쓰지 않는다. 에셋 참조 검증·고아 정리에 포함.
   - 사진 위에 블록 배경색(투명이면 흰색)을 덮개 세기만큼 덮어 글자가 읽히게 한다. 인스펙터 "배경 사진"(고르기·바꾸기·위치 조정·빼기, 덮개 슬라이더), 블록 두 번 누르기로 끌어서 위치 조정, 사진(투명 없음)을 위젯 위에 끌어 놓으면 그 위젯 배경.
 
-- [ ] **스프린트(기간 할 일) (2026-10-20 사용자 지시)** — "중간고사 대비 10/20~11/2"처럼 기간·목표를 만들고 그 안에 할 일을 넣는다. 진행률(끝낸 일/전체), 남은 날, 위젯·달력에 기간 표시. 사용자 데이터 + 마이그레이션 + IPC + MCP.
+- [x] **스프린트(기간 할 일) (2026-10-20 사용자 지시)** — "중간고사 대비 10/20~11/2"처럼 기간·목표를 만들고 그 안에 할 일을 넣는다.
+  - 데이터: sprints 표(이름, 목표, 시작~끝(끝 날 포함), 색) + todo_items.sprint_id(마이그레이션 007, 스프린트를 지우면 할 일은 남고 연결만 끊김 ON DELETE SET NULL). 최대 50개. 상태는 남은 일/끝낸 일(체크 하나), 스프린트에 넣은 할 일의 마감일은 비워 둔다(사용자 결정).
+  - IPC sprints.list/create/update/delete, todo.items.create/update의 sprintId(zod 재검증). MCP list_sprints/create_sprint/update_sprint/delete_sprint, add_todo·update_todo·list_todos의 sprintId.
+  - 화면: 할 일 화면 "스프린트" 탭(진행 중→예정→끝남 카드: 기간, D-N, 목표, 진행률, 남은 일·끝낸 일, + 할 일(카테고리 고르기), 수정·삭제), "이 날" 보기에 그날 걸친 스프린트, 작은 달력에 기간 색 줄, 할 일 상세 스프린트 고르기.
+  - sprint 블록(S 한 줄 / M 남은 일 체크): props.sprintId null = 진행 중 먼저 끝나는 것(없으면 가장 가까운 예정). 계산은 순수 함수(board/sprint.ts) + 테스트.
 - [ ] **캘린더 일기 (2026-10-20 사용자 지시)** — 날짜마다 글(간단 서식) + 기분(5단계) + 사진. 사진은 사용자 데이터 폴더에 재인코딩해 저장. 달력 칸에 기분 표시.
 - [ ] **습관 체크 (2026-10-20 사용자 지시)** — 매일 체크, 연속 기록, 이번 주 칸. 위젯 + 페이지.
 

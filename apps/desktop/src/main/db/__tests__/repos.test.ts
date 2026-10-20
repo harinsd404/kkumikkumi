@@ -35,6 +35,7 @@ const list = (n: number, order = n): TodoList => ({
   updatedAt: n,
 })
 const item = (n: number, listId: string, o: Partial<TodoItem> = {}): TodoItem => ({
+  sprintId: null,
   id: U(100 + n),
   listId,
   title: `할 일 ${n}`,

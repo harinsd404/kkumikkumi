@@ -1,4 +1,4 @@
-import type { TodoItem, TodoList } from '@kkumikkumi/schema'
+import type { Sprint, TodoItem, TodoList } from '@kkumikkumi/schema'
 import { useState } from 'react'
 import type { BoardActions } from '../../board/BoardContext'
 import { addDays } from '../../board/calendar'
@@ -25,6 +25,8 @@ interface Common {
   onOpen(id: string | null): void
   /** + 로 추가할 때의 마감일 */
   addDue: string | null
+  /** 상세에서 고를 스프린트 */
+  sprints: readonly Sprint[]
 }
 
 /** 카테고리마다 이름 칩(+로 추가) 아래 할 일. 맨 아래에서 새 카테고리를 만든다. */
@@ -54,6 +56,7 @@ function Category({
   openId,
   onOpen,
   addDue,
+  sprints,
 }: Common & { section: CategorySection<TodoItem>; tone: { label: string } }) {
   const [adding, setAdding] = useState(false)
   const [renaming, setRenaming] = useState(false)
@@ -155,6 +158,7 @@ function Category({
                   key={i.id}
                   item={i}
                   lists={allLists}
+                  sprints={sprints}
                   today={today}
                   actions={actions}
                   onClose={() => onOpen(null)}
@@ -172,16 +176,20 @@ function Category({
 function ItemDetail({
   item,
   lists,
+  sprints,
   today,
   actions,
   onClose,
 }: {
   item: TodoItem
   lists: readonly TodoList[]
+  sprints: readonly Sprint[]
   today: string
   actions: BoardActions
   onClose(): void
 }) {
+  // 끝난 스프린트는 고를 목록에서 빼되, 지금 들어 있는 것은 남긴다
+  const sprintOptions = sprints.filter((s) => s.endDate >= today || s.id === item.sprintId)
   const update = (patch: Parameters<BoardActions['todo']['update']>[1]) =>
     void actions.todo.update(item.id, patch)
 
@@ -236,6 +244,21 @@ function ItemDetail({
             {lists.map((l) => (
               <option key={l.id} value={l.id}>
                 {l.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="pg-field">
+          <span>스프린트</span>
+          <select
+            className="pg-input"
+            value={item.sprintId ?? ''}
+            onChange={(e) => update({ sprintId: e.target.value || null })}
+          >
+            <option value="">없음</option>
+            {sprintOptions.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
               </option>
             ))}
           </select>

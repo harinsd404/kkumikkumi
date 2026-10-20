@@ -1682,3 +1682,191 @@
   white-space: pre;
   user-select: text;
 }
+
+/* ── 스프린트 (2026-10-20) ── */
+.tdo-spans {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-height: 3px;
+}
+.tdo-spans span {
+  height: 3px;
+  opacity: 0.85;
+}
+.tdo-spans span.is-start {
+  margin-left: 25%;
+  border-radius: 999px 0 0 999px;
+}
+.tdo-spans span.is-end {
+  margin-right: 25%;
+  border-radius: 0 999px 999px 0;
+}
+.tdo-sprints {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.tdo-sprint {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-left: 5px solid var(--t-accent);
+  border-radius: 14px;
+  background: var(--t-surface);
+}
+.tdo-sprint.is-ended {
+  opacity: 0.7;
+}
+.tdo-sprint-form {
+  border-left-color: transparent;
+}
+.tdo-sprint-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.tdo-sprint-head:hover .tdo-cat-tools,
+.tdo-sprint-head .tdo-cat-tools:focus-within {
+  opacity: 1;
+}
+.tdo-sprint-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.tdo-sprint-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.tdo-sprint-badge {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.tdo-sprint-range {
+  color: var(--t-sub);
+  font-size: 13px;
+}
+.tdo-sprint-goal {
+  margin: 0;
+  color: var(--t-sub);
+  font-size: 14px;
+}
+.tdo-sprint-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tdo-sprint-track {
+  flex: 1;
+  height: 8px;
+  min-width: 40px;
+  border-radius: 999px;
+  background: #ffffff;
+  overflow: hidden;
+}
+.tdo-sprint-track span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+.tdo-sprint-count {
+  flex: none;
+  color: var(--t-sub);
+  font-size: 13px;
+  font-weight: 600;
+}
+.tdo-sprint-item {
+  cursor: default;
+}
+.tdo-sprint-cat {
+  flex: none;
+  color: var(--t-sub);
+  font-size: 12px;
+}
+.tdo-sprint-more {
+  align-self: flex-start;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--t-sub);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tdo-sprint-add {
+  display: flex;
+  gap: 8px;
+}
+.tdo-sprint-add select {
+  flex: none;
+  max-width: 120px;
+}
+.tdo-sprint-add input {
+  flex: 1;
+}
+.tdo-sprint-name-input {
+  font-size: 17px;
+  font-weight: 700;
+}
+.tdo-sprint-colors {
+  display: flex;
+  gap: 6px;
+  padding-top: 4px;
+}
+.tdo-sprint-colors button {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.12);
+  cursor: pointer;
+}
+.tdo-sprint-colors button[aria-checked='true'] {
+  box-shadow: 0 0 0 2px var(--t-text);
+}
+.tdo-day-sprints {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tdo-day-sprint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--t-surface);
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.tdo-day-sprint-name {
+  flex: none;
+  max-width: 40%;
+  overflow: hidden;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

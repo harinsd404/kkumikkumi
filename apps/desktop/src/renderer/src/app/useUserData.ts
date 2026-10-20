@@ -6,7 +6,7 @@ import type {
   TodoList,
 } from '@kkumikkumi/schema'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { IpcResult, TimerDoneInfo } from '../../../shared/api'
+import type { IpcResult, SprintFields, TimerDoneInfo } from '../../../shared/api'
 import type { BoardActions, BoardData, EditorTarget, TodoData } from '../board/BoardContext'
 import { localDayStart, type EventInput } from '../board/calendar'
 import { sortUpcoming } from '../board/dday'
@@ -24,6 +24,7 @@ async function loadTodos(): Promise<TodoData | null> {
   // items.list(null)이 기본 목록을 보장하고 알려 준다
   const def = await window.kkumi.invoke('todo.items.list', { listId: null })
   const lists = await window.kkumi.invoke('todo.lists.list')
+  const sprints = await window.kkumi.invoke('sprints.list')
   if (!def.ok || !lists.ok) return null
   const items: Record<string, TodoItem[]> = { [def.value.list.id]: def.value.items }
   for (const l of lists.value) {
@@ -31,7 +32,12 @@ async function loadTodos(): Promise<TodoData | null> {
     const r = await window.kkumi.invoke('todo.items.list', { listId: l.id })
     if (r.ok) items[l.id] = r.value.items
   }
-  return { lists: lists.value, defaultListId: def.value.list.id, items }
+  return {
+    lists: lists.value,
+    defaultListId: def.value.list.id,
+    items,
+    sprints: sprints.ok ? sprints.value : [],
+  }
 }
 
 export interface UserData {
@@ -41,6 +47,12 @@ export interface UserData {
     all: readonly TodoList[]
     create(name: string): Promise<TodoList | null>
     rename(id: string, name: string): Promise<boolean>
+    remove(id: string): Promise<boolean>
+  }
+  /** 스프린트 만들기·고치기·지우기(목록은 data.todos.sprints) */
+  sprints: {
+    create(f: SprintFields): Promise<boolean>
+    update(id: string, patch: Partial<SprintFields>): Promise<boolean>
     remove(id: string): Promise<boolean>
   }
   events: {
@@ -143,9 +155,15 @@ export function useUserData(onError: (text: string) => void): UserData {
   const actions = useMemo<BoardActions>(
     () => ({
       todo: {
-        create: async (listId, title, dueDate) =>
-          (await run(window.kkumi.invoke('todo.items.create', { listId, title, dueDate }))) !==
-          null,
+        create: async (listId, title, dueDate, sprintId) =>
+          (await run(
+            window.kkumi.invoke('todo.items.create', {
+              listId,
+              title,
+              dueDate,
+              ...(sprintId ? { sprintId } : {}),
+            }),
+          )) !== null,
         update: async (id, patch) => {
           // 체크는 바로 보이게(낙관적), 실패하면 run이 다시 읽어 되돌린다
           setTodos((t) => t && patchItem(t, id, patch))
@@ -207,6 +225,16 @@ export function useUserData(onError: (text: string) => void): UserData {
     [run, runOk, todos?.lists],
   )
 
+  const sprints = useMemo<UserData['sprints']>(
+    () => ({
+      create: async (f) => (await run(window.kkumi.invoke('sprints.create', f))) !== null,
+      update: async (id, patch) =>
+        (await run(window.kkumi.invoke('sprints.update', { id, patch }))) !== null,
+      remove: (id) => runOk(window.kkumi.invoke('sprints.delete', { id })),
+    }),
+    [run, runOk],
+  )
+
   const events = useMemo<UserData['events']>(
     () => ({
       create: async (e) =>
@@ -251,6 +279,7 @@ export function useUserData(onError: (text: string) => void): UserData {
     data,
     actions,
     lists,
+    sprints,
     events,
     editing,
     closeEditor,

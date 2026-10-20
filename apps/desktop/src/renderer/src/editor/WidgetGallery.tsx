@@ -70,6 +70,14 @@ const GALLERY: readonly GalleryGroup[] = [
     ],
   },
   {
+    type: 'sprint',
+    label: WIDGET_LABEL.sprint,
+    sizes: [
+      { size: 'S', label: '한 줄' },
+      { size: 'M', label: '남은 일' },
+    ],
+  },
+  {
     type: 'studyStats',
     label: WIDGET_LABEL.studyStats,
     sizes: [

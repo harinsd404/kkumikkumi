@@ -20,6 +20,7 @@ describe('migrate', () => {
       'calendar_events',
       'memos',
       'settings',
+      'sprints',
       'theme_rules',
       'timer_sessions',
       'timer_state',
@@ -28,6 +29,20 @@ describe('migrate', () => {
       'todo_items',
       'todo_lists',
     ])
+  })
+
+  it('007: 기존 할 일은 스프린트 없이 남는다', () => {
+    const db = openDb(':memory:')
+    migrate(db, migrations.slice(0, 6))
+    db.exec(
+      "INSERT INTO todo_lists (id, name, ord, created_at, updated_at) VALUES ('00000000-0000-7000-8000-000000000001', '할 일', 0, 1, 1)",
+    )
+    db.exec(
+      "INSERT INTO todo_items (id, list_id, title, done, completed_at, due_date, note, ord, created_at, updated_at) VALUES ('00000000-0000-7000-8000-000000000002', '00000000-0000-7000-8000-000000000001', '숙제', 0, NULL, NULL, '', 0, 1, 1)",
+    )
+    migrate(db, migrations)
+    const r = db.prepare('SELECT sprint_id FROM todo_items').get() as { sprint_id: unknown }
+    expect(r.sprint_id).toBeNull()
   })
 
   it('002: v1 DB의 기존 할 일은 빈 메모로 남는다', () => {

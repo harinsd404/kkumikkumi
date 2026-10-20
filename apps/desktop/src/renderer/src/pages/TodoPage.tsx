@@ -1,4 +1,4 @@
-import type { CalendarEvent } from '@kkumikkumi/schema'
+import type { CalendarEvent, Sprint, TodoItem } from '@kkumikkumi/schema'
 import { useMemo, useState } from 'react'
 import './pages.css'
 import type { BoardActions, TodoData } from '../board/BoardContext'
@@ -8,14 +8,17 @@ import type { UserData } from '../app/useUserData'
 import { CalendarPage } from './CalendarPage'
 import { shiftAnchor, titleFor, visibleDays } from './calendarView'
 import { monthDayKo, weekdayLabel } from './dateText'
+import { sprintBadge, sprintItems, sprintProgress, sprintsOn } from '../board/sprint'
 import { CategoryList } from './todo/CategoryList'
 import { MiniMonth } from './todo/MiniMonth'
+import { SprintList } from './todo/SprintList'
 import { dueForView, remainingByDay, VIEW_LABEL, viewSections, type TodoView } from './todoView'
 
 interface Props {
   todos: TodoData | undefined
   actions: BoardActions
   lists: UserData['lists']
+  sprintApi: UserData['sprints']
   palette: { accent: string; check: string }
   now: Date
   /** 사용자 데이터가 바뀔 때마다 증가(일정 다시 조회) */
@@ -27,11 +30,12 @@ interface Props {
   onBig(big: boolean): void
 }
 
-const VIEWS: TodoView[] = ['day', 'all', 'done']
+const VIEWS: TodoView[] = ['day', 'all', 'done', 'sprint']
 const EMPTY_TEXT: Record<TodoView, string> = {
   day: '이 날 할 일이 없어요. 카테고리의 + 로 추가해 보세요',
   all: '남은 할 일이 없어요',
   done: '완료한 할 일이 없어요',
+  sprint: '',
 }
 
 /**
@@ -97,6 +101,7 @@ function SplitView({
   todos,
   actions,
   lists,
+  sprintApi,
   palette,
   version,
   weekStartsOn,
@@ -130,7 +135,8 @@ function SplitView({
   const counts = useMemo(() => remainingByDay(todos?.items ?? {}), [todos])
   const sections = todos ? viewSections(todos.lists, todos.items, view, date, today, query) : []
   const dayEvents = dayData.events.get(date) ?? []
-  const empty = sections.every((s) => s.items.length === 0)
+  const sprints = todos?.sprints ?? []
+  const empty = view !== 'sprint' && sections.every((s) => s.items.length === 0)
 
   return (
     <div className="pg tdo">
@@ -160,6 +166,7 @@ function SplitView({
           </div>
         </header>
         <MiniMonth
+          sprints={sprints}
           month={month}
           selected={date}
           today={today}
@@ -176,7 +183,11 @@ function SplitView({
       <section className="pg-card tdo-main" aria-label="할 일">
         <header className="pg-head">
           <h1 className="pg-title">
-            {view === 'day' ? `${monthDayKo(date)} (${weekdayLabel(date)})` : '할 일'}
+            {view === 'day'
+              ? `${monthDayKo(date)} (${weekdayLabel(date)})`
+              : view === 'sprint'
+                ? '스프린트'
+                : '할 일'}
           </h1>
           <input
             className="pg-input pg-search"
@@ -204,7 +215,25 @@ function SplitView({
 
         <div className="tdo-scroll">
           {view === 'day' && <DayEvents date={date} events={dayEvents} actions={actions} />}
-          {todos && (
+          {view === 'day' && todos && (
+            <DaySprints
+              sprints={sprintsOn(sprints, date)}
+              items={todos.items}
+              today={today}
+              onOpen={() => onView('sprint')}
+            />
+          )}
+          {view === 'sprint' && todos && (
+            <SprintList
+              sprints={sprints}
+              items={todos.items}
+              lists={todos.lists}
+              today={today}
+              actions={actions}
+              api={sprintApi}
+            />
+          )}
+          {view !== 'sprint' && todos && (
             <CategoryList
               sections={sections}
               view={view}
@@ -217,6 +246,7 @@ function SplitView({
               openId={openId}
               onOpen={onOpen}
               addDue={dueForView(view, date)}
+              sprints={sprints}
             />
           )}
           {empty && (
@@ -262,6 +292,43 @@ function DayEvents({
         >
           + 일정
         </button>
+      </div>
+    </section>
+  )
+}
+
+/** "이 날" 보기: 고른 날이 기간 안에 드는 스프린트(진행률). 누르면 스프린트 보기 */
+function DaySprints({
+  sprints,
+  items,
+  today,
+  onOpen,
+}: {
+  sprints: readonly Sprint[]
+  items: Readonly<Record<string, readonly TodoItem[]>>
+  today: string
+  onOpen(): void
+}) {
+  if (sprints.length === 0) return null
+  return (
+    <section className="tdo-events" aria-label="스프린트">
+      <h2 className="pg-chip">스프린트</h2>
+      <div className="tdo-day-sprints">
+        {sprints.map((s) => {
+          const p = sprintProgress(sprintItems(items, s.id))
+          return (
+            <button key={s.id} type="button" className="tdo-day-sprint" onClick={onOpen}>
+              <span className="tdo-sprint-dot" style={{ background: s.color }} />
+              <span className="tdo-day-sprint-name">{s.name}</span>
+              <span className="tdo-sprint-track">
+                <span style={{ width: `${p.ratio * 100}%`, background: s.color }} />
+              </span>
+              <span className="tdo-sprint-count">
+                {p.done}/{p.total} · {sprintBadge(s, today)}
+              </span>
+            </button>
+          )
+        })}
       </div>
     </section>
   )

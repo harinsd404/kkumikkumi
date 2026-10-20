@@ -13,6 +13,7 @@ import type {
   PomodoroPhase,
   PomodoroSettings,
   Settings,
+  Sprint,
   Theme,
   ThemeRule,
   TimerSession,
@@ -71,6 +72,15 @@ export interface ImportedAsset {
 type Id = { id: string }
 type CalendarInput = Record<string, unknown>
 
+/** 스프린트 만들기/고치기 입력 */
+export interface SprintFields {
+  name: string
+  goal?: string
+  startDate: string
+  endDate: string
+  color?: string
+}
+
 export interface IpcSpec {
   'themes.list': { in: undefined; out: ThemeSummary[] }
   'themes.get': { in: Id; out: Theme }
@@ -110,7 +120,7 @@ export interface IpcSpec {
   /** listId가 null이면 기본 목록(없으면 생성) */
   'todo.items.list': { in: { listId: string | null }; out: { list: TodoList; items: TodoItem[] } }
   'todo.items.create': {
-    in: { listId: string | null; title: string; dueDate?: string | null }
+    in: { listId: string | null; title: string; dueDate?: string | null; sprintId?: string | null }
     out: TodoItem
   }
   'todo.items.update': {
@@ -120,6 +130,7 @@ export interface IpcSpec {
         title?: string
         done?: boolean
         dueDate?: string | null
+        sprintId?: string | null
         note?: string
         listId?: string
       }
@@ -128,6 +139,13 @@ export interface IpcSpec {
   }
   'todo.items.delete': { in: Id; out: null }
   'todo.items.reorder': { in: { listId: string; ids: string[] }; out: null }
+  /** 스프린트(시작 날짜 순) */
+  'sprints.list': { in: undefined; out: Sprint[] }
+  /** 최대 50개, 넘으면 conflict */
+  'sprints.create': { in: SprintFields; out: Sprint }
+  'sprints.update': { in: { id: string; patch: Partial<SprintFields> }; out: Sprint }
+  /** 안의 할 일은 남고 연결만 끊긴다 */
+  'sprints.delete': { in: Id; out: null }
   'todo.items.dueBetween': { in: { fromDate: string; toDate: string }; out: TodoItem[] }
   'calendar.range': {
     in: { fromUtc: number; toUtc: number; fromDate: string; toDate: string }

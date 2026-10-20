@@ -1120,3 +1120,106 @@ button.kc-chip {
   width: 240px;
   height: 240px;
 }
+
+/* ── 스프린트 ── */
+.ksp {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  height: 100%;
+  padding: 25px;
+  font-weight: 500;
+}
+.ksp--M {
+  justify-content: flex-start;
+  gap: 10px;
+}
+.ksp-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.ksp-dot {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+.ksp-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 22px;
+  font-weight: 800;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ksp-badge {
+  flex: none;
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: var(--kb-check);
+  font-size: 16px;
+  font-weight: 800;
+}
+.ksp-range {
+  margin: -4px 0 0 24px;
+  color: var(--kb-sub);
+  font-size: 14px;
+}
+.ksp-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ksp-track {
+  flex: 1;
+  height: 14px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--kb-check) 40%, transparent);
+  overflow: hidden;
+}
+.ksp-track span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+.ksp-count {
+  flex: none;
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.ksp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  margin: 4px 0 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+}
+.ksp-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 17px;
+}
+.ksp-title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ksp-check-hint {
+  opacity: 0;
+}
+.ksp-item .kt-check:hover .ksp-check-hint {
+  opacity: 0.5;
+}
+.ksp-done-all {
+  color: var(--kb-sub);
+  font-size: 16px;
+}

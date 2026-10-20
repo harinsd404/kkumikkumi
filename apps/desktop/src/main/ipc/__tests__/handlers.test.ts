@@ -683,3 +683,35 @@ describe('colorCombos', () => {
     expect(await codeOf(h['colorCombos.add']({ name: 'over', ...colors() }))).toBe('conflict')
   })
 })
+
+describe('sprints', () => {
+  const base = { name: '중간고사 대비', startDate: '2026-10-20', endDate: '2026-11-02' }
+  it('만들기·고치기·목록, 시작~끝 순서 검사', async () => {
+    const s = await h['sprints.create']({ ...base, goal: '수학 오답 정리' })
+    expect(s).toMatchObject({ ...base, goal: '수학 오답 정리' })
+    expect(await codeOf(h['sprints.create']({ ...base, endDate: '2026-10-01' }))).toBe(
+      'invalid_input',
+    )
+    // 시작만 끝 뒤로 바꾸면 거부
+    expect(
+      await codeOf(h['sprints.update']({ id: s.id, patch: { startDate: '2026-12-01' } })),
+    ).toBe('invalid_input')
+    const u = await h['sprints.update']({ id: s.id, patch: { name: '기말 대비' } })
+    expect(u.name).toBe('기말 대비')
+    expect((await h['sprints.list'](undefined)).map((x) => x.id)).toEqual([s.id])
+  })
+  it('할 일에 스프린트 연결, 없는 스프린트는 not_found, 스프린트를 지우면 할 일은 남고 연결만 끊긴다', async () => {
+    const s = await h['sprints.create'](base)
+    const t = await h['todo.items.create']({ listId: null, title: '오답 노트', sprintId: s.id })
+    expect(t.sprintId).toBe(s.id)
+    expect(
+      await codeOf(h['todo.items.create']({ listId: null, title: 'x', sprintId: env.newId() })),
+    ).toBe('not_found')
+    const moved = await h['todo.items.update']({ id: t.id, patch: { sprintId: null } })
+    expect(moved.sprintId).toBeNull()
+    await h['todo.items.update']({ id: t.id, patch: { sprintId: s.id } })
+    await h['sprints.delete']({ id: s.id })
+    const { items } = await h['todo.items.list']({ listId: t.listId })
+    expect(items.find((x) => x.id === t.id)?.sprintId).toBeNull()
+  })
+})

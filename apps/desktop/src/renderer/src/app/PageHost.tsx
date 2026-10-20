@@ -82,6 +82,7 @@ function pageContent({
           todos={user.data.todos}
           actions={user.actions}
           lists={user.lists}
+          sprintApi={user.sprints}
           palette={theme.defaults.palette}
           now={now}
           version={user.data.version ?? 0}

@@ -7,6 +7,11 @@ import type { HandlerDeps, HandlersOf } from './deps'
 export function todoHandlers(d: HandlerDeps): HandlersOf<'todo'> {
   const { repos } = d
 
+  /** 스프린트 연결: null이면 연결 없음, 있으면 그 스프린트가 있어야 한다 */
+  const checkSprint = (sprintId: string | null | undefined) => {
+    if (sprintId && !repos.sprints.get(sprintId)) throw new NotFoundError('sprint')
+  }
+
   const resolveList = (listId: string | null): TodoList => {
     if (listId !== null) {
       const l = repos.todo.getList(listId)
@@ -68,13 +73,15 @@ export function todoHandlers(d: HandlerDeps): HandlersOf<'todo'> {
       return { list, items: repos.todo.items(list.id) }
     },
     'todo.items.create': async (i) => {
-      const { listId, title, dueDate } = z
+      const { listId, title, dueDate, sprintId } = z
         .strictObject({
           listId: Uuid.nullable(),
           title: TodoItemSchema.shape.title,
           dueDate: DateStr.nullable().optional(),
+          sprintId: Uuid.nullable().optional(),
         })
         .parse(i)
+      checkSprint(sprintId)
       const list = resolveList(listId)
       const now = d.now()
       return repos.todo.insertItem({
@@ -86,6 +93,7 @@ export function todoHandlers(d: HandlerDeps): HandlersOf<'todo'> {
         dueDate: dueDate ?? null,
         note: '',
         order: repos.todo.nextItemOrder(list.id),
+        sprintId: sprintId ?? null,
         createdAt: now,
         updatedAt: now,
       })
@@ -100,9 +108,11 @@ export function todoHandlers(d: HandlerDeps): HandlersOf<'todo'> {
             dueDate: DateStr.nullable().optional(),
             note: TodoItemSchema.shape.note.optional(),
             listId: Uuid.optional(),
+            sprintId: Uuid.nullable().optional(),
           }),
         })
         .parse(i)
+      checkSprint(patch.sprintId)
       const cur = repos.todo.getItem(id)
       if (!cur) throw new NotFoundError('todo_item')
       const now = d.now()
@@ -115,6 +125,7 @@ export function todoHandlers(d: HandlerDeps): HandlersOf<'todo'> {
         dueDate: patch.dueDate === undefined ? cur.dueDate : patch.dueDate,
         note: patch.note ?? cur.note,
         listId: patch.listId ?? cur.listId,
+        sprintId: patch.sprintId === undefined ? cur.sprintId : patch.sprintId,
         order: movedList ? repos.todo.nextItemOrder(patch.listId!) : cur.order,
         done,
         completedAt: done ? (cur.done ? cur.completedAt : now) : null,

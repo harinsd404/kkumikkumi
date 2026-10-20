@@ -90,6 +90,7 @@ export function EditPanel({
           timetables={timetables}
           otherThemes={otherThemes}
           events={user.actions.calendar}
+          sprints={user.data.todos?.sprints}
         />
       )}
     </aside>

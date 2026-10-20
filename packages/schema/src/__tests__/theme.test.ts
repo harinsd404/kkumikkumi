@@ -100,6 +100,17 @@ describe('ThemeSchema', () => {
       expectBad(t, '매니페스트')
     })
 
+    it('스프린트 블록: sprintId(null 또는 UUID)만', () => {
+      const t = baseTheme()
+      const i = t.blocks.findIndex((b: { type: string }) => b.type === 'todo')
+      t.blocks[i] = { ...t.blocks[i], type: 'sprint', size: 'M', props: { sprintId: null } }
+      expectOk(t)
+      t.blocks[i].props = { sprintId: U(901) }
+      expectOk(t)
+      t.blocks[i].props = { sprintId: 'x' }
+      expectBad(t)
+    })
+
     it('새 위젯 블록: 공부 통계·진행률·시계 설정 검증', () => {
       const t = baseTheme()
       const i = t.blocks.findIndex((b: { type: string }) => b.type === 'todo')

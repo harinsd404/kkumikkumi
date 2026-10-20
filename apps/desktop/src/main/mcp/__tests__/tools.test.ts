@@ -362,3 +362,40 @@ describe('MCP set_timetable', () => {
     expect(env.core.repos.timetable.countTimetables()).toBe(20)
   })
 })
+
+describe('MCP 스프린트', () => {
+  it('만들기 → 할 일 넣기 → 목록(진행률·남은 날) → 지우면 할 일은 남는다', async () => {
+    env.clock.now = new Date(2026, 9, 21, 9).getTime()
+    const { call } = await connect('readwrite')
+    const s = await call('create_sprint', {
+      name: '중간고사 대비',
+      startDate: '2026-10-20',
+      endDate: '2026-11-02',
+      goal: '수학 오답',
+    })
+    expect(s.error).toBeNull()
+    expect(s.data).toMatchObject({ status: 'active', daysLeft: 12, done: 0, total: 0 })
+    const a = await call('add_todo', { title: '오답 노트', sprintId: s.data.id })
+    await call('add_todo', { title: '단어 100개', sprintId: s.data.id })
+    await call('update_todo', { id: a.data.id, done: true })
+    const list = await call('list_sprints')
+    expect(list.data[0]).toMatchObject({ done: 1, total: 2 })
+    const inSprint = await call('list_todos', { sprintId: s.data.id, status: 'all' })
+    expect(inSprint.data.total).toBe(2)
+    expect(
+      (await call('create_sprint', { name: 'x', startDate: '2026-11-02', endDate: '2026-10-01' }))
+        .error,
+    ).toBeTruthy()
+    await call('delete_sprint', { id: s.data.id })
+    const after = await call('list_todos', { status: 'all' })
+    expect(after.data.items.filter((t: { sprintId: string | null }) => t.sprintId)).toEqual([])
+    expect(after.data.total).toBe(2)
+    expect(changed).toContain('todo')
+  })
+  it('읽기만이면 스프린트 쓰기 도구가 없다', async () => {
+    const { client } = await connect('read')
+    const names = (await client.listTools()).tools.map((t) => t.name)
+    expect(names).toContain('list_sprints')
+    expect(names).not.toContain('create_sprint')
+  })
+})

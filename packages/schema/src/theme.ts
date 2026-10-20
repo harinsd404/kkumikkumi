@@ -37,6 +37,7 @@ export const BLOCK_SIZES = {
   studyStats: { S: { w: 2, h: 1 }, M: { w: 2, h: 2 } },
   progress: { S: { w: 2, h: 1 }, M: { w: 2, h: 2 } },
   clock: { S: { w: 2, h: 1 }, M: { w: 2, h: 2 } },
+  sprint: { S: { w: 2, h: 1 }, M: { w: 2, h: 2 } },
 } as const satisfies Record<
   string,
   Partial<Record<'S' | 'M' | 'L' | 'W', { w: number; h: number }>>
@@ -213,6 +214,14 @@ export const BlockSchema = z.discriminatedUnion('type', [
       /** 보여 줄 기간(S는 첫 번째만). 직접 지정은 이름과 시작~끝 날짜(끝 날 포함) */
       periods: z.array(ProgressPeriodSchema).min(1).max(3),
       weekStartsOn: z.union([z.literal(0), z.literal(1)]),
+    }),
+  }),
+  z.strictObject({
+    ...blockBase,
+    type: z.literal('sprint'),
+    props: z.strictObject({
+      // 사용자 데이터(스프린트) 참조. null = 진행 중 중 먼저 끝나는 것(자동). 가져올 때 null로 치환
+      sprintId: Uuid.nullable(),
     }),
   }),
   z.strictObject({

@@ -6,6 +6,7 @@ import type { HandlerDeps, Handlers } from './handlers/deps'
 import { mcpHandlers } from './handlers/mcp'
 import { memoHandlers } from './handlers/memos'
 import { settingsHandlers } from './handlers/settings'
+import { sprintHandlers } from './handlers/sprints'
 import { themeRuleHandlers } from './handlers/themeRules'
 import { themeHandlers } from './handlers/themes'
 import { timerHandlers } from './handlers/timer'
@@ -21,6 +22,7 @@ export function createHandlers(d: HandlerDeps): Handlers {
     ...assetHandlers(d),
     ...settingsHandlers(d),
     ...todoHandlers(d),
+    ...sprintHandlers(d),
     ...calendarHandlers(d),
     ...timerHandlers(d),
     ...memoHandlers(d),
