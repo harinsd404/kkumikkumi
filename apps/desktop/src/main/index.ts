@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { app, BrowserWindow, dialog, shell } from 'electron'
-import { APP_DISPLAY_NAME, APP_INTERNAL_NAME } from '../shared/identity'
+import { app, BrowserWindow, dialog, safeStorage, shell } from 'electron'
+import { APP_BUNDLE_ID, APP_DISPLAY_NAME, APP_INTERNAL_NAME } from '../shared/identity'
 import { pickImageFile } from './assets/pickImageFile'
 import { handleAssetProtocol, registerAssetScheme } from './assets/protocol'
 import { bootstrap, type AppCore } from './bootstrap'
@@ -18,6 +19,9 @@ import { errorKind, initLog, logError } from './log'
 import { setAppMenu } from './menu'
 import { createMcpController, type McpController } from './mcp/controller'
 import { createMcpServer } from './mcp/tools'
+import { runMcpBridge } from './mcp/bridge'
+import { SyncError, SyncService } from './sync/service'
+import { flushSyncRenderer } from './sync/flushRenderer'
 
 /** 빌드 때 정하는 데이터 폴더 이름(배포 전 시험 빌드만 다르게, 보통은 빈 문자열 → 내부 식별자) */
 declare const __KKUMI_DATA_DIR__: string
@@ -26,130 +30,171 @@ declare const __KKUMI_DATA_DIR__: string
 app.setName(APP_DISPLAY_NAME)
 app.setPath('userData', join(app.getPath('appData'), __KKUMI_DATA_DIR__ || APP_INTERNAL_NAME))
 applyDevUserData()
-// 배포본은 원격 디버깅 포트로 열지 않는다(다른 프로그램이 앱 화면·데이터에 붙는 것 방지). 배포 전 시험 빌드만 허용.
-if (app.isPackaged && !__KKUMI_DATA_DIR__ && app.commandLine.hasSwitch('remote-debugging-port'))
-  app.exit(1)
-initLog(app.getPath('logs'))
-process.on('uncaughtException', (err) => logError('[main] uncaught', errorKind(err)))
-process.on('unhandledRejection', (err) => logError('[main] unhandled rejection', errorKind(err)))
-app.on('render-process-gone', (_e, _wc, d) => logError('[renderer] gone', d.reason))
-app.on('child-process-gone', (_e, d) => logError(`[${d.type}] gone`, d.reason))
+if (app.commandLine.hasSwitch('mcp-stdio')) {
+  void runMcpBridge(app.getPath('userData'), (code) => app.exit(code))
+} else {
+  if (process.platform === 'win32') app.setAppUserModelId(APP_BUNDLE_ID)
+  // 배포본은 원격 디버깅 포트로 열지 않는다(다른 프로그램이 앱 화면·데이터에 붙는 것 방지). 배포 전 시험 빌드만 허용.
+  if (app.isPackaged && !__KKUMI_DATA_DIR__ && app.commandLine.hasSwitch('remote-debugging-port'))
+    app.exit(1)
+  initLog(app.getPath('logs'))
+  process.on('uncaughtException', (err) => logError('[main] uncaught', errorKind(err)))
+  process.on('unhandledRejection', (err) => logError('[main] unhandled rejection', errorKind(err)))
+  app.on('render-process-gone', (_e, _wc, d) => logError('[renderer] gone', d.reason))
+  app.on('child-process-gone', (_e, d) => logError(`[${d.type}] gone`, d.reason))
 
-let core: AppCore | null = null
-let timer: TimerService | null = null
-let mcp: McpController | null = null
-const getCore = () => core
-registerCloseHandshake()
+  let core: AppCore | null = null
+  let timer: TimerService | null = null
+  let mcp: McpController | null = null
+  let sync: SyncService | null = null
+  const getCore = () => core
+  registerCloseHandshake()
 
-registerAssetScheme()
+  registerAssetScheme()
 
-// DB와 테마 파일을 한 프로세스만 쓰도록 단일 인스턴스로 제한한다.
-const isPrimary = app.requestSingleInstanceLock()
-if (!isPrimary) app.quit()
-app.on('second-instance', () => {
-  const win = boardWindow() ?? (core ? createBoardWindow(getCore) : null)
-  if (win?.isMinimized()) win.restore()
-  win?.focus()
-})
-
-app.on('web-contents-created', (_event, contents) => hardenWebContents(contents))
-
-void app.whenReady().then(async () => {
-  if (!isPrimary) return
-  setAppMenu({
-    openSettings: (section) => {
-      const win = boardWindow() ?? (core ? createBoardWindow(getCore) : null)
-      if (!win) return
-      win.show()
-      win.focus()
-      // 새로 만든 창이면 로드가 끝난 뒤 보낸다
-      if (win.webContents.isLoading())
-        win.webContents.once('did-finish-load', () =>
-          win.webContents.send('app:open-settings', section),
-        )
-      else win.webContents.send('app:open-settings', section)
-    },
+  // DB와 테마 파일을 한 프로세스만 쓰도록 단일 인스턴스로 제한한다.
+  const isPrimary = app.requestSingleInstanceLock()
+  if (!isPrimary) app.quit()
+  app.on('second-instance', () => {
+    const win = boardWindow() ?? (core ? createBoardWindow(getCore) : null)
+    if (win?.isMinimized()) win.restore()
+    win?.focus()
   })
-  try {
-    core = await bootstrap({
-      userDataDir: app.getPath('userData'),
+
+  app.on('web-contents-created', (_event, contents) => hardenWebContents(contents))
+
+  void app.whenReady().then(async () => {
+    if (!isPrimary) return
+    setAppMenu({
+      openSettings: (section) => {
+        const win = boardWindow() ?? (core ? createBoardWindow(getCore) : null)
+        if (!win) return
+        win.show()
+        win.focus()
+        // 새로 만든 창이면 로드가 끝난 뒤 보낸다
+        if (win.webContents.isLoading())
+          win.webContents.once('did-finish-load', () =>
+            win.webContents.send('app:open-settings', section),
+          )
+        else win.webContents.send('app:open-settings', section)
+      },
+    })
+    try {
+      core = await bootstrap({
+        userDataDir: app.getPath('userData'),
+        now: Date.now,
+        newId: randomUUID,
+        defaultThemeName: '푸딩 아침',
+        defaultListName: '할 일',
+      })
+    } catch (err) {
+      logError('[boot]', errorKind(err))
+      dialog.showErrorBox(APP_DISPLAY_NAME, '데이터를 여는 중 문제가 생겼습니다. 앱을 종료합니다.')
+      app.quit()
+      return
+    }
+    handleAssetProtocol(core.themes, core.diaryPhotos)
+    timer = startTimerService(core)
+    const c = core
+    sync = new SyncService({
+      flush: flushSyncRenderer,
+      db: c.db,
+      repos: c.repos,
+      seal: (token) => {
+        if (!safeStorage.isEncryptionAvailable()) throw new SyncError('sync_secure_storage')
+        return safeStorage.encryptString(token).toString('base64')
+      },
+      unseal: (token) => {
+        try {
+          return safeStorage.decryptString(Buffer.from(token, 'base64'))
+        } catch {
+          throw new SyncError('sync_secure_storage')
+        }
+      },
+      backup: async (document) => {
+        const dir = join(app.getPath('userData'), 'sync-backups')
+        await mkdir(dir, { recursive: true, mode: 0o700 })
+        await writeFile(join(dir, `${Date.now()}-${randomUUID()}.json`), JSON.stringify(document), {
+          mode: 0o600,
+          flag: 'wx',
+        })
+      },
+      changed: () => {
+        for (const w of BrowserWindow.getAllWindows())
+          if (!w.isDestroyed()) {
+            w.webContents.send('data:changed', 'todo')
+            w.webContents.send('data:changed', 'memos')
+          }
+      },
+    })
+    const handlers = createHandlers({
+      ...core,
+      sync,
       now: Date.now,
       newId: randomUUID,
-      defaultThemeName: '푸딩 아침',
+      pickImageFile,
       defaultListName: '할 일',
-    })
-  } catch (err) {
-    logError('[boot]', errorKind(err))
-    dialog.showErrorBox(APP_DISPLAY_NAME, '데이터를 여는 중 문제가 생겼습니다. 앱을 종료합니다.')
-    app.quit()
-    return
-  }
-  handleAssetProtocol(core.themes, core.diaryPhotos)
-  timer = startTimerService(core)
-  const c = core
-  const handlers = createHandlers({
-    ...core,
-    now: Date.now,
-    newId: randomUUID,
-    pickImageFile,
-    defaultListName: '할 일',
-    timer,
-    takeMissedTimerDone,
-    onTodoCompleted: () => bus.emit('todo:completed'),
-    miniTimer: {
-      open: () => openMiniTimer(getCore),
-      close: closeMiniTimer,
-      apply: applyMiniPrefs,
-    },
-    app: {
-      version: app.getVersion(),
-      openFolder: async (folder) => {
-        // shell.openPath는 실패하면 오류 문자열을 돌려준다(경로는 사용자 데이터라 로그에 남기지 않음)
-        const err = await shell.openPath(app.getPath(folder))
-        if (err) logError('[app] openFolder', folder)
+      timer,
+      takeMissedTimerDone,
+      onTodoCompleted: () => bus.emit('todo:completed'),
+      miniTimer: {
+        open: () => openMiniTimer(getCore),
+        close: closeMiniTimer,
+        apply: applyMiniPrefs,
       },
-    },
-    mcp: {
-      status: () => mcp!.status(),
-      apply: (mode) => mcp!.apply(mode),
-    },
-  })
-  // 외부 AI 연결(MCP): 앱 IPC와 같은 핸들러를 쓴다. 바뀐 데이터는 열린 창들이 다시 읽는다.
-  mcp = createMcpController({
-    userDataDir: app.getPath('userData'),
-    makeServer: (mode) =>
-      createMcpServer({
-        handlers,
-        mode,
-        currentMode: () => mcp?.status().mode ?? 'off',
-        now: Date.now,
+      app: {
         version: app.getVersion(),
-        changed: (domain) => {
-          for (const w of BrowserWindow.getAllWindows())
-            if (!w.isDestroyed()) w.webContents.send('data:changed', domain)
+        openFolder: async (folder) => {
+          // shell.openPath는 실패하면 오류 문자열을 돌려준다(경로는 사용자 데이터라 로그에 남기지 않음)
+          const err = await shell.openPath(app.getPath(folder))
+          if (err) logError('[app] openFolder', folder)
         },
-      }),
-    onError: (tag, err) => logError(tag, errorKind(err)),
+      },
+      mcp: {
+        status: () => mcp!.status(),
+        apply: (mode) => mcp!.apply(mode),
+      },
+    })
+    // 외부 AI 연결(MCP): 앱 IPC와 같은 핸들러를 쓴다. 바뀐 데이터는 열린 창들이 다시 읽는다.
+    mcp = createMcpController({
+      userDataDir: app.getPath('userData'),
+      bridgeCommand: app.getPath('exe'),
+      makeServer: (mode) =>
+        createMcpServer({
+          handlers,
+          mode,
+          currentMode: () => mcp?.status().mode ?? 'off',
+          now: Date.now,
+          version: app.getVersion(),
+          changed: (domain) => {
+            for (const w of BrowserWindow.getAllWindows())
+              if (!w.isDestroyed()) w.webContents.send('data:changed', domain)
+          },
+        }),
+      onError: (tag, err) => logError(tag, errorKind(err)),
+    })
+    registerIpc(handlers)
+    void mcp.apply(c.repos.settings.mcp().mode)
+    sync.start()
+
+    createBoardWindow(getCore)
+    app.on('activate', () => {
+      // 미니 창만 남아 있어도 Dock을 누르면 보드 창을 다시 연다
+      if (!boardWindow()) createBoardWindow(getCore)
+    })
   })
-  registerIpc(handlers)
-  void mcp.apply(c.repos.settings.mcp().mode)
 
-  createBoardWindow(getCore)
-  app.on('activate', () => {
-    // 미니 창만 남아 있어도 Dock을 누르면 보드 창을 다시 연다
-    if (!boardWindow()) createBoardWindow(getCore)
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') app.quit()
   })
-})
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
-})
-
-app.on('will-quit', () => {
-  void mcp?.dispose()
-  mcp = null
-  timer?.dispose()
-  timer = null
-  core?.db.close()
-  core = null
-})
+  app.on('will-quit', () => {
+    sync?.stop()
+    void mcp?.dispose()
+    mcp = null
+    timer?.dispose()
+    timer = null
+    core?.db.close()
+    core = null
+  })
+}

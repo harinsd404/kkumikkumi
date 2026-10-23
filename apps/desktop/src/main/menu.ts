@@ -10,19 +10,23 @@ export function setAppMenu(h: { openSettings(section: SettingsSection | null): v
   const dev = !app.isPackaged
   const template: MenuItemConstructorOptions[] = [
     {
-      role: 'appMenu',
+      ...(process.platform === 'darwin' ? { role: 'appMenu' as const } : { label: '꾸미꾸미' }),
       submenu: [
         { role: 'about' },
         { type: 'separator' },
         { label: '설정…', accelerator: 'CmdOrCtrl+,', click: () => h.openSettings(null) },
         { label: 'AI 연결…', click: () => h.openSettings('mcp') },
         { type: 'separator' },
-        { role: 'services' },
-        { type: 'separator' },
-        { role: 'hide' },
-        { role: 'hideOthers' },
-        { role: 'unhide' },
-        { type: 'separator' },
+        ...(process.platform === 'darwin'
+          ? ([
+              { role: 'services' },
+              { type: 'separator' },
+              { role: 'hide' },
+              { role: 'hideOthers' },
+              { role: 'unhide' },
+              { type: 'separator' },
+            ] satisfies MenuItemConstructorOptions[])
+          : []),
         { role: 'quit' },
       ],
     },

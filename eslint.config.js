@@ -12,6 +12,7 @@ export default tseslint.config(
       'apps/desktop/src/main/**',
       'apps/desktop/src/preload/**',
       'apps/desktop/scripts/**',
+      'apps/sync-server/**',
       '**/*.config.{ts,js}',
     ],
     languageOptions: { globals: globals.node },

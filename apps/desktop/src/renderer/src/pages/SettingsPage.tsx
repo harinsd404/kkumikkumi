@@ -5,6 +5,7 @@ import type { ThemeMenu } from '../app/TitleBar'
 import type { BoardData } from '../board/BoardContext'
 import { McpSection } from './settings/McpSection'
 import { ThemeSection } from './settings/ThemeSection'
+import { SyncSection } from './settings/SyncSection'
 import { PomodoroSettingsForm } from './TimerPage'
 
 // 설정 페이지: 지금 있는 앱 설정을 한곳에 모은다(테마, 타이머, AI 연결, 정보).
@@ -38,6 +39,7 @@ export function SettingsPage(p: Props) {
         <ThemeSection menu={p.themeMenu} current={p.theme} data={p.data} now={p.now} />
         <TimerSection pomodoro={p.pomodoro} update={p.updatePomodoro} showNotice={p.showNotice} />
         <McpSection highlight={p.section === 'mcp'} />
+        <SyncSection />
         <InfoSection showNotice={p.showNotice} />
       </div>
     </div>

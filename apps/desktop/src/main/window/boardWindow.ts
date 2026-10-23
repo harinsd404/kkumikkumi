@@ -47,8 +47,9 @@ export function createBoardWindow(getCore: () => AppCore | null): BrowserWindow 
     show: false,
     title: APP_DISPLAY_NAME,
     // 타이틀바는 앱이 그린다(보드 위 36px). 신호등 버튼은 시스템 것을 쓰고 위치만 맞춘다.
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 14, y: 12 },
+    ...(process.platform === 'darwin'
+      ? { titleBarStyle: 'hiddenInset' as const, trafficLightPosition: { x: 14, y: 12 } }
+      : { titleBarStyle: 'default' as const, autoHideMenuBar: true }),
     backgroundColor: '#ffffff',
     webPreferences: secureWebPreferences(),
   })

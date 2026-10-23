@@ -11,10 +11,10 @@ allowBuilds:
   # electron-builder의 Windows 설치 프로그램 도구(macOS 배포에는 쓰지 않음)
   electron-winstaller: false
 
-# sharp는 플랫폼별 optional 패키지(@img/*)를 쓴다. macOS만 설치해 wasm32 폴백(약 9MB)을 피한다.
+# 현재 빌드 호스트의 네이티브 패키지만 설치한다. macOS/Windows CI에서 각각 패키징한다.
 supportedArchitectures:
-  os: [darwin]
-  cpu: [arm64, x64]
+  os: [current]
+  cpu: [current]
 
 # electron-builder 하위 의존성(@peculiar/utils)이 tslib를 선언하지 않아 pnpm의 엄격한 구조에서 못 찾는다.
 packageExtensions:

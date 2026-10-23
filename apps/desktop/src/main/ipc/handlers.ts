@@ -14,6 +14,7 @@ import { themeHandlers } from './handlers/themes'
 import { timerHandlers } from './handlers/timer'
 import { timetableHandlers } from './handlers/timetable'
 import { todoHandlers } from './handlers/todo'
+import { syncHandlers } from './handlers/sync'
 
 export type { HandlerDeps, Handlers } from './handlers/deps'
 
@@ -35,5 +36,6 @@ export function createHandlers(d: HandlerDeps): Handlers {
     ...habitHandlers(d),
     ...mcpHandlers(d),
     ...appHandlers(d),
+    ...syncHandlers(d),
   }
 }

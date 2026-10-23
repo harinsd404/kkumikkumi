@@ -4,6 +4,10 @@ Codex, Claude Code처럼 MCP를 지원하는 AI 앱이 꾸미꾸미의 할 일, 
 
 ## 구조
 
+Windows 빌드는 `nc` 대신 설치된 `kkumikkumi.exe --mcp-stdio`를 사용한다.
+설정 → AI 연결의 TOML/JSON 예시를 복사한다. 사용자별 Named Pipe를 비밀값으로 인증하며 키를 AI 설정에 넣을 필요는 없다.
+자세한 내용은 [Windows 안내](windows.md)를 참고한다. 아래 Unix 소켓 명령은 macOS용이다.
+
 ```
 AI 앱 ──stdio──> /usr/bin/nc -U <소켓> ──Unix 소켓──> 꾸미꾸미 main (MCP 서버, @modelcontextprotocol/sdk)
                                                          └─ 앱 IPC 핸들러(zod 재검증) → SQLite

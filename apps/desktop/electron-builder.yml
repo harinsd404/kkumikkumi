@@ -12,8 +12,6 @@ directories:
 files:
   - out/**
   - package.json
-  # arm64 전용 빌드라 x64용 sharp 바이너리는 뺀다
-  - '!**/node_modules/@img/*-x64/**'
 # 언어별 표시 이름(ko: 꾸미꾸미)
 extraResources:
   - from: build/lproj
@@ -55,3 +53,14 @@ mac:
 dmg:
   title: 꾸미꾸미 ${version}
   artifactName: kkumikkumi-${version}-${arch}.dmg
+win:
+  target:
+    - target: nsis
+      arch: x64
+  icon: build/icon.png
+  artifactName: kkumikkumi-${version}-${arch}-setup.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  shortcutName: 꾸미꾸미

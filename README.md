@@ -5,7 +5,7 @@
 <h1 align="center">꾸미꾸미</h1>
 
 <p align="center">
-  할 일, 캘린더, 습관, 타이머, 시간표를 한 화면에 모아 내 마음대로 꾸미는 macOS 데스크탑 보드 앱
+  할 일, 캘린더, 습관, 타이머, 시간표를 한 화면에 모아 내 마음대로 꾸미는 데스크탑 보드 앱
 </p>
 
 <p align="center">
@@ -23,7 +23,8 @@
 꾸미꾸미는 창 하나에 위젯 블록을 퍼즐처럼 배치해 나만의 "보드"를 만드는 앱입니다.
 캘린더, 할 일, 습관, 디데이, 시계, 사진, 스티커를 원하는 자리에 놓고 색과 글꼴과 무늬를 골라 테마로 저장합니다.
 
-- **로컬 전용:** 계정, 서버, 동기화가 없습니다. 모든 데이터는 내 Mac 안에만 저장됩니다.
+- **로컬 우선:** 기본은 내 기기에 저장합니다. 선택적으로 개인 서버에 할 일·카테고리·스프린트·메모를 동기화할 수 있습니다. [서버 설치와 연결](docs/self-hosting.md)
+- **Windows 지원:** x64 설치 파일 빌드와 CI를 제공합니다. 기존 0.3.0 다운로드는 macOS용이며, Windows 설치 파일은 새 브랜치의 CI artifact에서 받을 수 있습니다. [Windows 안내](docs/windows.md)
 - **꾸미기 중심:** 8×5 격자에 블록을 놓고, 그 위에 사진과 스티커를 자유롭게 붙입니다.
 - **테마:** 기본 테마 두 개(푸딩 아침, 코튼캔디)와 직접 만든 테마를 바꿔 가며 씁니다.
 - **AI 연결:** Codex, Claude Code 같은 AI 앱에서 할 일과 일정을 말로 넣고 볼 수 있습니다(MCP, 기본은 꺼짐).
@@ -111,8 +112,8 @@ Apple Silicon Mac(M1 이상)용 DMG를 제공합니다. 아직 Apple 공증을 �
 
 ### 요구 사항
 
-- macOS (Apple Silicon 기준으로 개발·검증)
-- Node.js 22.12 이상
+- macOS 또는 Windows x64 (각 운영체제에서 패키징)
+- Node.js 24 이상 (동기화 서버 포함)
 - pnpm 11
 
 ### 명령
@@ -126,19 +127,21 @@ pnpm test            # 단위 테스트(Vitest)
 pnpm test:electron   # main 프로세스 테스트(SQLite·sharp, Electron의 Node로 실행)
 pnpm build           # 빌드
 pnpm dist            # macOS DMG 만들기(apps/desktop/dist)
+pnpm --filter @kkumikkumi/desktop dist:win  # Windows에서 x64 설치 파일 만들기
 ```
 
 ### 기술 스택
 
-| 영역    | 사용                                                           |
-| ------- | -------------------------------------------------------------- |
-| 앱      | Electron 44, React 19, TypeScript(strict), electron-vite       |
-| 데이터  | `node:sqlite`(사용자 데이터), 테마는 폴더(`theme.json` + 에셋) |
-| 검증    | zod 4 (스키마는 `packages/schema` 한 곳에서 정의)              |
-| AI 연결 | `@modelcontextprotocol/sdk` (MCP 서버, Unix 소켓)              |
-| 이미지  | sharp (디코딩 → 축소 → PNG/JPEG 재인코딩 → 해시)               |
-| 테스트  | Vitest                                                         |
-| 패키징  | electron-builder (DMG, ad-hoc 서명, Electron 퓨즈)             |
+| 영역    | 사용                                                                      |
+| ------- | ------------------------------------------------------------------------- |
+| 앱      | Electron 44, React 19, TypeScript(strict), electron-vite                  |
+| 데이터  | `node:sqlite`(사용자 데이터), 테마는 폴더(`theme.json` + 에셋)            |
+| 검증    | zod 4 (스키마는 `packages/schema` 한 곳에서 정의)                         |
+| AI 연결 | `@modelcontextprotocol/sdk` (macOS Unix 소켓 / Windows 인증된 Named Pipe) |
+| 이미지  | sharp (디코딩 → 축소 → PNG/JPEG 재인코딩 → 해시)                          |
+| 테스트  | Vitest                                                                    |
+| 패키징  | electron-builder (DMG / Windows NSIS, Electron 퓨즈)                      |
+| 동기화  | 선택적 개인 서버(Node 24 HTTP + SQLite), Docker Compose                   |
 
 의존성마다 추가한 이유와 대안은 [docs/dependencies.md](docs/dependencies.md)에 적어 둡니다.
 
@@ -166,10 +169,11 @@ docs/              확인된 사실, 의존성, 폰트 라이선스, 배포 문�
 - `contextIsolation`, `sandbox`, `nodeIntegration: false`, 엄격한 CSP를 사용하고, 외부 페이지 이동과 새 창은 막습니다.
 - main 프로세스는 renderer에서 오는 모든 입력을 zod로 다시 검증합니다. 우리 앱 페이지(메인 프레임)에서 온 호출만 처리합니다.
 - 배포본은 Node 실행 모드, `NODE_OPTIONS`, 디버거 인자를 끈 Electron 퓨즈를 쓰고, 원격 디버깅 포트로 실행하면 종료합니다.
-- AI 연결(MCP)은 기본으로 꺼져 있습니다. 켜면 사용자 전용 권한(폴더 0700, 소켓 0600)의 로컬 소켓만 열고, AI가 부르는 도구도 같은 zod 검증을 거칩니다. 테마·에셋·설정은 열지 않습니다.
+- AI 연결(MCP)은 기본으로 꺼져 있습니다. macOS는 사용자 전용 Unix 소켓, Windows는 사용자별 비밀값으로 인증하는 Named Pipe를 사용합니다. AI가 부르는 도구도 같은 zod 검증을 거치며 테마·에셋·설정은 열지 않습니다.
+- 개인 서버 동기화는 명시적으로 연결한 뒤에만 데이터를 전송합니다. 접속키는 OS 저장소로 암호화하고, 원격 연결은 HTTPS(SSH 터널은 루프백 HTTP)만 허용합니다. 서버 운영자는 저장된 데이터에 접근할 수 있으며 종단간 암호화는 제공하지 않습니다.
 - 오류 기록에는 오류 종류만 남기고 할 일, 일정, 파일 경로 같은 사용자 데이터는 남기지 않습니다.
 - 일기 사진도 다른 사진처럼 다시 인코딩해 앱 데이터 폴더(`diary/`)에만 두고, 앱이 저장한 사진만 불러옵니다.
-- 데이터 위치: `~/Library/Application Support/kkumikkumi` (오류 기록: `~/Library/Logs/꾸미꾸미`)
+- 데이터 위치: macOS `~/Library/Application Support/kkumikkumi`, Windows `%APPDATA%/kkumikkumi`. 오류 기록은 설정에서 폴더를 열 수 있습니다.
 
 ## 로드맵
 

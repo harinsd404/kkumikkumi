@@ -102,6 +102,10 @@ export interface SprintFields {
 }
 
 export interface IpcSpec {
+  'sync.status': { in: undefined; out: SyncStatus }
+  'sync.connect': { in: { url: string; token: string; importLocal: boolean }; out: SyncStatus }
+  'sync.disconnect': { in: undefined; out: SyncStatus }
+  'sync.run': { in: { prefer?: 'local' | 'remote' }; out: SyncStatus }
   'themes.list': { in: undefined; out: ThemeSummary[] }
   'themes.get': { in: Id; out: Theme }
   'themes.create': { in: ThemeLook & { name: string; template: ThemeTemplateId }; out: Theme }
@@ -301,6 +305,8 @@ export interface TimetableData {
 }
 
 export interface McpStatus {
+  /** Windows uses the installed executable as a stdio bridge. No Node installation required. */
+  bridgeCommand?: string
   mode: McpMode
   /** AI 앱이 연결할 소켓 경로(설정 안내용) */
   socketPath: string
@@ -308,6 +314,16 @@ export interface McpStatus {
   listening: boolean
   /** 켰는데 열지 못한 이유 */
   error: 'path_too_long' | 'listen_failed' | null
+}
+
+export interface SyncStatus {
+  url: string
+  enabled: boolean
+  busy: boolean
+  pending: number
+  conflicts: number
+  error: string | null
+  lastSyncedAt: number | null
 }
 
 /** 설정 페이지에서 Finder로 열 수 있는 폴더 */

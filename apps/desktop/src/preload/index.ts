@@ -20,6 +20,17 @@ const api: KkumiApi = {
     return ipcRenderer.invoke(channel, input)
   }) as KkumiApi['invoke'],
   onBeforeClose: (cb) => {
+    // The same save barrier protects incoming sync changes from replacing typed input.
+    ipcRenderer.removeAllListeners('app:before-sync')
+    ipcRenderer.on('app:before-sync', (_e, id: unknown) => {
+      if (typeof id !== 'string') return
+      void Promise.resolve()
+        .then(cb)
+        .then(
+          () => ipcRenderer.send('app:sync-ready', id, true),
+          () => ipcRenderer.send('app:sync-ready', id, false),
+        )
+    })
     ipcRenderer.removeAllListeners('app:before-close')
     ipcRenderer.on('app:before-close', () => {
       void Promise.resolve()

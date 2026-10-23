@@ -25,7 +25,7 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
   - 자유 배치 레이어: 스티커와 이미지. 위치/크기/회전/z-order, back/front 레이어.
   - 이미지 블록: 그리드 image 블록과 자유 image 아이템이 같은 ImageContent 구조를 공유.
 - 리사이즈: 고정 논리 캔버스(1600x1000, 8x5 그리드)를 균일 스케일로 그리고 창 비율을 잠근다. 반응형 재배치 없음.
-- 데이터: 로컬 전용(계정/서버/동기화 없음). 모든 엔티티에 UUID, schemaVersion, updatedAt. outbox/tombstone/deviceId는 만들지 않는다.
+- 데이터: 로컬 우선. 2026-10-23 사용자 지시로 선택적 개인 서버 동기화를 추가한다. v1 대상은 할 일·카테고리·스프린트·메모. 마지막으로 확인한 서버 문서와 로컬 DB 차이를 영속 변경 목록으로 사용하며, revision과 3-way merge로 충돌을 처리한다. `docs/self-hosting.md` 참고.
 - 저장: 사용자 데이터는 SQLite(node:sqlite, 2026-10-12 결정 — better-sqlite3는 Electron 44 prebuild 없음), 테마는 폴더(theme.json + assets/<hash>.<ext>).
 - 에셋: sharp로 재인코딩. 저장 포맷은 PNG/JPEG로 정규화(WebP는 투명이면 PNG, 아니면 JPEG), 펫은 PNG만. 긴 변 상한 image 3200px / pet 512px.
 - 캘린더: 내부 일정만. 시각 일정은 startUtc/endUtc + tzid, 종일 일정은 날짜 문자열. 반복 일정은 MVP 제외(recurrence: null 예약).
@@ -40,7 +40,7 @@ macOS 우선(Windows는 추후 검토)의 데스크탑 앱. 사용자가 일반 
   - 타이핑 감지는 "마지막 키 입력 이후 경과 시간"만 사용. 키 내용/키 코드는 읽지도 저장하지도 로깅하지도 않는다.
   - 음악 감지는 인터페이스만 만들고 스텁. 다른 앱 창 위를 걷는 기능은 MVP 제외.
 - 테마 자동 전환: 시간대(자정 넘김 가능), 요일, 모드(focus = 타이머 실행 중), 시스템 외형(light/dark). 겹치면 priority. 수동 전환은 manualOverride(until=null이면 해제 전까지).
-- OS 의존 코드는 PlatformAdapter 인터페이스 뒤에 둔다. macOS만 구현, Windows는 미지원 스텁.
+- OS 의존 코드는 분리한다. macOS와 Windows x64를 지원하며 MCP는 각각 Unix 소켓/인증된 Named Pipe를 사용한다. 펫의 미구현 기능은 별도다.
 - 배포: 직접 배포(DMG), 코드 서명 + 공증. 앱스토어 샌드박스는 고려하지 않는다.
 
 ## 가정 (미확정, 변경 가능)
