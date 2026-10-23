@@ -5,6 +5,9 @@ import {
   emptySyncDocument,
   SYNC_MAX_BYTES,
   SYNC_VERSION,
+  SYNC_BLOB_MAX_BYTES,
+  SYNC_BLOB_QUOTA_BYTES,
+  syncBlobRefs,
   SyncDocumentSchema,
   type SyncPush,
   type SyncSnapshot,
@@ -22,6 +25,9 @@ export class SyncStore {
         revision INTEGER NOT NULL DEFAULT 0, document TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS mutations (account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
         id TEXT NOT NULL, digest TEXT NOT NULL, PRIMARY KEY(account_id,id)) STRICT;`)
+    this.db.exec(`CREATE TABLE IF NOT EXISTS blobs (
+      account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      hash TEXT NOT NULL, data BLOB NOT NULL, PRIMARY KEY(account_id,hash)) STRICT;`)
     this.db.prepare("INSERT OR IGNORE INTO metadata VALUES ('server_id', ?)").run(randomUUID())
     this.serverId = String(
       this.db.prepare("SELECT value FROM metadata WHERE key='server_id'").get()!['value'],
@@ -74,6 +80,8 @@ export class SyncStore {
         return { status: seen ? 200 : 409, snapshot: current }
       }
       const document = applySyncChanges(current.document, input.changes)
+      for (const ref of syncBlobRefs(document))
+        if (!this.hasBlob(accountId, ref.hash)) throw new Error('missing_blob')
       const serialized = JSON.stringify(document)
       if (Buffer.byteLength(serialized) > SYNC_MAX_BYTES) throw new Error('document_too_large')
       this.db
@@ -89,6 +97,29 @@ export class SyncStore {
       this.db.exec('ROLLBACK')
       throw e
     }
+  }
+  blob(accountId: string, hash: string): Uint8Array | null {
+    const row = this.db
+      .prepare('SELECT data FROM blobs WHERE account_id=? AND hash=?')
+      .get(accountId, hash)
+    return row ? (row['data'] as Uint8Array) : null
+  }
+  hasBlob(accountId: string, hash: string): boolean {
+    return !!this.db
+      .prepare('SELECT 1 FROM blobs WHERE account_id=? AND hash=?')
+      .get(accountId, hash)
+  }
+  putBlob(accountId: string, digest: string, data: Buffer): void {
+    if (!data.length || data.length > SYNC_BLOB_MAX_BYTES) throw new Error('request_too_large')
+    if (createHash('sha256').update(data).digest('hex') !== digest) throw new Error('invalid_hash')
+    if (this.hasBlob(accountId, digest)) return
+    const used = Number(
+      this.db
+        .prepare('SELECT coalesce(sum(length(data)),0) AS n FROM blobs WHERE account_id=?')
+        .get(accountId)!['n'],
+    )
+    if (used + data.length > SYNC_BLOB_QUOTA_BYTES) throw new Error('document_too_large')
+    this.db.prepare('INSERT INTO blobs VALUES (?,?,?)').run(accountId, digest, data)
   }
   close(): void {
     this.db.close()

@@ -20,6 +20,7 @@ import { setAppMenu } from './menu'
 import { createMcpController, type McpController } from './mcp/controller'
 import { createMcpServer } from './mcp/tools'
 import { runMcpBridge } from './mcp/bridge'
+import { SyncData } from './sync/data'
 import { SyncError, SyncService } from './sync/service'
 import { flushSyncRenderer } from './sync/flushRenderer'
 
@@ -96,8 +97,15 @@ if (app.commandLine.hasSwitch('mcp-stdio')) {
     handleAssetProtocol(core.themes, core.diaryPhotos)
     timer = startTimerService(core)
     const c = core
+    const syncData = new SyncData(c, app.getPath('userData'))
     sync = new SyncService({
+      data: syncData,
       flush: flushSyncRenderer,
+      release: (changed) => {
+        if (!changed)
+          for (const w of BrowserWindow.getAllWindows())
+            if (!w.isDestroyed()) w.webContents.send('app:sync-release')
+      },
       db: c.db,
       repos: c.repos,
       seal: (token) => {
@@ -120,16 +128,17 @@ if (app.commandLine.hasSwitch('mcp-stdio')) {
         })
       },
       changed: () => {
+        applyMiniPrefs(c.repos.settings.miniTimer())
         for (const w of BrowserWindow.getAllWindows())
           if (!w.isDestroyed()) {
-            w.webContents.send('data:changed', 'todo')
-            w.webContents.send('data:changed', 'memos')
+            w.webContents.send('data:changed', 'sync')
           }
       },
     })
     const handlers = createHandlers({
       ...core,
       sync,
+      syncData,
       now: Date.now,
       newId: randomUUID,
       pickImageFile,

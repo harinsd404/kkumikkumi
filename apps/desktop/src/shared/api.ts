@@ -105,7 +105,7 @@ export interface IpcSpec {
   'sync.status': { in: undefined; out: SyncStatus }
   'sync.connect': { in: { url: string; token: string; importLocal: boolean }; out: SyncStatus }
   'sync.disconnect': { in: undefined; out: SyncStatus }
-  'sync.run': { in: { prefer?: 'local' | 'remote' }; out: SyncStatus }
+  'sync.run': { in: { prefer?: 'local' | 'remote'; upgrade?: boolean }; out: SyncStatus }
   'themes.list': { in: undefined; out: ThemeSummary[] }
   'themes.get': { in: Id; out: Theme }
   'themes.create': { in: ThemeLook & { name: string; template: ThemeTemplateId }; out: Theme }
@@ -317,6 +317,7 @@ export interface McpStatus {
 }
 
 export interface SyncStatus {
+  requiresUpgrade: boolean
   url: string
   enabled: boolean
   busy: boolean
@@ -333,7 +334,7 @@ export type AppFolder = 'logs' | 'userData'
 export type SettingsSection = 'mcp'
 
 /** 외부(MCP)에서 사용자 데이터가 바뀌었을 때 renderer가 다시 읽을 영역 */
-export type DataDomain = 'todo' | 'calendar' | 'memos' | 'timetable' | 'habits'
+export type DataDomain = 'todo' | 'calendar' | 'memos' | 'timetable' | 'habits' | 'sync'
 
 export interface TimerDoneInfo {
   mode: TimerMode

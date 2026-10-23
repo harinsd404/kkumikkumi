@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 import { contextBridge, ipcRenderer } from 'electron'
 import type { DataDomain, KkumiApi } from '../shared/api'
 import { isChannel } from '../shared/channels'
@@ -11,6 +12,12 @@ function subscribe<T>(
   ipcRenderer.on(event, (_e, v: T) => cb(v))
 }
 
+let syncGeneration = 0
+ipcRenderer.on('app:sync-release', () => {
+  syncGeneration++
+  if (document.body) document.body.inert = false
+})
+
 // renderer에 노출하는 최소 API. ipcRenderer 자체는 노출하지 않고, 허용 목록에 있는 채널만 invoke한다.
 const api: KkumiApi = {
   platform: process.platform,
@@ -21,12 +28,17 @@ const api: KkumiApi = {
   }) as KkumiApi['invoke'],
   onBeforeSync: (cb) => {
     ipcRenderer.removeAllListeners('app:before-sync')
-    ipcRenderer.on('app:before-sync', (_e, id: unknown) => {
+    ipcRenderer.on('app:before-sync', (_e, id: unknown, lock: unknown) => {
       if (typeof id !== 'string') return
+      const generation = ++syncGeneration
       void Promise.resolve()
         .then(cb)
         .then(
-          (ok) => ipcRenderer.send('app:sync-ready', id, ok === true),
+          (ok) => {
+            if (generation !== syncGeneration) return
+            if (ok === true && lock === true) document.body.inert = true
+            ipcRenderer.send('app:sync-ready', id, ok === true)
+          },
           () => ipcRenderer.send('app:sync-ready', id, false),
         )
     })

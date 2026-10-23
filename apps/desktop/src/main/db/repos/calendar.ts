@@ -36,6 +36,12 @@ export interface CalendarRange {
 export class CalendarRepo {
   constructor(private readonly db: Db) {}
 
+  all() {
+    return (this.db.prepare('SELECT * FROM calendar_events ORDER BY id').all() as Row[]).map(
+      toEvent,
+    )
+  }
+
   inRange(r: CalendarRange): CalendarEvent[] {
     const rows = this.db
       .prepare(

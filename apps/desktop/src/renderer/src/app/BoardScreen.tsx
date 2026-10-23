@@ -1,3 +1,4 @@
+import { flushTrackedSaves } from './saveBarrier'
 import type { Asset, Theme } from '@kkumikkumi/schema'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { SettingsSection } from '../../../shared/api'
@@ -48,10 +49,12 @@ async function saveTheme(theme: Theme) {
 export function BoardScreen({
   initialTheme,
   initialPage = 'board',
+  onPageChange,
   onSwitchTheme,
 }: {
   initialTheme: Theme
   initialPage?: AppPage
+  onPageChange?(page: AppPage): void
   /** 활성 테마 바꾸기(App이 이 화면을 새 테마로 다시 만든다) */
   onSwitchTheme?(id: string, page: AppPage): Promise<boolean>
 }) {
@@ -70,6 +73,9 @@ export function BoardScreen({
   /** 흰 배경 스티커: 지울지 물어보는 중인 원본 에셋 */
   const [cutout, setCutout] = useState<Asset | null>(null)
   const [page, setPage] = useState<AppPage>(initialPage)
+  useEffect(() => {
+    onPageChange?.(page)
+  }, [page, onPageChange])
   /** 앱 메뉴 "설정…"/"AI 연결…": 설정 페이지로(편집 중이면 편집은 그대로 두고 보드 밖으로 나가지 않는다) */
   const [settingsSection, setSettingsSection] = useState<SettingsSection | null>(null)
   const showNotice = ed.showNotice
@@ -166,15 +172,21 @@ export function BoardScreen({
           (el instanceof HTMLElement && el.isContentEditable)
         )
       }
-      if (typing()) return false
-      const [saved] = await Promise.all([flushMemos(), flushUser()])
-      return saved && !typing()
+      const draftOpen = () => editing || !!document.querySelector('[role="dialog"], dialog[open]')
+      if (typing() || draftOpen()) return false
+      const [saved, themeSaved, diarySaved] = await Promise.all([
+        flushMemos(),
+        ed.flush(),
+        flushTrackedSaves(),
+        flushUser(),
+      ])
+      return saved && themeSaved && diarySaved && !typing() && !draftOpen()
     })
     window.kkumi.onBeforeClose(async () => {
       if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
       await Promise.all([ed.flush(), flushMemos(), flushUser()])
     })
-  }, [ed, flushMemos, flushUser])
+  }, [ed, editing, flushMemos, flushUser])
 
   const { incoming, toCanvasRef } = drag
   return (

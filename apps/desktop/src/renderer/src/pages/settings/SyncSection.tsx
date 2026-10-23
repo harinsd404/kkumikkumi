@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import type { SyncStatus } from '../../../../shared/api'
 
 const messages: Record<string, string> = {
+  sync_upgrade: '시간표·일기·사진·테마까지 동기화하려면 아래에서 전체 동기화를 시작해 주세요.',
+  sync_blob: '사진 파일을 확인하지 못했어요. 동기화를 다시 시도해 주세요.',
   sync_unsaved: '편집 중인 내용을 먼저 저장하고 다시 동기화해 주세요.',
   sync_url: 'HTTPS 주소를 입력해 주세요. SSH 터널은 http://127.0.0.1:8787을 사용할 수 있어요.',
   sync_auth: '접속키를 확인해 주세요.',
@@ -39,7 +41,10 @@ export function SyncSection() {
       clearInterval(timer)
     }
   }, [])
-  const act = async (kind: 'connect' | 'disconnect' | 'run', prefer?: 'local' | 'remote') => {
+  const act = async (
+    kind: 'connect' | 'disconnect' | 'run' | 'upgrade',
+    prefer?: 'local' | 'remote',
+  ) => {
     setBusy(true)
     setError(null)
     try {
@@ -52,7 +57,10 @@ export function SyncSection() {
             })
           : kind === 'disconnect'
             ? await window.kkumi.invoke('sync.disconnect')
-            : await window.kkumi.invoke('sync.run', prefer ? { prefer } : {})
+            : await window.kkumi.invoke(
+                'sync.run',
+                kind === 'upgrade' ? { upgrade: consent } : prefer ? { prefer } : {},
+              )
       if (r.ok) {
         setStatus(r.value)
         setToken('')
@@ -70,8 +78,8 @@ export function SyncSection() {
         기기 간 동기화
       </h2>
       <p className="st-note">
-        개인 서버로 할 일·카테고리·스프린트·메모를 동기화해요. 일정·시간표·습관·일기·테마는 이
-        기기에만 남아요.
+        개인 서버로 할 일·메모·일정·시간표·습관·일기·타이머 기록·테마·사진과 공통 설정을 동기화해요.
+        접속키·AI 연결 권한·창 위치·실행 중인 타이머는 기기별로 유지해요.
       </p>
       {status?.enabled ? (
         <>
@@ -82,6 +90,27 @@ export function SyncSection() {
               ? ` · 마지막 동기화 ${new Date(status.lastSyncedAt).toLocaleString()}`
               : ''}
           </p>
+          {status.requiresUpgrade && (
+            <div>
+              <label className="st-toggle">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  disabled={locked}
+                  onChange={(e) => setConsent(e.target.checked)}
+                />
+                일기·사진을 포함한 전체 데이터를 이 서버와 동기화합니다.
+              </label>
+              <button
+                className="pg-pill"
+                type="button"
+                disabled={locked || !consent}
+                onClick={() => void act('upgrade')}
+              >
+                전체 동기화 시작
+              </button>
+            </div>
+          )}
           <div className="pg-tabs">
             <button
               className="pg-pill"
@@ -138,7 +167,8 @@ export function SyncSection() {
               disabled={locked}
               onChange={(e) => setConsent(e.target.checked)}
             />
-            이 기기의 기존 할 일·메모를 위 서버의 계정에 올리고, 서버의 데이터와 합쳐 동기화합니다.
+            일기·사진을 포함한 이 기기의 전체 데이터를 위 서버의 계정에 올리고, 서버의 데이터와 합쳐
+            동기화합니다.
           </label>
           <button className="pg-pill" type="submit" disabled={locked || !consent || !status}>
             연결하기

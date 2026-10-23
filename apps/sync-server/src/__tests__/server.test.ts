@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -11,7 +11,7 @@ afterEach(async () => {
   for (const fn of cleanup.splice(0).reverse()) await fn()
 })
 const mutation = () => ({
-  protocol: 1 as const,
+  protocol: 2 as const,
   mutationId: randomUUID(),
   revision: 0,
   changes: [
@@ -64,9 +64,9 @@ describe('self-hosted server', () => {
     )
     const address = server.address() as { port: number },
       url = `http://127.0.0.1:${address.port}`
-    expect((await fetch(`${url}/v1/snapshot`)).status).toBe(401)
+    expect((await fetch(`${url}/v2/snapshot`)).status).toBe(401)
     const post = (body: unknown) =>
-      fetch(`${url}/v1/changes`, {
+      fetch(`${url}/v2/changes`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${a.token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -77,6 +77,70 @@ describe('self-hosted server', () => {
     const bad = mutation()
     bad.changes[0]!.value.id = randomUUID()
     expect((await post(bad)).status).toBe(400)
+    expect(store.snapshot(a.accountId).revision).toBe(1)
+    const bytes = Buffer.from('blob test'),
+      hash = createHash('sha256').update(bytes).digest('hex')
+    const blobUrl = `${url}/v2/blobs/${hash}`
+    expect(
+      (
+        await fetch(blobUrl, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${a.token}`,
+            'Content-Type': 'application/octet-stream',
+          },
+          body: bytes,
+        })
+      ).status,
+    ).toBe(200)
+    expect((await fetch(blobUrl, { headers: { Authorization: `Bearer ${b.token}` } })).status).toBe(
+      404,
+    )
+    expect(
+      (await fetch(blobUrl, { method: 'HEAD', headers: { Authorization: `Bearer ${a.token}` } }))
+        .status,
+    ).toBe(200)
+    expect(
+      Buffer.from(
+        await (
+          await fetch(blobUrl, { headers: { Authorization: `Bearer ${a.token}` } })
+        ).arrayBuffer(),
+      ),
+    ).toEqual(bytes)
+    expect(
+      (
+        await fetch(blobUrl, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${a.token}`,
+            'Content-Type': 'application/octet-stream',
+          },
+          body: 'wrong hash',
+        })
+      ).status,
+    ).toBe(400)
+    expect(() =>
+      store.push(a.accountId, {
+        protocol: 2,
+        mutationId: randomUUID(),
+        revision: 1,
+        changes: [
+          {
+            collection: 'diary',
+            id: '2026-10-23',
+            value: {
+              id: '2026-10-23',
+              date: '2026-10-23',
+              body: '',
+              mood: null,
+              photos: [{ hash: 'a'.repeat(64), mime: 'image/png' }],
+              createdAt: 1,
+              updatedAt: 1,
+            },
+          },
+        ],
+      }),
+    ).toThrow('missing_blob')
     expect(store.snapshot(a.accountId).revision).toBe(1)
   })
 })

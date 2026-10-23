@@ -135,3 +135,11 @@
 | Windows 패키징     | 대상 OS에서 패키징해 네이티브 의존성을 검증한다. Windows CI에서 x64 NSIS 설치 파일과 패키지 실행 파일의 MCP 진입점을 검사한다.                            | https://www.electron.build/v26/docs/features/multi-platform-build/          | electron-builder 26.15.3            | 2026-10-23 |
 | SQLite 온라인 백업 | 실행 중인 WAL DB는 파일 하나를 복사하지 않고 `node:sqlite`의 `backup()`을 사용한다. ARM64 Ubuntu 배포에서 재시작 후 데이터 유지와 온라인 백업을 실측했다. | https://nodejs.org/api/sqlite.html#sqlitebackupsourceDb-destination-options | Node 24 Docker / Ubuntu 24.04 ARM64 | 2026-10-23 |
 | 도메인 없는 접속   | 루프백 HTTP 서버를 SSH 터널로 연결한다. 도메인 사용 시 HTTPS 프록시로 바꾸며 기본적인 ACME HTTP/TLS 검증에는 TCP 80/443 접근이 필요하다.                  | https://caddyserver.com/docs/quick-starts/https                             | Caddy 문서 / OpenSSH 터널 실측      | 2026-10-23 |
+
+## 전체 동기화 v2 (2026-10-23)
+
+- 저장 범위는 `SyncDocumentSchema`의 15개 컬렉션으로 정의한다. 접속키, MCP 권한, 창 위치, 실행 중 타이머는 포함하지 않는다.
+- 사진/테마 이미지는 SHA-256 주소와 계정별 SQLite BLOB으로 저장한다. 기존 `node:sqlite.backup`에 이미지가 함께 포함되므로 별도 서버 파일 백업을 조합할 필요가 없다.
+- 클라이언트는 설치된 sharp 0.35.5 API(`metadata`, `raw().toBuffer`, `limitInputPixels`, `failOn`)로 이미지 전체를 검증한다. 새 의존성은 없다.
+- 로컬 파일 복구는 SQLite에 남은 `sync.files` 적용 의도를 bootstrap의 기본 테마 생성/정리보다 먼저 재실행한다. IPC/MCP는 파일 적용이 끝나기 전 데이터에 접근하지 않는다.
+- 검증: 두 프로필 전체 데이터/사진 복제, 수정/삭제 전파, v1 전환 동의, 이미지 손상/누락/계정 격리, 파일 적용 실패 후 bootstrap 복구, 진행 중 파일 작업과 동기화 충돌 방지 테스트.

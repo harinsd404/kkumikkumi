@@ -1,60 +1,170 @@
 import { z } from 'zod'
-import { Uuid } from './theme'
-import { MemoSchema, SprintSchema, TodoItemSchema, TodoListSchema } from './userdata'
+import { ThemeSchema, Uuid } from './theme'
+import {
+  MemoSchema,
+  SprintSchema,
+  TodoItemSchema,
+  TodoListSchema,
+  CalendarEventSchema,
+  TimetableSchema,
+  TimetableEntrySchema,
+  HabitSchema,
+  HabitCheckSchema,
+  DiaryEntrySchema,
+  TimerSessionSchema,
+  ThemeRuleSchema,
+  ColorComboSchema,
+  SettingsSchema,
+  PomodoroSettingsSchema,
+  MiniTimerPrefsSchema,
+  TimetablePrefsSchema,
+} from './userdata'
 
-/** v1 deliberately syncs these four collections; other device data stays local. */
-export const SYNC_VERSION = 1
+export const SYNC_VERSION = 2
 export const SYNC_MAX_BYTES = 8 * 1024 * 1024
-export const SYNC_COLLECTIONS = ['lists', 'sprints', 'todos', 'memos'] as const
+export const SYNC_BLOB_MAX_BYTES = 5 * 1024 * 1024
+export const SYNC_BLOB_QUOTA_BYTES = 512 * 1024 * 1024
+const DiarySync = DiaryEntrySchema.extend({ id: z.string() }).refine((v) => v.id === v.date)
+const CheckSync = HabitCheckSchema.extend({ id: z.string() }).refine(
+  (v) => v.id === `${v.habitId}/${v.date}`,
+)
+export const SyncPreferenceSchema = z.discriminatedUnion('id', [
+  z.strictObject({ id: z.literal('app'), value: SettingsSchema }),
+  z.strictObject({ id: z.literal('pomodoro'), value: PomodoroSettingsSchema }),
+  z.strictObject({ id: z.literal('miniTimer'), value: MiniTimerPrefsSchema }),
+  z.strictObject({ id: z.literal('timetablePrefs'), value: TimetablePrefsSchema }),
+])
+export const SYNC_COLLECTIONS = [
+  'lists',
+  'sprints',
+  'todos',
+  'memos',
+  'calendarEvents',
+  'timetables',
+  'timetableEntries',
+  'habits',
+  'habitChecks',
+  'diary',
+  'timerSessions',
+  'themes',
+  'themeRules',
+  'colorCombos',
+  'preferences',
+] as const
 export type SyncCollection = (typeof SYNC_COLLECTIONS)[number]
 const shapes = {
   lists: TodoListSchema,
   sprints: SprintSchema,
   todos: TodoItemSchema,
   memos: MemoSchema,
+  calendarEvents: CalendarEventSchema,
+  timetables: TimetableSchema,
+  timetableEntries: TimetableEntrySchema,
+  habits: HabitSchema,
+  habitChecks: CheckSync,
+  diary: DiarySync,
+  timerSessions: TimerSessionSchema,
+  themes: ThemeSchema,
+  themeRules: ThemeRuleSchema,
+  colorCombos: ColorComboSchema,
+  preferences: SyncPreferenceSchema,
 }
-
+// Defaults migrate v1 snapshots without discarding their acknowledged baseline.
 export const SyncDocumentSchema = z
   .strictObject({
     lists: z.array(TodoListSchema).max(2000),
     sprints: z.array(SprintSchema).max(2000),
     todos: z.array(TodoItemSchema).max(20000),
     memos: z.array(MemoSchema).max(5000),
+    calendarEvents: z.array(CalendarEventSchema).max(20000).default([]),
+    timetables: z.array(TimetableSchema).max(1000).default([]),
+    timetableEntries: z.array(TimetableEntrySchema).max(20000).default([]),
+    habits: z.array(HabitSchema).max(2000).default([]),
+    habitChecks: z.array(CheckSync).max(100000).default([]),
+    diary: z.array(DiarySync).max(30000).default([]),
+    timerSessions: z.array(TimerSessionSchema).max(100000).default([]),
+    themes: z.array(ThemeSchema).max(1000).default([]),
+    themeRules: z.array(ThemeRuleSchema).max(2000).default([]),
+    colorCombos: z.array(ColorComboSchema).max(30).default([]),
+    preferences: z.array(SyncPreferenceSchema).max(4).default([]),
   })
   .superRefine((d, ctx) => {
+    const issue = (message: string) => ctx.addIssue({ code: 'custom', message })
     for (const key of SYNC_COLLECTIONS) {
-      if (new Set(d[key].map((v) => v.id)).size !== d[key].length)
-        ctx.addIssue({ code: 'custom', message: 'duplicate_id', path: [key] })
+      if (new Set(d[key].map((v) => v.id)).size !== d[key].length) issue('duplicate_id')
     }
-    const lists = new Set(d.lists.map((v) => v.id))
-    const sprints = new Set(d.sprints.map((v) => v.id))
+    const lists = new Set(d.lists.map((v) => v.id)),
+      sprints = new Set(d.sprints.map((v) => v.id))
     if (d.todos.some((v) => !lists.has(v.listId) || (v.sprintId && !sprints.has(v.sprintId))))
-      ctx.addIssue({ code: 'custom', message: 'missing_parent' })
+      issue('missing_parent')
+    const timetables = new Map(d.timetables.map((v) => [v.id, v])),
+      slots = new Set<string>()
+    for (const e of d.timetableEntries) {
+      const t = timetables.get(e.timetableId)
+      if (!t) issue('missing_timetable')
+      if (e.slot.kind === 'period') {
+        const slot = `${e.timetableId}/${e.slot.day}/${e.slot.period}`
+        if (slots.has(slot) || (t && e.slot.period > t.settings.periods.length))
+          issue('invalid_slot')
+        slots.add(slot)
+      }
+    }
+    const habits = new Set(d.habits.map((v) => v.id)),
+      themes = new Set(d.themes.map((v) => v.id))
+    if (d.habitChecks.some((v) => !habits.has(v.habitId))) issue('missing_habit')
+    if (d.themeRules.some((v) => !themes.has(v.themeId))) issue('missing_theme')
+    for (const p of d.preferences) {
+      if (
+        p.id === 'app' &&
+        (!themes.has(p.value.activeThemeId) ||
+          (p.value.manualOverride && !themes.has(p.value.manualOverride.themeId)))
+      )
+        issue('missing_theme')
+      if (p.id === 'timetablePrefs' && p.value.activeId && !timetables.has(p.value.activeId))
+        issue('missing_timetable')
+    }
   })
 export type SyncDocument = z.infer<typeof SyncDocumentSchema>
 export type SyncEntity = SyncDocument[SyncCollection][number]
-export const emptySyncDocument = (): SyncDocument => ({
-  lists: [],
-  sprints: [],
-  todos: [],
-  memos: [],
-})
-
+export const emptySyncDocument = (): SyncDocument =>
+  SyncDocumentSchema.parse({ lists: [], sprints: [], todos: [], memos: [] })
 export const SyncChangeSchema = z
   .strictObject({
     collection: z.enum(SYNC_COLLECTIONS),
-    id: Uuid,
-    value: z.union([TodoListSchema, SprintSchema, TodoItemSchema, MemoSchema]).nullable(),
+    id: z.string().min(1).max(128),
+    value: z
+      .union([
+        TodoListSchema,
+        SprintSchema,
+        TodoItemSchema,
+        MemoSchema,
+        CalendarEventSchema,
+        TimetableSchema,
+        TimetableEntrySchema,
+        HabitSchema,
+        CheckSync,
+        DiarySync,
+        TimerSessionSchema,
+        ThemeSchema,
+        ThemeRuleSchema,
+        ColorComboSchema,
+        SyncPreferenceSchema,
+      ])
+      .nullable(),
   })
   .superRefine((c, ctx) => {
     if (c.value && (c.value.id !== c.id || !shapes[c.collection].safeParse(c.value).success))
       ctx.addIssue({ code: 'custom', message: 'invalid_entity' })
   })
+/** Only validated image references are transported; no client-controlled paths. */
+export function syncBlobRefs(d: SyncDocument) {
+  return [...d.themes.flatMap((t) => t.assets), ...d.diary.flatMap((e) => e.photos)]
+}
 export const SyncPushSchema = z.strictObject({
   protocol: z.literal(SYNC_VERSION),
   mutationId: Uuid,
   revision: z.number().int().nonnegative().safe(),
-  changes: z.array(SyncChangeSchema).min(1).max(30000),
+  changes: z.array(SyncChangeSchema).min(1).max(200000),
 })
 export type SyncPush = z.infer<typeof SyncPushSchema>
 export type SyncChange = z.infer<typeof SyncChangeSchema>

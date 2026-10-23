@@ -5,7 +5,7 @@ import { isTrustedFrame } from '../security'
 import { SyncError } from './service'
 
 /** Flush the editor's debounced input before reading/replacing local rows. */
-export async function flushSyncRenderer(): Promise<void> {
+export async function flushSyncRenderer(lock = false): Promise<void> {
   const win = boardWindow()
   if (!win || win.isDestroyed()) return
   const requestId = randomUUID()
@@ -22,6 +22,6 @@ export async function flushSyncRenderer(): Promise<void> {
     }
     const timeout = setTimeout(() => finish(false), 3000)
     ipcMain.on('app:sync-ready', ready)
-    win.webContents.send('app:before-sync', requestId)
+    win.webContents.send('app:before-sync', requestId, lock)
   })
 }

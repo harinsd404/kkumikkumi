@@ -28,8 +28,13 @@ export function syncHandlers(d: HandlerDeps): HandlersOf<'sync'> {
       return service().disconnect()
     },
     'sync.run': async (i) => {
-      const { prefer } = z.strictObject({ prefer: z.enum(['local', 'remote']).optional() }).parse(i)
-      return service().run(prefer)
+      const { prefer, upgrade } = z
+        .strictObject({
+          prefer: z.enum(['local', 'remote']).optional(),
+          upgrade: z.boolean().optional(),
+        })
+        .parse(i)
+      return upgrade ? service().upgrade() : service().run(prefer)
     },
   }
 }

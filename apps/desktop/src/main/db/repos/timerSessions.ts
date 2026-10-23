@@ -18,6 +18,12 @@ const toSession = (r: Row): TimerSession =>
 export class TimerSessionRepo {
   constructor(private readonly db: Db) {}
 
+  all() {
+    return (this.db.prepare('SELECT * FROM timer_sessions ORDER BY id').all() as Row[]).map(
+      toSession,
+    )
+  }
+
   insert(session: TimerSession): TimerSession {
     const s = TimerSessionSchema.parse(session)
     this.db

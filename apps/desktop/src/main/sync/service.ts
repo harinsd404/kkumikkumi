@@ -1,3 +1,4 @@
+import type { SyncData } from './data'
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import {
@@ -21,6 +22,7 @@ export class SyncError extends Error {
   }
 }
 const StateSchema = z.strictObject({
+  scopeVersion: z.number().int().default(1),
   url: z.string(),
   token: z.string().nullable(),
   enabled: z.boolean(),
@@ -51,7 +53,9 @@ export function normalizeSyncUrl(input: string): string {
 }
 
 interface Deps {
-  flush?(): Promise<void>
+  data?: SyncData
+  flush?(lock?: boolean): Promise<void>
+  release?(changed: boolean): void
   db: Db
   repos: Repos
   seal(token: string): string
@@ -90,6 +94,7 @@ export class SyncService {
     this.state = state
   }
   private read(): SyncDocument {
+    if (this.d.data) return this.d.data.read()
     const lists = this.d.repos.todo.lists()
     return SyncDocumentSchema.parse({
       lists,
@@ -110,11 +115,18 @@ export class SyncService {
     for (const v of document.memos) repos.memos.insert(v)
   }
   status(): SyncStatus {
+    let pending = 0
+    try {
+      if (this.state && !this.stopped) pending = syncDiff(this.state.base, this.read()).length
+    } catch {
+      /* A concurrent file save will finish before the next run. */
+    }
     return {
+      requiresUpgrade: !!this.state && this.state.scopeVersion < SYNC_VERSION,
       url: this.state?.url ?? '',
       enabled: this.state?.enabled ?? false,
       busy: this.busy,
-      pending: this.state && !this.stopped ? syncDiff(this.state.base, this.read()).length : 0,
+      pending,
       conflicts: this.conflicts,
       error: this.error,
       lastSyncedAt: this.state?.lastSyncedAt ?? null,
@@ -130,7 +142,7 @@ export class SyncService {
       throw new SyncError('sync_too_large')
     let response: Response
     try {
-      response = await (this.d.fetch ?? fetch)(`${url}/v1/${body ? 'changes' : 'snapshot'}`, {
+      response = await (this.d.fetch ?? fetch)(`${url}/v2/${body ? 'changes' : 'snapshot'}`, {
         method: body ? 'POST' : 'GET',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         ...(encoded === undefined ? {} : { body: encoded }),
@@ -140,6 +152,7 @@ export class SyncService {
     } catch {
       throw new SyncError('sync_network')
     }
+    if (response.status === 426) throw new SyncError('sync_protocol')
     if (response.status === 401) throw new SyncError('sync_auth')
     if (response.status === 413) throw new SyncError('sync_too_large')
     if (response.status !== 200 && response.status !== 409) throw new SyncError('sync_server')
@@ -186,12 +199,15 @@ export class SyncService {
         snapshot.revision >= previous.revision
       await this.d.flush?.()
       if (this.stopped) throw new SyncError('sync_stopped')
-      await this.d.backup(this.read())
+      const local = this.read()
+      await this.d.data?.cacheLocal(local)
+      await this.d.backup(local)
       if (this.stopped) throw new SyncError('sync_stopped')
       this.save(
         same
-          ? { ...previous, token, enabled: true }
+          ? { ...previous, token, enabled: true, scopeVersion: SYNC_VERSION }
           : {
+              scopeVersion: SYNC_VERSION,
               url,
               token,
               enabled: true,
@@ -216,12 +232,52 @@ export class SyncService {
     this.error = null
     return this.status()
   }
+  async upgrade(): Promise<SyncStatus> {
+    if (this.busy) throw new SyncError('sync_busy')
+    if (!this.state?.enabled) throw new SyncError('sync_consent')
+    this.busy = true
+    try {
+      await this.d.flush?.()
+      const local = this.read()
+      await this.d.data?.cacheLocal(local)
+      await this.d.backup(local)
+      this.save({ ...this.state, scopeVersion: SYNC_VERSION })
+    } finally {
+      this.busy = false
+    }
+    return this.run()
+  }
   async run(prefer?: 'local' | 'remote'): Promise<SyncStatus> {
     if (this.busy || this.stopped || !this.state?.enabled || !this.state.token) return this.status()
+    if (this.state.scopeVersion < SYNC_VERSION) {
+      this.error = 'sync_upgrade'
+      return this.status()
+    }
     this.busy = true
     const state = this.state
+    let applied = false
     try {
       const token = this.d.unseal(state.token!)
+      const blobRequest = async (hash: string, method: 'GET' | 'HEAD' | 'PUT', bytes?: Buffer) => {
+        let r: Response
+        try {
+          r = await (this.d.fetch ?? fetch)(`${state.url}/v2/blobs/${hash}`, {
+            method,
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/octet-stream',
+            },
+            ...(bytes ? { body: new Uint8Array(bytes) } : {}),
+            redirect: 'error',
+            signal: AbortSignal.timeout(30000),
+          })
+        } catch {
+          throw new SyncError('sync_network')
+        }
+        if (r.status === 401) throw new SyncError('sync_auth')
+        if (r.status === 413) throw new SyncError('sync_too_large')
+        return r
+      }
       // Retry a bounded number of revision races; never resend a stale full snapshot.
       for (let attempt = 0; attempt < 3; attempt++) {
         const { snapshot: remote } = await this.request(state.url, token)
@@ -232,6 +288,7 @@ export class SyncService {
         await this.d.flush?.()
         if (this.stopped) break
         const local = this.read()
+        await this.d.data?.cacheLocal(local)
         const merged = mergeSyncDocuments(state.base, local, remote.document, prefer)
         this.conflicts = merged.conflicts.length
         if (this.conflicts && !prefer) {
@@ -240,11 +297,14 @@ export class SyncService {
         }
         if (this.conflicts) {
           await this.d.backup(local)
+          await this.d.data?.transfer(remote.document, blobRequest, false)
           await this.d.backup(remote.document)
           if (this.stopped) break
           // Edits can arrive while the backups are written. Re-read on the next pass.
           if (syncDiff(local, this.read()).length) continue
         }
+        await this.d.data?.transfer(merged.document, blobRequest, true)
+        if (this.stopped) break
         const changes = syncDiff(remote.document, merged.document)
         const result = changes.length
           ? await this.request(state.url, token, {
@@ -263,29 +323,45 @@ export class SyncService {
           accepted.revision < remote.revision
         )
           throw new SyncError('sync_protocol')
-        // Preserve edits made during the HTTP request. They become the next diff.
-        await this.d.flush?.()
+        await this.d.data?.transfer(accepted.document, blobRequest, false)
+        // Briefly prevent new renderer drafts until its refreshed view is mounted.
+        await this.d.flush?.(true)
         if (this.stopped) break
-        const latest = this.read()
+        let latest = this.read()
+        for (let pass = 0; ; pass++) {
+          await this.d.data?.cacheLocal(latest)
+          if (this.stopped) return this.status()
+          const fresh = this.read()
+          if (!syncDiff(latest, fresh).length) break
+          if (pass >= 9) throw new SyncError('sync_unsaved')
+          latest = fresh
+        }
         const next = mergeSyncDocuments(local, latest, accepted.document, 'local').document
         const changed = syncDiff(latest, next).length > 0
-        transaction(this.d.db, () => {
-          if (changed) this.apply(next)
-          this.save({
-            ...state,
-            base: accepted.document,
-            revision: accepted.revision,
-            lastSyncedAt: Date.now(),
+        const saved = {
+          ...state,
+          base: accepted.document,
+          revision: accepted.revision,
+          lastSyncedAt: Date.now(),
+        }
+        if (changed && this.d.data) this.d.data.commit(next, () => this.save(saved))
+        else
+          transaction(this.d.db, () => {
+            if (changed) this.apply(next)
+            this.save(saved)
           })
-        })
         this.conflicts = 0
         this.error = null
-        if (changed) this.d.changed()
+        if (changed) {
+          applied = true
+          this.d.changed()
+        }
         break
       }
     } catch (e) {
       this.error = e instanceof SyncError ? e.code : 'sync_storage'
     } finally {
+      this.d.release?.(applied)
       this.busy = false
     }
     return this.status()

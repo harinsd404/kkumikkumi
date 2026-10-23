@@ -20,7 +20,7 @@ export type { HandlerDeps, Handlers } from './handlers/deps'
 
 /** 모든 핸들러는 입력을 zod로 재검증한다(입력 스키마는 각 handlers/<영역>.ts). renderer 타입은 신뢰하지 않는다. */
 export function createHandlers(d: HandlerDeps): Handlers {
-  return {
+  const handlers: Handlers = {
     ...themeHandlers(d),
     ...assetHandlers(d),
     ...settingsHandlers(d),
@@ -38,4 +38,14 @@ export function createHandlers(d: HandlerDeps): Handlers {
     ...appHandlers(d),
     ...syncHandlers(d),
   }
+  // Include MCP: it uses this same handler map. Sync commits only between operations.
+  if (!d.syncData) return handlers
+  return Object.fromEntries(
+    Object.entries(handlers).map(([name, handler]) => [
+      name,
+      name.startsWith('sync.')
+        ? handler
+        : (input: unknown) => d.syncData!.guard<unknown>(() => handler(input)),
+    ]),
+  ) as Handlers
 }
