@@ -13,8 +13,12 @@ import { NotFoundError, type Repos } from '../../db/repos'
 import type { DiaryPhotoStore } from '../../diary/photoStore'
 import type { ThemeStore } from '../../themes/themeStore'
 import type { TimerService } from '../../timer/timerService'
+import type { SyncData } from '../../sync/data'
+import type { SyncService } from '../../sync/service'
 
 export interface HandlerDeps {
+  syncData?: SyncData
+  sync?: SyncService
   db: Db
   repos: Repos
   themes: ThemeStore

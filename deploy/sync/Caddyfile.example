@@ -1,0 +1,5 @@
+# Run Caddy on the same VPS after pointing your domain to it.
+# Only the reverse proxy listens publicly; the sync service stays on loopback.
+sync.example.com {
+    reverse_proxy 127.0.0.1:8787
+}

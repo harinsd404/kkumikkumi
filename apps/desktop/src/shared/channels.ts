@@ -81,6 +81,10 @@ export const CHANNELS = [
   'mcp.update',
   'app.info',
   'app.openFolder',
+  'sync.status',
+  'sync.connect',
+  'sync.disconnect',
+  'sync.run',
 ] as const
 
 export type Channel = (typeof CHANNELS)[number]

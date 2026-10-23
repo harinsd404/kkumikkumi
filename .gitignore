@@ -4,3 +4,6 @@ dist/
 *.tsbuildinfo
 .DS_Store
 coverage/
+.env
+.env.*
+apps/sync-server/data/

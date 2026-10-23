@@ -2,6 +2,15 @@ import { describe, expect, it } from 'vitest'
 import { mcpSnippets } from '../settings/McpSection'
 
 describe('mcpSnippets', () => {
+  it('escapes Windows executable paths and uses the packaged stdio bridge', () => {
+    const command = 'C:\\Users\\a b\\꾸미꾸미\\kkumikkumi.exe'
+    const snippets = mcpSnippets('unused', command)
+    expect(snippets[0]!.text).toContain(JSON.stringify(command))
+    expect(JSON.parse(snippets[1]!.text).mcpServers.kkumikkumi).toEqual({
+      command,
+      args: ['--mcp-stdio'],
+    })
+  })
   it('공백·따옴표가 있는 경로도 한 인자로 감싼다', () => {
     const path = '/Users/a b/Library/Application Support/kkumikkumi/mcp/kkumikkumi.sock'
     const [codex, codexCli, claude] = mcpSnippets(path)

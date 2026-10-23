@@ -18,7 +18,24 @@ const ERROR_TEXT: Record<NonNullable<McpStatus['error']>, string> = {
 /** TOML/셸 문자열(경로에 공백이 있어도 되게) */
 const quote = (s: string) => JSON.stringify(s)
 
-export function mcpSnippets(socketPath: string) {
+export function mcpSnippets(socketPath: string, bridgeCommand?: string) {
+  if (bridgeCommand)
+    return [
+      {
+        id: 'codex',
+        label: 'Codex (%USERPROFILE%/.codex/config.toml)',
+        text: `[mcp_servers.kkumikkumi]\ncommand = ${quote(bridgeCommand)}\nargs = ["--mcp-stdio"]`,
+      },
+      {
+        id: 'claude-json',
+        label: 'MCP JSON 설정',
+        text: JSON.stringify(
+          { mcpServers: { kkumikkumi: { command: bridgeCommand, args: ['--mcp-stdio'] } } },
+          null,
+          2,
+        ),
+      },
+    ]
   const p = quote(socketPath)
   return [
     {
@@ -112,7 +129,7 @@ export function McpSection({ highlight = false }: { highlight?: boolean }) {
       {status?.error && <p className="st-error">{ERROR_TEXT[status.error]}</p>}
       {on && status.listening && (
         <div className="st-snippets">
-          {mcpSnippets(status.socketPath).map((s) => (
+          {mcpSnippets(status.socketPath, status.bridgeCommand).map((s) => (
             <div key={s.id} className="st-snippet">
               <div className="st-snippet-head">
                 <span>{s.label}</span>

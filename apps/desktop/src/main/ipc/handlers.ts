@@ -14,12 +14,13 @@ import { themeHandlers } from './handlers/themes'
 import { timerHandlers } from './handlers/timer'
 import { timetableHandlers } from './handlers/timetable'
 import { todoHandlers } from './handlers/todo'
+import { syncHandlers } from './handlers/sync'
 
 export type { HandlerDeps, Handlers } from './handlers/deps'
 
 /** 모든 핸들러는 입력을 zod로 재검증한다(입력 스키마는 각 handlers/<영역>.ts). renderer 타입은 신뢰하지 않는다. */
 export function createHandlers(d: HandlerDeps): Handlers {
-  return {
+  const handlers: Handlers = {
     ...themeHandlers(d),
     ...assetHandlers(d),
     ...settingsHandlers(d),
@@ -35,5 +36,17 @@ export function createHandlers(d: HandlerDeps): Handlers {
     ...habitHandlers(d),
     ...mcpHandlers(d),
     ...appHandlers(d),
+    ...syncHandlers(d),
   }
+  // Include MCP data calls: they use this same map. Device-only OS/MCP controls
+  // do not touch the synced document and may wait on external processes indefinitely.
+  if (!d.syncData) return handlers
+  return Object.fromEntries(
+    Object.entries(handlers).map(([name, handler]) => [
+      name,
+      /^(sync|app|mcp)\./.test(name)
+        ? handler
+        : (input: unknown) => d.syncData!.guard<unknown>(() => handler(input)),
+    ]),
+  ) as Handlers
 }
