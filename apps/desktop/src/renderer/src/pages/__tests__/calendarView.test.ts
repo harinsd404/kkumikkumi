@@ -175,7 +175,7 @@ describe('보기 날짜와 제목', () => {
 
 describe('끌어 놓기 결과', () => {
   withTz('Asia/Seoul')
-  const ev = { ...timed('2026-10-12', '09:00', '10:00'), id: 'x', createdAt: 1 }
+  const event = () => ({ ...timed('2026-10-12', '09:00', '10:00'), id: 'x', createdAt: 1 })
   const allDay: EventInput = {
     ...base,
     allDay: true,
@@ -184,12 +184,14 @@ describe('끌어 놓기 결과', () => {
   }
 
   it('놓을 자리가 없거나 같은 날짜 칸이면 null', () => {
+    const ev = event()
     expect(dropResult({ event: ev, originDate: '2026-10-12', target: null })).toBeNull()
     const same = { kind: 'day', date: '2026-10-12' } as const
     expect(dropResult({ event: ev, originDate: '2026-10-12', target: same })).toBeNull()
   })
 
   it('날짜 칸: 잡은 칸 기준으로 며칠 옮긴다(여러 날 일정의 둘째 날을 잡은 경우)', () => {
+    const ev = event()
     const r = dropResult({
       event: allDay,
       originDate: '2026-10-13',
@@ -205,6 +207,7 @@ describe('끌어 놓기 결과', () => {
   })
 
   it('시간 칸: 종일 일정은 놓지 않고, 시작이 그대로면 null', () => {
+    const ev = event()
     const time = (date: string, minute: number) => ({ kind: 'time', date, minute }) as const
     expect(
       dropResult({ event: allDay, originDate: '2026-10-12', target: time('2026-10-12', 600) }),
