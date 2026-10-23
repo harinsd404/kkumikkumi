@@ -85,18 +85,49 @@ export function recoverSyncFiles(db: Db, root: string) {
 
 export class SyncData {
   private operations = 0
+  private paused: Promise<void> | null = null
+  private drained: (() => void) | null = null
   private validated = new Set<string>()
   constructor(
     private readonly core: AppCore,
     private readonly root: string,
   ) {}
   async guard<T>(operation: () => Promise<T>): Promise<T> {
+    while (this.paused) await this.paused
     recoverSyncFiles(this.core.db, this.root)
     this.operations++
     try {
       return await operation()
     } finally {
       this.operations--
+      if (!this.operations) this.drained?.()
+    }
+  }
+  /** Reserve a short local snapshot/apply window, then drain existing IPC/MCP work.
+   * New requests wait instead of starving sync; never hold this across renderer flush or HTTP.
+   */
+  async withIdle<T>(operation: () => T | Promise<T>): Promise<T> {
+    while (this.paused) await this.paused
+    let resume!: () => void
+    this.paused = new Promise<void>((resolve) => {
+      resume = resolve
+    })
+    let timeout: ReturnType<typeof setTimeout> | undefined
+    try {
+      if (this.operations) {
+        await new Promise<void>((resolve, reject) => {
+          this.drained = resolve
+          timeout = setTimeout(() => reject(new SyncError('sync_saving')), 10000)
+        })
+        clearTimeout(timeout)
+        this.drained = null
+      }
+      return await operation()
+    } finally {
+      clearTimeout(timeout)
+      this.drained = null
+      this.paused = null
+      resume()
     }
   }
   private idle() {

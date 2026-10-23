@@ -93,6 +93,16 @@ export class SyncService {
       .run(JSON.stringify(state))
     this.state = state
   }
+  private async withIdle<T>(operation: () => T | Promise<T>): Promise<T> {
+    return this.d.data ? this.d.data.withIdle(operation) : operation()
+  }
+  private capture(): Promise<SyncDocument> {
+    return this.withIdle(async () => {
+      const local = this.read()
+      await this.d.data?.cacheLocal(local)
+      return local
+    })
+  }
   private read(): SyncDocument {
     if (this.d.data) return this.d.data.read()
     const lists = this.d.repos.todo.lists()
@@ -199,8 +209,7 @@ export class SyncService {
         snapshot.revision >= previous.revision
       await this.d.flush?.()
       if (this.stopped) throw new SyncError('sync_stopped')
-      const local = this.read()
-      await this.d.data?.cacheLocal(local)
+      const local = await this.capture()
       await this.d.backup(local)
       if (this.stopped) throw new SyncError('sync_stopped')
       this.save(
@@ -238,8 +247,7 @@ export class SyncService {
     this.busy = true
     try {
       await this.d.flush?.()
-      const local = this.read()
-      await this.d.data?.cacheLocal(local)
+      const local = await this.capture()
       await this.d.backup(local)
       this.save({ ...this.state, scopeVersion: SYNC_VERSION })
     } finally {
@@ -287,8 +295,7 @@ export class SyncService {
         if (remote.revision < state.revision) throw new SyncError('sync_rollback')
         await this.d.flush?.()
         if (this.stopped) break
-        const local = this.read()
-        await this.d.data?.cacheLocal(local)
+        const local = await this.capture()
         const merged = mergeSyncDocuments(state.base, local, remote.document, prefer)
         this.conflicts = merged.conflicts.length
         if (this.conflicts && !prefer) {
@@ -301,7 +308,7 @@ export class SyncService {
           await this.d.backup(remote.document)
           if (this.stopped) break
           // Edits can arrive while the backups are written. Re-read on the next pass.
-          if (syncDiff(local, this.read()).length) continue
+          if (syncDiff(local, await this.withIdle(() => this.read())).length) continue
         }
         await this.d.data?.transfer(merged.document, blobRequest, true)
         if (this.stopped) break
@@ -327,35 +334,37 @@ export class SyncService {
         // Briefly prevent new renderer drafts until its refreshed view is mounted.
         await this.d.flush?.(true)
         if (this.stopped) break
-        let latest = this.read()
-        for (let pass = 0; ; pass++) {
-          await this.d.data?.cacheLocal(latest)
-          if (this.stopped) return this.status()
-          const fresh = this.read()
-          if (!syncDiff(latest, fresh).length) break
-          if (pass >= 9) throw new SyncError('sync_saving')
-          latest = fresh
-        }
-        const next = mergeSyncDocuments(local, latest, accepted.document, 'local').document
-        const changed = syncDiff(latest, next).length > 0
-        const saved = {
-          ...state,
-          base: accepted.document,
-          revision: accepted.revision,
-          lastSyncedAt: Date.now(),
-        }
-        if (changed && this.d.data) this.d.data.commit(next, () => this.save(saved))
-        else
-          transaction(this.d.db, () => {
-            if (changed) this.apply(next)
-            this.save(saved)
-          })
-        this.conflicts = 0
-        this.error = null
-        if (changed) {
-          applied = true
-          this.d.changed()
-        }
+        await this.withIdle(async () => {
+          let latest = this.read()
+          for (let pass = 0; ; pass++) {
+            await this.d.data?.cacheLocal(latest)
+            if (this.stopped) return
+            const fresh = this.read()
+            if (!syncDiff(latest, fresh).length) break
+            if (pass >= 9) throw new SyncError('sync_saving')
+            latest = fresh
+          }
+          const next = mergeSyncDocuments(local, latest, accepted.document, 'local').document
+          const changed = syncDiff(latest, next).length > 0
+          const saved = {
+            ...state,
+            base: accepted.document,
+            revision: accepted.revision,
+            lastSyncedAt: Date.now(),
+          }
+          if (changed && this.d.data) this.d.data.commit(next, () => this.save(saved))
+          else
+            transaction(this.d.db, () => {
+              if (changed) this.apply(next)
+              this.save(saved)
+            })
+          this.conflicts = 0
+          this.error = null
+          if (changed) {
+            applied = true
+            this.d.changed()
+          }
+        })
         break
       }
     } catch (e) {

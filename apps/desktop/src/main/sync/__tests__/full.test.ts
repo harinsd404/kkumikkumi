@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createHash, randomUUID } from 'node:crypto'
 import { existsSync, readFileSync, writeFileSync, rmSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
@@ -10,9 +10,12 @@ import { SyncData } from '../data'
 import { SyncService } from '../service'
 import { SyncStore } from '../../../../../sync-server/src/store'
 import { createSyncHttpServer } from '../../../../../sync-server/src/http'
+import { createHandlers } from '../../ipc/handlers'
+import { DEFAULT_TIMER } from '../../../shared/timer'
 
 const cleanups: (() => void | Promise<void>)[] = []
 afterEach(async () => {
+  vi.restoreAllMocks()
   for (const c of cleanups.splice(0).reverse()) await c()
 })
 async function setup() {
@@ -34,6 +37,7 @@ async function setup() {
     cleanups.push(() => env.cleanup())
     const data = new SyncData(env.core, env.dir),
       backups: SyncDocument[] = []
+    const flush: (lock?: boolean) => Promise<void> = async () => {}
     const deps = {
       ...env.core,
       data,
@@ -43,9 +47,25 @@ async function setup() {
         backups.push(d)
       },
       changed() {},
+      flush,
     }
     const service = new SyncService(deps)
-    return { env, data, service, deps, backups }
+    const app = { version: 'test', openFolder: async () => {} }
+    const handlers = createHandlers({
+      ...env.core,
+      sync: service,
+      syncData: data,
+      now: () => env.clock.now,
+      newId: env.newId,
+      pickImageFile: async () => null,
+      timer: {
+        get: () => ({ ...DEFAULT_TIMER, updatedAt: env.clock.now }),
+        command: () => ({ ...DEFAULT_TIMER, updatedAt: env.clock.now }),
+        applySettings() {},
+      },
+      app,
+    })
+    return { env, data, service, deps, backups, handlers, app }
   }
   return {
     store,
@@ -157,6 +177,88 @@ async function fill(c: Awaited<ReturnType<Awaited<ReturnType<typeof setup>>['cli
 }
 
 describe('full sync', () => {
+  it.each(['connect', 'run'] as const)(
+    'finishes %s when a theme read overlaps the renderer flush',
+    async (kind) => {
+      const s = await setup(),
+        a = await s.client()
+      if (kind === 'run') await s.connect(a.service)
+      const read = a.env.core.themes.read.bind(a.env.core.themes)
+      let reading: Promise<unknown> | undefined
+      a.deps.flush = async () => {
+        vi.spyOn(a.env.core.themes, 'read').mockImplementationOnce(async (id) => {
+          await new Promise((resolve) => setTimeout(resolve, 30))
+          return read(id)
+        })
+        reading = a.handlers['themes.get']({ id: a.env.core.repos.settings.get()!.activeThemeId })
+      }
+      const result =
+        kind === 'connect'
+          ? await a.handlers['sync.connect']({
+              url: s.url,
+              token: s.account.token,
+              importLocal: true,
+            })
+          : await a.handlers['sync.run']({})
+      await reading
+      expect(result.error).toBeNull()
+      expect(result.lastSyncedAt).not.toBeNull()
+    },
+  )
+  it('waits for a real theme save at final apply and preserves it for the next upload', async () => {
+    const s = await setup(),
+      a = await s.client(),
+      b = await s.client()
+    await s.connect(a.service)
+    await s.connect(b.service)
+    expect((await b.handlers['sync.run']({ prefer: 'remote' })).error).toBeNull()
+    expect((await a.handlers['sync.run']({})).error).toBeNull()
+    const memo = await b.handlers['memos.create']({ body: 'remote edit' })
+    expect((await b.handlers['sync.run']({})).error).toBeNull()
+    const theme = await a.env.core.themes.read(a.env.core.repos.settings.get()!.activeThemeId)
+    const save = a.env.core.themes.save.bind(a.env.core.themes)
+    let saving: Promise<unknown> | undefined
+    a.deps.flush = async (lock) => {
+      if (!lock) return
+      vi.spyOn(a.env.core.themes, 'save').mockImplementationOnce(async (value) => {
+        await new Promise((resolve) => setTimeout(resolve, 30))
+        return save(value)
+      })
+      saving = a.handlers['themes.save']({
+        theme: { ...theme, background: { type: 'color', color: '#123456', pattern: null } },
+      })
+    }
+    const result = await a.handlers['sync.run']({})
+    await saving
+    expect(result.error).toBeNull()
+    expect(a.env.core.repos.memos.get(memo.id)?.body).toBe('remote edit')
+    expect(result.pending).toBeGreaterThan(0)
+    a.deps.flush = async () => {}
+    expect((await a.handlers['sync.run']({})).error).toBeNull()
+    expect(
+      s.store.snapshot(s.account.accountId).document.themes.find((t) => t.id === theme.id)
+        ?.background,
+    ).toEqual({ type: 'color', color: '#123456', pattern: null })
+  })
+  it('does not treat waiting for the OS to open a folder as an unfinished save', async () => {
+    const s = await setup(),
+      a = await s.client()
+    await s.connect(a.service)
+    let release!: () => void
+    a.app.openFolder = () =>
+      new Promise<void>((resolve) => {
+        release = resolve
+      })
+    const opening = a.handlers['app.openFolder']({ folder: 'logs' })
+    let result
+    try {
+      result = await a.handlers['sync.run']({})
+    } finally {
+      release()
+      await opening
+    }
+    expect(result.error).toBeNull()
+  })
   it('round-trips all content and images, propagates edits/deletes, leaves credentials and device settings local', async () => {
     const s = await setup(),
       a = await s.client(),
@@ -279,9 +381,8 @@ describe('full sync', () => {
           release = r
         }),
     )
-    expect((await a.service.run()).error).toBe('sync_saving')
-    release()
-    await pending
+    setTimeout(release, 30)
     expect((await a.service.run()).error).toBeNull()
+    await pending
   })
 })

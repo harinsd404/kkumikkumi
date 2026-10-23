@@ -38,12 +38,13 @@ export function createHandlers(d: HandlerDeps): Handlers {
     ...appHandlers(d),
     ...syncHandlers(d),
   }
-  // Include MCP: it uses this same handler map. Sync commits only between operations.
+  // Include MCP data calls: they use this same map. Device-only OS/MCP controls
+  // do not touch the synced document and may wait on external processes indefinitely.
   if (!d.syncData) return handlers
   return Object.fromEntries(
     Object.entries(handlers).map(([name, handler]) => [
       name,
-      name.startsWith('sync.')
+      /^(sync|app|mcp)\./.test(name)
         ? handler
         : (input: unknown) => d.syncData!.guard<unknown>(() => handler(input)),
     ]),
