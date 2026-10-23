@@ -49,7 +49,7 @@ export function useThemeActions({
   page: AppPage
   themes: { list: ThemeSummary[]; refresh(): Promise<void> }
   flushTheme(): Promise<boolean>
-  flushMemoEdits(): Promise<void>
+  flushMemoEdits(): Promise<boolean>
   showNotice(text: string): void
   onSwitchTheme: ((id: string, page: AppPage) => Promise<boolean>) | undefined
 }): ThemeActions {
@@ -57,8 +57,8 @@ export function useThemeActions({
   /** 남은 변경을 저장하고 테마를 (다시) 불러온다. 같은 ID여도 화면을 새로 만든다. */
   const switchTo = useCallback(
     async (id: string) => {
-      const [saved] = await Promise.all([flushTheme(), flushMemoEdits()])
-      if (!saved) {
+      const saved = await Promise.all([flushTheme(), flushMemoEdits()])
+      if (!saved.every(Boolean)) {
         showNotice(SAVE_FAILED)
         return false
       }

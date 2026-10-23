@@ -156,6 +156,20 @@ export function BoardScreen({
   const flushMemos = memos.flush
   const flushUser = user.flush
   useEffect(() => {
+    window.kkumi.onBeforeSync(async () => {
+      // A periodic sync must not blur inputs or replace a draft that saves on blur.
+      const typing = () => {
+        const el = document.activeElement
+        return (
+          el instanceof HTMLInputElement ||
+          el instanceof HTMLTextAreaElement ||
+          (el instanceof HTMLElement && el.isContentEditable)
+        )
+      }
+      if (typing()) return false
+      const [saved] = await Promise.all([flushMemos(), flushUser()])
+      return saved && !typing()
+    })
     window.kkumi.onBeforeClose(async () => {
       if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
       await Promise.all([ed.flush(), flushMemos(), flushUser()])

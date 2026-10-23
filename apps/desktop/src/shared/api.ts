@@ -352,6 +352,8 @@ export interface KkumiApi {
    * 창을 닫기 직전에 호출된다(저장 마무리용). cb가 끝나면(최대 약 1.5초) 창이 닫힌다. 마지막 등록만 유효.
    */
   onBeforeClose(cb: () => Promise<void> | void): void
+  /** 동기화 직전 저장 확인. 입력 중이거나 저장에 실패하면 false로 반영을 미룬다. */
+  onBeforeSync(cb: () => Promise<boolean>): void
   /** main이 타이머 상태를 바꿀 때마다(완료 포함). 마지막 등록만 유효. */
   onTimerChanged(cb: (s: TimerState) => void): void
   /** 실행 중이던 타이머가 끝났을 때. 마지막 등록만 유효. */

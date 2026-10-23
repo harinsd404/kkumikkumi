@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import { makeEnv, type TestEnv } from '../../__tests__/helpers'
-import { SyncService, normalizeSyncUrl } from '../service'
+import { SyncError, SyncService, normalizeSyncUrl } from '../service'
 import { SyncStore } from '../../../../../sync-server/src/store'
 import { createSyncHttpServer } from '../../../../../sync-server/src/http'
 import type { SyncDocument } from '@kkumikkumi/schema'
@@ -52,6 +52,26 @@ const addMemo = (env: TestEnv, body: string) =>
   env.core.repos.memos.insert({ id: randomUUID(), body, pinned: false, createdAt: 1, updatedAt: 1 })
 
 describe('two-device sync', () => {
+  it('does not replace local rows if the renderer cannot save its draft', async () => {
+    const s = await setup(),
+      a = await s.client(),
+      b = await s.client()
+    const memo = addMemo(a.env, 'base')
+    await s.connect(a.service)
+    await s.connect(b.service)
+    a.env.core.repos.memos.update({ ...memo, body: 'remote edit' })
+    await a.service.run()
+    const blocked = new SyncService({
+      ...b.deps,
+      flush: async () => {
+        throw new SyncError('sync_unsaved')
+      },
+    })
+    expect((await blocked.run()).error).toBe('sync_unsaved')
+    expect(b.env.core.repos.memos.get(memo.id)?.body).toBe('base')
+    expect((await b.service.run()).error).toBeNull()
+    expect(b.env.core.repos.memos.get(memo.id)?.body).toBe('remote edit')
+  })
   it('reconciles offline edits, restart, pinned-only changes and deletions', async () => {
     const s = await setup(),
       a = await s.client(),

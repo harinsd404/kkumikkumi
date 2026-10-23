@@ -19,18 +19,19 @@ const api: KkumiApi = {
       return Promise.resolve({ ok: false, error: { code: 'unknown_channel' } })
     return ipcRenderer.invoke(channel, input)
   }) as KkumiApi['invoke'],
-  onBeforeClose: (cb) => {
-    // The same save barrier protects incoming sync changes from replacing typed input.
+  onBeforeSync: (cb) => {
     ipcRenderer.removeAllListeners('app:before-sync')
     ipcRenderer.on('app:before-sync', (_e, id: unknown) => {
       if (typeof id !== 'string') return
       void Promise.resolve()
         .then(cb)
         .then(
-          () => ipcRenderer.send('app:sync-ready', id, true),
+          (ok) => ipcRenderer.send('app:sync-ready', id, ok === true),
           () => ipcRenderer.send('app:sync-ready', id, false),
         )
     })
+  },
+  onBeforeClose: (cb) => {
     ipcRenderer.removeAllListeners('app:before-close')
     ipcRenderer.on('app:before-close', () => {
       void Promise.resolve()
