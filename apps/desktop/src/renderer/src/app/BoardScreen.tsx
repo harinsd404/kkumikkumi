@@ -1,3 +1,4 @@
+import { focusedSyncControl, prepareRendererSync } from './syncReadiness'
 import { flushTrackedSaves } from './saveBarrier'
 import type { Asset, Theme } from '@kkumikkumi/schema'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -162,26 +163,21 @@ export function BoardScreen({
   const flushMemos = memos.flush
   const flushUser = user.flush
   useEffect(() => {
-    window.kkumi.onBeforeSync(async () => {
-      // A periodic sync must not blur inputs or replace a draft that saves on blur.
-      const typing = () => {
-        const el = document.activeElement
-        return (
-          el instanceof HTMLInputElement ||
-          el instanceof HTMLTextAreaElement ||
-          (el instanceof HTMLElement && el.isContentEditable)
-        )
-      }
-      const draftOpen = () => editing || !!document.querySelector('[role="dialog"], dialog[open]')
-      if (typing() || draftOpen()) return false
-      const [saved, themeSaved, diarySaved] = await Promise.all([
-        flushMemos(),
-        ed.flush(),
-        flushTrackedSaves(),
-        flushUser(),
-      ])
-      return saved && themeSaved && diarySaved && !typing() && !draftOpen()
-    })
+    window.kkumi.onBeforeSync(() =>
+      prepareRendererSync({
+        focus: () => focusedSyncControl(document),
+        draftOpen: () => editing || !!document.querySelector('[role="dialog"], dialog[open]'),
+        save: async () => {
+          const [memosSaved, themeSaved, diarySaved] = await Promise.all([
+            flushMemos(),
+            ed.flush(),
+            flushTrackedSaves(),
+            flushUser(),
+          ])
+          return memosSaved && themeSaved && diarySaved
+        },
+      }),
+    )
     window.kkumi.onBeforeClose(async () => {
       if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
       await Promise.all([ed.flush(), flushMemos(), flushUser()])

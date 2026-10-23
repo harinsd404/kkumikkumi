@@ -10,17 +10,25 @@ export async function flushSyncRenderer(lock = false): Promise<void> {
   if (!win || win.isDestroyed()) return
   const requestId = randomUUID()
   await new Promise<void>((resolve, reject) => {
-    const finish = (ok: boolean) => {
+    const finish = (error: string | null) => {
       clearTimeout(timeout)
       ipcMain.removeListener('app:sync-ready', ready)
-      if (ok) resolve()
-      else reject(new SyncError('sync_unsaved'))
+      if (error) reject(new SyncError(error))
+      else resolve()
     }
-    const ready = (event: Electron.IpcMainEvent, id: unknown, ok: unknown) => {
+    const ready = (event: Electron.IpcMainEvent, id: unknown, readiness: unknown) => {
       if (event.sender === win.webContents && isTrustedFrame(event.senderFrame) && id === requestId)
-        finish(ok === true)
+        finish(
+          readiness === 'ready'
+            ? null
+            : readiness === 'editing'
+              ? 'sync_editing'
+              : readiness === 'save_failed'
+                ? 'sync_unsaved'
+                : 'sync_protocol',
+        )
     }
-    const timeout = setTimeout(() => finish(false), 3000)
+    const timeout = setTimeout(() => finish('sync_renderer_wait'), 10000)
     ipcMain.on('app:sync-ready', ready)
     win.webContents.send('app:before-sync', requestId, lock)
   })

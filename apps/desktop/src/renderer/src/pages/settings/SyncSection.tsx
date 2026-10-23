@@ -4,7 +4,10 @@ import type { SyncStatus } from '../../../../shared/api'
 const messages: Record<string, string> = {
   sync_upgrade: '시간표·일기·사진·테마까지 동기화하려면 아래에서 전체 동기화를 시작해 주세요.',
   sync_blob: '사진 파일을 확인하지 못했어요. 동기화를 다시 시도해 주세요.',
-  sync_unsaved: '편집 중인 내용을 먼저 저장하고 다시 동기화해 주세요.',
+  sync_unsaved: '변경 내용을 저장하지 못했어요. 저장 오류를 해결한 뒤 다시 동기화해 주세요.',
+  sync_editing: '입력칸을 벗어나거나 편집창을 닫으면 동기화를 이어가요.',
+  sync_saving: '현재 저장 작업을 마친 뒤 자동으로 다시 동기화해요.',
+  sync_renderer_wait: '화면의 응답을 기다리고 있어요. 잠시 후 다시 시도해 주세요.',
   sync_url: 'HTTPS 주소를 입력해 주세요. SSH 터널은 http://127.0.0.1:8787을 사용할 수 있어요.',
   sync_auth: '접속키를 확인해 주세요.',
   sync_network: '서버에 연결하지 못했어요. 로컬 변경은 보관 중이에요.',
@@ -31,6 +34,12 @@ export function SyncSection() {
       const r = await window.kkumi.invoke('sync.status')
       if (active && r.ok) {
         setStatus(r.value)
+        if (r.value.enabled && r.value.lastSyncedAt && !r.value.error)
+          setError((current) =>
+            current && ['sync_editing', 'sync_saving', 'sync_renderer_wait'].includes(current)
+              ? null
+              : current,
+          )
         if (initial) setUrl(r.value.url)
       }
     }
@@ -72,8 +81,9 @@ export function SyncSection() {
   }
   const locked = busy || !!status?.busy
   const issue = error ?? status?.error
+  const waiting = !!issue && ['sync_editing', 'sync_saving', 'sync_renderer_wait'].includes(issue)
   return (
-    <section className="pg-card st-card" aria-labelledby="st-sync">
+    <section className="pg-card st-card" aria-labelledby="st-sync" data-sync-controls>
       <h2 id="st-sync" className="pg-chip">
         기기 간 동기화
       </h2>
@@ -176,7 +186,7 @@ export function SyncSection() {
         </form>
       )}
       {issue && (
-        <p className="st-error" role="alert">
+        <p className={waiting ? 'st-note' : 'st-error'} role={waiting ? 'status' : 'alert'}>
           {messages[issue] ?? '동기화를 마치지 못했어요. 로컬 데이터는 유지돼요.'}
         </p>
       )}

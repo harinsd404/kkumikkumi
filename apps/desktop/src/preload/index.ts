@@ -34,12 +34,12 @@ const api: KkumiApi = {
       void Promise.resolve()
         .then(cb)
         .then(
-          (ok) => {
+          (readiness) => {
             if (generation !== syncGeneration) return
-            if (ok === true && lock === true) document.body.inert = true
-            ipcRenderer.send('app:sync-ready', id, ok === true)
+            if (readiness === 'ready' && lock === true) document.body.inert = true
+            ipcRenderer.send('app:sync-ready', id, readiness)
           },
-          () => ipcRenderer.send('app:sync-ready', id, false),
+          () => ipcRenderer.send('app:sync-ready', id, 'save_failed'),
         )
     })
   },

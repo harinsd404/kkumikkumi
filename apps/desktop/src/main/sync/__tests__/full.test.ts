@@ -279,7 +279,7 @@ describe('full sync', () => {
           release = r
         }),
     )
-    expect((await a.service.run()).error).toBe('sync_unsaved')
+    expect((await a.service.run()).error).toBe('sync_saving')
     release()
     await pending
     expect((await a.service.run()).error).toBeNull()

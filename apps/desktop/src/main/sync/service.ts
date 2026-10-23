@@ -333,7 +333,7 @@ export class SyncService {
           if (this.stopped) return this.status()
           const fresh = this.read()
           if (!syncDiff(latest, fresh).length) break
-          if (pass >= 9) throw new SyncError('sync_unsaved')
+          if (pass >= 9) throw new SyncError('sync_saving')
           latest = fresh
         }
         const next = mergeSyncDocuments(local, latest, accepted.document, 'local').document

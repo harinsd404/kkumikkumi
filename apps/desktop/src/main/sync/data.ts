@@ -100,7 +100,7 @@ export class SyncData {
     }
   }
   private idle() {
-    if (this.operations) throw new SyncError('sync_unsaved')
+    if (this.operations) throw new SyncError('sync_saving')
     recoverSyncFiles(this.core.db, this.root)
   }
   read(): SyncDocument {
