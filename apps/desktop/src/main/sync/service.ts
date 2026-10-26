@@ -203,7 +203,6 @@ export class SyncService {
       const previous = this.state
       const same =
         previous &&
-        previous.url === url &&
         previous.serverId === snapshot.serverId &&
         previous.accountId === snapshot.accountId &&
         snapshot.revision >= previous.revision
@@ -214,7 +213,7 @@ export class SyncService {
       if (this.stopped) throw new SyncError('sync_stopped')
       this.save(
         same
-          ? { ...previous, token, enabled: true, scopeVersion: SYNC_VERSION }
+          ? { ...previous, url, token, enabled: true, scopeVersion: SYNC_VERSION }
           : {
               scopeVersion: SYNC_VERSION,
               url,
