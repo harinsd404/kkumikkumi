@@ -1,3 +1,4 @@
+import { AssetImage } from '../ui/AssetImage'
 import type { FreeItem } from '@kkumikkumi/schema'
 import { useBoard } from './BoardContext'
 import { decorCss, imageCss } from './style'
@@ -18,7 +19,7 @@ export function FreeItemView({ item }: { item: FreeItem }) {
     const css = imageCss(item.content)
     return (
       <div className="kb-abs" style={{ ...base, ...css.frame }}>
-        {url && <img src={url} alt="" style={css.img} draggable={false} />}
+        {url && <AssetImage src={url} alt="" style={css.img} draggable={false} />}
       </div>
     )
   }
@@ -32,7 +33,7 @@ export function FreeItemView({ item }: { item: FreeItem }) {
       data-sticker={item.source.type === 'builtin' ? item.source.id : undefined}
     >
       {url ? (
-        <img
+        <AssetImage
           className="kb-fill"
           src={url}
           alt=""

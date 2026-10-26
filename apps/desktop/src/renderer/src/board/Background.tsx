@@ -1,3 +1,4 @@
+import { AssetImage } from '../ui/AssetImage'
 import dotsFirstUrl from './icons/pattern-dots-first.svg'
 import dotsUrl from './icons/pattern-dots.svg'
 import starsUrl from './icons/pattern-stars.svg'
@@ -14,7 +15,7 @@ export function Background() {
     return (
       <div className="kb-bg">
         {url && (
-          <img
+          <AssetImage
             className="kb-fill"
             src={url}
             alt=""

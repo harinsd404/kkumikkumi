@@ -155,3 +155,10 @@
 - 실제 `createHandlers`와 `SyncData`를 함께 연결한 HTTP 통합 테스트에서, `themes.get` 또는 `themes.save`가 렌더러 응답과 겹치면 곧바로 `sync_saving`으로 중단되는 것을 재현했다. 이전 테스트는 서비스를 직접 호출해 이 경로를 놓쳤다.
 - 로컬 스냅샷/이미지 캐시와 최종 적용은 진행 중인 IPC/MCP 데이터 호출이 끝나기를 최대 10초 기다린다. 이 구간에 들어오는 새 호출은 대기시켜 동기화가 계속 밀리지 않게 한다. 네트워크 요청과 렌더러 저장 요청 동안에는 잠그지 않는다.
 - 동기화 문서에 영향을 주지 않는 `app.*`/`mcp.*` 제어는 대기 대상에서 제외한다. 실제 저장 중 적용 금지, 늦게 완료된 로컬 수정과 서버 수정의 동시 보존, 대기 시간 초과/오류 후 잠금 해제, 최초 연결과 수동 동기화를 검증한다. 새 의존성은 없다.
+
+### 사진 로딩 실패 복구 및 IP HTTPS (2026-10-26)
+
+- 실제 사용자 사진 두 파일은 이전 백업과 SHA-256이 일치하고, 세 이미지 블록의 참조와 배치도 남아 있었다. 앱 재시작으로 세 칸의 표시가 복구됐다. 당시 최초 요청이 실패/정지한 트리거는 기록이 없어 확정할 수 없다. MCP 활성/비활성/연결 중 종료는 격리 프로필에서 정상 종료되어 종료 멈춤의 원인으로 단정하지 않는다.
+- Electron 44.7.0의 실제 프로토콜 핸들러와 sandbox/contextIsolation/webSecurity/CSP를 켠 창에서 파일 누락 → 복원을 재현했다. 기존 `<img>`는 파일이 돌아와도 빈칸이며 `AssetImage`는 재시작·테마 수정 없이 정상 디코딩된다. `pnpm --filter @kkumikkumi/desktop test:images`로 macOS/Windows CI에서 재검증한다.
+- 오류 응답은 `no-store`, 성공한 내용 해시 에셋만 immutable 캐시를 사용한다. 이미지 로드는 실패·10초 정지 시 최대 세 번 재시도하고, 모두 실패하면 안내 후 창 재방문 시 다시 시도한다. URL 쿼리 허용, CORS/CSP 완화, 원본/테마 변경은 없다. 로그에는 고정 오류 코드만 남긴다.
+- Let's Encrypt IP 인증서는 Certbot 5.4 이상에서 webroot와 `--ip-address`, `--preferred-profile shortlived`로 발급할 수 있다. 80에서 검증하고 HTTPS는 8787에 제공할 수 있다. 출처: https://letsencrypt.org/2026/03/11/shorter-certs-certbot.html (2026-10-26 확인). 배포 구성은 Certbot 5.8.0 / Nginx 1.29.7 / Linux Docker host network, 인증서와 API 데이터는 저장소 밖에 둔다.

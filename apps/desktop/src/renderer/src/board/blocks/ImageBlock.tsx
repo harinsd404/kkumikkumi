@@ -1,3 +1,4 @@
+import { AssetImage } from '../../ui/AssetImage'
 import type { GridBlock } from '@kkumikkumi/schema'
 import { useBoard } from '../BoardContext'
 import { imageCss } from '../style'
@@ -20,7 +21,7 @@ export function ImageBlock({ block }: { block: ImageBlockT }) {
   }
   return (
     <div className="kb-fill" style={css.frame}>
-      <img src={url} alt="" style={css.img} draggable={false} />
+      <AssetImage src={url} alt="" style={css.img} draggable={false} />
     </div>
   )
 }

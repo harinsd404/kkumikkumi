@@ -1,0 +1,9 @@
+[Unit]
+Description=Renew kkumikkumi IP TLS certificate
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/kkumikkumi-sync-tls.env
+ExecStart=/bin/sh -c 'exec /bin/sh "$KKUMI_TLS_SOURCE/deploy/sync/ip-tls/renew.sh"'

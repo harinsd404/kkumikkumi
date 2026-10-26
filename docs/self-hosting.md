@@ -4,6 +4,54 @@
 접속키·MCP 권한·창 위치·실행 중 타이머는 기기별로 유지한다. 같은 타이머를 여러 기기에서 중복 실행하지 않는다.
 동기화는 선택 사항이며 기본은 꺼져 있다. 서버에 연결하지 않아도 기존 로컬 기능을 계속 쓸 수 있다.
 
+## 도메인 없이 HTTPS로 직접 연결하기 (Linux VPS)
+
+`deploy/sync/ip-tls`는 공인 IPv4 주소 인증서와 HTTPS 8787 포트를 사용한다. SSH 터널이 필요 없다.
+클라우드 인그레스와 호스트 방화벽에서 TCP **80**(인증서 검증/갱신), **8787**(HTTPS 동기화)을 허용한다.
+80에서는 ACME 검증 파일만 제공하며 API는 제공하지 않는다. 18787은 루프백 전용이다.
+
+[Let's Encrypt의 IP 인증서 안내](https://letsencrypt.org/2026/03/11/shorter-certs-certbot.html)에 따라 Certbot 5.8.0과 `shortlived` 프로필을 사용한다.
+인증서 수명은 약 6일이므로 아래 자동 갱신 타이머도 반드시 설치한다. 인증서/개인키는 저장소 밖 `/var/lib/kkumikkumi-tls`에 보관한다.
+
+검토한 커밋을 체크아웃한 서버에서 실행한다(기존 `deploy/sync/compose.yaml` API가 먼저 실행되어 있어야 한다).
+`KKUMI_PUBLIC_IP`를 실제 공인 IPv4로 바꾼다.
+
+```sh
+export KKUMI_PUBLIC_IP=203.0.113.10
+cd deploy/sync/ip-tls
+KKUMI_TLS_CONFIG=http docker compose up -d gateway
+docker compose run --rm certbot certonly --dry-run --non-interactive \
+  --agree-tos --register-unsafely-without-email --preferred-profile shortlived \
+  --webroot --webroot-path /var/www/acme --ip-address "$KKUMI_PUBLIC_IP" \
+  --cert-name kkumikkumi
+# 위 검증이 통과하면 같은 명령에서 --dry-run을 빼고 실제 인증서를 발급한다.
+```
+
+발급 후 API의 `deploy/sync/.env`에 기존 이미지 태그를 유지하면서 `KKUMI_LOCAL_PORT=18787`을 추가한다.
+`deploy/sync`에서 `docker compose up -d sync`를 실행한 뒤 `ip-tls`에서 `docker compose up -d gateway`를 실행한다.
+이 전환 중 기존 8787 HTTP 터널은 끊긴다. 앱의 설정 → 동기화에서 **`https://공인IP:8787`**와 기존 접속키로 다시 연결한다.
+`curl --fail https://공인IP:8787/health`가 인증서 예외 옵션 없이 성공하는지 확인한다.
+
+자동 갱신 설정(`/etc/kkumikkumi-sync-tls.env`는 root 소유로 만든다):
+
+```ini
+KKUMI_PUBLIC_IP=203.0.113.10
+KKUMI_TLS_SOURCE=/absolute/path/to/kkumikkumi
+```
+
+```sh
+sudo install -m 644 kkumikkumi-sync-cert.service kkumikkumi-sync-cert.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now kkumikkumi-sync-cert.timer
+sudo systemctl start kkumikkumi-sync-cert.service
+sudo systemctl status kkumikkumi-sync-cert.service
+sudo systemctl list-timers kkumikkumi-sync-cert.timer
+```
+
+갱신은 하루 두 번 확인하고 성공 후 Nginx 설정 검사와 무중단 인증서 재읽기를 수행한다.
+장애는 `journalctl -u kkumikkumi-sync-cert.service`에서 확인한다. IP가 바뀌면 새 IP로 인증서 발급과 앱 URL 변경이 필요하다.
+인증서 만료나 검증 실패를 피하려고 앱의 인증서 검증을 끄지 않는다.
+
 ## 소스와 배포 관리
 
 - `apps/desktop`: 앱과 동기화 클라이언트. 접속키는 Electron `safeStorage`로 암호화해 보관하며 UI로 다시 반환하지 않는다.
@@ -36,7 +84,7 @@ docker compose exec sync node dist/admin.js create-account my-devices
 기본 Compose는 **서버의 127.0.0.1:8787에서만** 연결을 받는다. 영구 데이터는 `kkumikkumi-sync_sync-data` Docker 볼륨의 `/data/sync.db`에 있다.
 이미지를 다시 빌드하거나 컨테이너를 교체해도 이 볼륨은 유지된다. `docker compose down -v`는 데이터를 지우므로 사용하지 않는다.
 
-## 도메인이 없을 때: SSH 터널
+## 대안: SSH 터널 (기본 루프백 구성)
 
 각 클라이언트 PC에서 다음을 실행하고 터미널을 열어 둔다(Windows는 OpenSSH 클라이언트 필요).
 

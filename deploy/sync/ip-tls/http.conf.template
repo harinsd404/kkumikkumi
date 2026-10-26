@@ -1,0 +1,11 @@
+# Port 80 serves only ACME challenges, never sync data or credentials.
+server {
+    listen 80;
+    server_name _;
+    access_log off;
+    location /.well-known/acme-challenge/ {
+        root /var/www/acme;
+        try_files $uri =404;
+    }
+    location / { return 404; }
+}
