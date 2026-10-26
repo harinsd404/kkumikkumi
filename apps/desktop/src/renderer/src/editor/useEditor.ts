@@ -27,6 +27,7 @@ const ERROR_TEXT: Record<ReduceError, string> = {
   locked: '잠긴 꾸미기예요. 잠금을 풀어 주세요',
   too_many: '꾸미기는 100개까지 넣을 수 있어요',
   background_not_color: '이미지 배경에서는 바꿀 수 없어요',
+  image_background: '자유 크기를 쓰려면 스타일의 배경색을 투명으로 바꿔 주세요',
 }
 
 export interface EditorApi {
@@ -116,7 +117,15 @@ export function useEditor(initial: Theme, deps: EditorDeps): EditorApi {
   // 실행 취소 등으로 선택한 요소가 사라졌으면 선택 해제로 본다
   const exists = (s: AdjustTarget) =>
     !!s && (s.kind === 'free' ? theme.freeItems : theme.blocks).some((x) => x.id === s.id)
-  const live: Selection = exists(selection) ? selection : null
+  const live = useMemo<Selection>(() => {
+    if (!selection) return null
+    const kind = theme.blocks.some((b) => b.id === selection.id)
+      ? 'block'
+      : theme.freeItems.some((f) => f.id === selection.id)
+        ? 'free'
+        : null
+    return kind === null ? null : kind === selection.kind ? selection : { ...selection, kind }
+  }, [selection, theme.blocks, theme.freeItems])
   // 배경 사진 조정은 그 블록에 배경 사진이 아직 있을 때만(빼기 후 남은 조정 상태 정리)
   const liveAdjust =
     exists(adjusting) &&

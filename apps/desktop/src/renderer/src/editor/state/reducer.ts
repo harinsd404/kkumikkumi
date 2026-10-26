@@ -12,7 +12,7 @@ import {
   type GridBlock,
   type Theme,
 } from '@kkumikkumi/schema'
-import { gridItems } from '../../board/layout'
+import { blockBox, gridItems } from '../../board/layout'
 import { clampPosition, MIN_ITEM_SIZE } from './geometry'
 
 /**
@@ -29,6 +29,7 @@ export type EditorAction =
     }
   | { type: 'block/move'; id: string; col: number; row: number }
   | { type: 'block/resize'; id: string; size: GridBlock['size'] }
+  | { type: 'block/freeImage'; id: string }
   | { type: 'block/delete'; id: string }
   | { type: 'block/duplicate'; id: string; newId: string }
   | { type: 'block/style'; id: string; patch: Partial<GridBlock['style']> }
@@ -65,6 +66,7 @@ export type ReduceError =
   | 'locked'
   | 'too_many'
   | 'background_not_color'
+  | 'image_background'
 
 export type ReduceResult = { ok: true; theme: Theme } | { ok: false; error: ReduceError }
 
@@ -134,6 +136,35 @@ export function reduce(t: Theme, a: EditorAction): ReduceResult {
           return (x.id === a.id ? { ...next, size: a.size } : next) as GridBlock
         }),
       })
+    }
+    case 'block/freeImage': {
+      const b = t.blocks.find((x) => x.id === a.id)
+      if (!b || b.type !== 'image') return fail('not_found')
+      if (t.freeItems.length >= 100) return fail('too_many')
+      // 자유 이미지 형식에는 배경색이 없다. 사용자가 지정한 색을 조용히 버리지 않는다.
+      if (b.style.bg !== null) return fail('image_background')
+      const box = blockBox(blockRect(b)!)
+      const { opacity, radius, border, shadow } = b.style
+      const item: FreeItem = {
+        id: b.id,
+        kind: 'image',
+        x: box.left,
+        y: box.top,
+        w: box.width,
+        h: box.height,
+        rotation: 0,
+        z: 0,
+        layer: 'front',
+        locked: false,
+        decor: { opacity, radius, border, shadow },
+        content: b.props,
+      }
+      // 기존 앞 레이어 꾸미기는 계속 위에 둔다. 다른 블록의 위치는 바꾸지 않는다.
+      const freeItems = renumber([
+        item,
+        ...t.freeItems.map((f) => (f.layer === 'front' ? { ...f, z: f.z + 1 } : f)),
+      ])
+      return ok({ ...t, blocks: t.blocks.filter((x) => x.id !== b.id), freeItems })
     }
     case 'block/delete':
       if (!t.blocks.some((b) => b.id === a.id)) return fail('not_found')

@@ -3,6 +3,7 @@ import type { SwatchGroup } from '../../app/colorGroups'
 import { ColorField, Section, Segmented, Slider } from '../fields'
 import type { EditorApi } from '../useEditor'
 import { groupOf } from './group'
+import type { BlockDataApis } from './BlockProps'
 
 type Decor = FreeItem['decor']
 type ImageContent = Extract<GridBlock, { type: 'image' }>['props']
@@ -143,12 +144,50 @@ export function ImageContentFields(props: {
 export function FreeImageFields({
   ed,
   item,
+  pickImage,
 }: {
   ed: EditorApi
   item: Extract<FreeItem, { kind: 'image' }>
+  pickImage?: BlockDataApis['pickImage'] | undefined
 }) {
   return (
     <Section title="이미지">
+      {pickImage && (
+        <div className="ki-buttons">
+          <button
+            type="button"
+            onClick={async () => {
+              const asset = await pickImage('image')
+              if (!asset) return
+              if (
+                ed.dispatch({
+                  type: 'free/content',
+                  id: item.id,
+                  patch: {
+                    assetHash: asset.hash,
+                    focus: { ...item.content.focus, x: 0.5, y: 0.5 },
+                  },
+                }) &&
+                !item.locked
+              )
+                ed.adjust({ kind: 'free', id: item.id })
+            }}
+          >
+            {item.content.assetHash ? '이미지 바꾸기' : '+ 이미지 고르기'}
+          </button>
+          {item.content.assetHash && (
+            <button
+              type="button"
+              onClick={() => {
+                ed.dispatch({ type: 'free/content', id: item.id, patch: { assetHash: null } })
+                ed.adjust(null)
+              }}
+            >
+              비우기
+            </button>
+          )}
+        </div>
+      )}
       <ImageContentFields
         content={item.content}
         apply={(patch, key) =>

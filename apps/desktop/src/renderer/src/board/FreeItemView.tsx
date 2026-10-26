@@ -19,7 +19,11 @@ export function FreeItemView({ item }: { item: FreeItem }) {
     const css = imageCss(item.content)
     return (
       <div className="kb-abs" style={{ ...base, ...css.frame }}>
-        {url && <AssetImage src={url} alt="" style={css.img} draggable={false} />}
+        {url ? (
+          <AssetImage src={url} alt="" style={css.img} draggable={false} />
+        ) : (
+          <div className="kb-fill" style={{ background: theme.defaults.palette.surface }} />
+        )}
       </div>
     )
   }

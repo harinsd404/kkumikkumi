@@ -72,6 +72,7 @@ export function Inspector({ ed, onDuplicate, onDelete, otherThemes, ...apis }: I
             <FreeSection
               ed={ed}
               free={free}
+              pickImage={apis.pickImage}
               swatches={swatches}
               onDuplicate={onDuplicate}
               onDelete={onDelete}

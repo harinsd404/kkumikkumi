@@ -77,6 +77,12 @@ describe('resizeFromCorner', () => {
     expect(r.w / r.h).toBeCloseTo(2)
     expect(r.w).toBeCloseTo(400)
   })
+  it('최대 크기에 닿아도 가로로 긴 배너의 비율을 유지한다', () => {
+    const banner = { ...box, w: 1550, h: 170 }
+    const r = resizeFromCorner(banner, 'se', { x: 3000, y: 3000 }, true)
+    expect(r.w).toBe(1600)
+    expect(r.w / r.h).toBeCloseTo(1550 / 170)
+  })
   it('최소 크기 아래로 줄지 않는다(뒤집히지 않음)', () => {
     const r = resizeFromCorner(box, 'se', { x: 0, y: 0 }, false)
     expect([r.w, r.h]).toEqual([MIN_ITEM_SIZE, MIN_ITEM_SIZE])

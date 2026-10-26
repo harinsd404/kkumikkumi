@@ -76,9 +76,13 @@ export function resizeFromCorner(b: Box, corner: Corner, pointer: Point, keepAsp
   let w = clamp(d.x * s.x, MIN_ITEM_SIZE, CANVAS.width)
   let h = clamp(d.y * s.y, MIN_ITEM_SIZE, CANVAS.height)
   if (keepAspect) {
-    const k = Math.max(w / b.w, h / b.h)
-    w = clamp(b.w * k, MIN_ITEM_SIZE, CANVAS.width)
-    h = clamp(b.h * k, MIN_ITEM_SIZE, CANVAS.height)
+    const k = clamp(
+      Math.max(w / b.w, h / b.h),
+      Math.max(MIN_ITEM_SIZE / b.w, MIN_ITEM_SIZE / b.h),
+      Math.min(CANVAS.width / b.w, CANVAS.height / b.h),
+    )
+    w = b.w * k
+    h = b.h * k
   }
   const off = rotate({ x: (s.x * w) / 2, y: (s.y * h) / 2 }, b.rotation)
   const c2 = { x: anchor.x + off.x, y: anchor.y + off.y }

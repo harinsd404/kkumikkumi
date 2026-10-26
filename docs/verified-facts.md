@@ -164,3 +164,10 @@
 - Electron 44.7.0의 실제 프로토콜 핸들러와 sandbox/contextIsolation/webSecurity/CSP를 켠 창에서 파일 누락 → 복원을 재현했다. 기존 `<img>`는 파일이 돌아와도 빈칸이며 `AssetImage`는 재시작·테마 수정 없이 정상 디코딩된다. `pnpm --filter @kkumikkumi/desktop test:images`로 macOS/Windows CI에서 재검증한다.
 - 오류 응답은 `no-store`, 성공한 내용 해시 에셋만 immutable 캐시를 사용한다. 이미지 로드는 실패·10초 정지 시 최대 세 번 재시도하고, 모두 실패하면 안내 후 창 재방문 시 다시 시도한다. URL 쿼리 허용, CORS/CSP 완화, 원본/테마 변경은 없다. 로그에는 고정 오류 코드만 남긴다.
 - Let's Encrypt IP 인증서는 Certbot 5.4 이상에서 webroot와 `--ip-address`, `--preferred-profile shortlived`로 발급할 수 있다. 80에서 검증하고 HTTPS는 8787에 제공할 수 있다. 출처: https://letsencrypt.org/2026/03/11/shorter-certs-certbot.html (2026-10-26 확인). 배포 구성은 Certbot 5.8.0 / Nginx 1.29.7 / Linux Docker host network, 인증서와 API 데이터는 저장소 밖에 둔다.
+
+### 이미지 위젯 자유 크기 (2026-10-26)
+
+- 기존 `FreeItem` 이미지 형식의 `x/y/w/h`를 사용한다. 스키마·동기화 프로토콜·서버 변경 없이 저장/공유하며, 그리드 사진은 사용자가 모서리를 끌거나 자유 크기 버튼을 누를 때만 변환한다.
+- 변환 시 이미지 해시, fit/focus/shape, 투명도/모서리/외곽선/그림자를 복사한다. 지원되지 않는 블록 배경색은 삭제하지 않고 투명 선택을 요청한다. 같은 ID로 전환과 크기 조절을 한 실행 취소 기록으로 묶고 undo/redo 뒤 선택도 유지한다.
+- Electron 44.7.0 격리 프로필에서 실제 `EditorOverlay`, `useEditor`, 인스펙터를 연결해 0.5배 캔버스 모서리 클릭/드래그, 한 번의 undo/redo, Shift 비율 제한, 숫자 입력, JSON 검증/저장 후 재열기를 확인했다. 명령: `pnpm --filter @kkumikkumi/desktop test:editor`. 사용자 프로필은 시험에 쓰지 않는다.
+- 새 의존성은 없다. esbuild는 기존 Vite 의존성을 사용하며, Electron 실행 시 Windows의 `ELECTRON_RUN_AS_NODE` 변수를 완전히 제거한다.

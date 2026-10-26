@@ -227,6 +227,51 @@ export function EditorOverlay({ ed, scale, onDropFile, incoming, toCanvasRef }: 
     )
   }
 
+  const startImageResize = (b: GridBlock, box: Box, corner: Corner) => (e: ReactPointerEvent) => {
+    if (e.button !== 0 || b.type !== 'image') return
+    e.stopPropagation()
+    e.preventDefault()
+    ed.adjust(null)
+    const start = toCanvas(e)
+    const initial = { x: box.left, y: box.top, w: box.width, h: box.height, rotation: 0 }
+    const offset = {
+      x: box.left + (corner.endsWith('e') ? box.width : 0) - start.x,
+      y: box.top + (corner.startsWith('s') ? box.height : 0) - start.y,
+    }
+    const opts = { groupKey: `resize:${b.id}`, continuous: true }
+    let converted = false
+    let failed = false
+    track(
+      (ev) => {
+        if (failed) return
+        const p = toCanvas(ev)
+        if (!converted) {
+          if (Math.hypot((p.x - start.x) * scale, (p.y - start.y) * scale) < DRAG_THRESHOLD) return
+          if (!ed.dispatch({ type: 'block/freeImage', id: b.id }, opts)) {
+            failed = true
+            return
+          }
+          converted = true
+          ed.select({ kind: 'free', id: b.id })
+        }
+        ed.dispatch(
+          {
+            type: 'free/update',
+            id: b.id,
+            patch: resizeFromCorner(
+              initial,
+              corner,
+              { x: p.x + offset.x, y: p.y + offset.y },
+              ev.shiftKey,
+            ),
+          },
+          opts,
+        )
+      },
+      () => ed.endGesture(),
+    )
+  }
+
   const startRotate = (f: FreeItem) => (e: ReactPointerEvent) => {
     if (e.button !== 0) return
     e.stopPropagation()
@@ -271,6 +316,8 @@ export function EditorOverlay({ ed, scale, onDropFile, incoming, toCanvasRef }: 
                 className={`ke-handle ke-handle--${c}`}
                 style={{ width: handle, height: handle, margin: -handle / 2, borderWidth: px(1.5) }}
                 onPointerDown={startResize(f, c)}
+                title="크기 조절 (Shift: 비율 유지)"
+                aria-label={`크기 조절 ${c}`}
               />
             ))}
             <span
@@ -338,7 +385,20 @@ export function EditorOverlay({ ed, scale, onDropFile, incoming, toCanvasRef }: 
                 ed.adjust({ kind: 'blockBg', id: b.id })
             }}
             aria-label={`${b.type} 블록`}
-          />
+          >
+            {selected &&
+              b.type === 'image' &&
+              CORNERS.map((c) => (
+                <span
+                  key={c}
+                  className={`ke-handle ke-handle--${c}`}
+                  style={{ width: px(12), height: px(12), margin: -px(6), borderWidth: px(1.5) }}
+                  onPointerDown={startImageResize(b, box, c)}
+                  title="자유 크기 조절 (Shift: 비율 유지)"
+                  aria-label={`크기 조절 ${c}`}
+                />
+              ))}
+          </div>
         )
       })}
       {front.map(freeHit)}

@@ -1,6 +1,7 @@
 import { createDefaultTheme, parseTheme, type Asset, type Theme } from '@kkumikkumi/schema'
 import { describe, expect, it } from 'vitest'
 import { newFreeItem, reduce, type EditorAction } from '../reducer'
+import { commit, createHistory, redo, seal, undo } from '../history'
 
 const U = (n: number) => `00000000-0000-7000-8000-${String(n).padStart(12, '0')}`
 const H = (c: string) => c.repeat(64)
@@ -260,5 +261,85 @@ describe('테마', () => {
       palette: { accent: '#ff0000', text: '#4a3a36' },
     })
     expect(valid(t)).toBe(true)
+  })
+})
+
+describe('이미지 위젯 자유 크기', () => {
+  const photo = () =>
+    run(
+      base(),
+      { type: 'asset/add', asset },
+      {
+        type: 'block/style',
+        id: BANNER,
+        patch: {
+          bg: null,
+          opacity: 0.8,
+          radius: 15,
+          border: { width: 2.5, color: null },
+          shadow: 'soft',
+        },
+      },
+      {
+        type: 'block/props',
+        id: BANNER,
+        patch: { assetHash: asset.hash, fit: 'contain', focus: { x: 0.2, y: 0.7, zoom: 1.5 } },
+      },
+    )
+  it('사진·자르기·장식·위치를 유지하고 다른 블록을 옮기지 않는다', () => {
+    const t = photo()
+    const next = run(t, { type: 'block/freeImage', id: BANNER })
+    const original = t.blocks.find((b) => b.id === BANNER)!
+    expect(next.blocks).toEqual(t.blocks.filter((b) => b.id !== BANNER))
+    expect(next.freeItems[0]).toMatchObject({
+      id: BANNER,
+      kind: 'image',
+      x: 25,
+      y: 25,
+      w: 1550,
+      h: 170,
+      content: original.props,
+      decor: { opacity: 0.8, radius: 15, border: { width: 2.5, color: null }, shadow: 'soft' },
+    })
+    expect(valid(next)).toBe(true)
+    expect(parseTheme(JSON.parse(JSON.stringify(next))).success).toBe(true)
+  })
+  it('변환과 연속 크기 조절은 한 번에 실행 취소·다시 실행된다', () => {
+    const t = photo()
+    const opts = { groupKey: 'resize', continuous: true }
+    let h = createHistory(t)
+    for (const a of [
+      { type: 'block/freeImage', id: BANNER },
+      { type: 'free/update', id: BANNER, patch: { w: 837, h: 293 } },
+      { type: 'free/update', id: BANNER, patch: { w: 619, h: 327 } },
+    ] satisfies EditorAction[])
+      h = commit(h, run(h.present, a), opts)
+    h = seal(h)
+    expect(h.past).toHaveLength(1)
+    expect(undo(h).present).toEqual(t)
+    expect(redo(undo(h)).present).toEqual(h.present)
+    expect(valid(h.present)).toBe(true)
+  })
+  it('기존 앞 레이어의 위아래 순서를 보존한다', () => {
+    const t = run(photo(), {
+      type: 'free/add',
+      item: newFreeItem('image', U(50), asset, { x: 100, y: 100 }),
+    })
+    const next = run(t, { type: 'block/freeImage', id: BANNER })
+    expect(next.freeItems.find((f) => f.id === BANNER)?.z).toBeLessThan(
+      next.freeItems.find((f) => f.id === U(50))!.z,
+    )
+    expect(valid(next)).toBe(true)
+  })
+  it('배경색을 조용히 지우지 않고, 용량 제한 실패 시 원본을 유지한다', () => {
+    const t = run(photo(), { type: 'block/style', id: BANNER, patch: { bg: '#ffffff' } })
+    expect(err(t, { type: 'block/freeImage', id: BANNER })).toBe('image_background')
+    const full = photo()
+    full.freeItems = Array.from({ length: 100 }, (_, i) =>
+      newFreeItem('image', U(100 + i), asset, { x: 100, y: 100 }),
+    )
+    expect(err(full, { type: 'block/freeImage', id: BANNER })).toBe('too_many')
+    expect(full.blocks.some((b) => b.id === BANNER)).toBe(true)
+    expect(err(photo(), { type: 'block/freeImage', id: TODO })).toBe('not_found')
   })
 })
