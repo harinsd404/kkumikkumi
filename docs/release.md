@@ -1,4 +1,6 @@
-# 배포 (1차: 나와 지인용, 서명/공증 없음)
+# 배포 (나와 지인용, 서명/공증 없음)
+
+macOS DMG(arm64)는 Mac에서, Windows 설치 파일(x64)은 Windows 또는 CI(`.github/workflows/desktop.yml`)에서 만든다.
 
 ## 만들기
 
@@ -8,9 +10,11 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm test:electron
 pnpm dist          # apps/desktop/dist/kkumikkumi-<버전>-arm64.dmg
 ```
 
+Windows 설치 파일(`kkumikkumi-<버전>-x64-setup.exe`)은 [windows.md](windows.md)대로 Windows에서 `pnpm --filter @kkumikkumi/desktop dist:win`으로 만들거나, 버전을 올린 커밋을 main에 올린 뒤 CI 실행의 `windows-installer` artifact를 받는다(`gh run download <run-id> -n windows-installer`).
+
 - 버전은 `apps/desktop/package.json`의 `version`. 올린 뒤 `pnpm dist`.
 - 버전을 올리면 `CHANGELOG.md`에 바뀐 점을 적고 README의 "최신 버전" 줄을 맞춘다.
-- 설정은 `apps/desktop/electron-builder.yml`. Apple Silicon(arm64) DMG만 만든다.
+- 설정은 `apps/desktop/electron-builder.yml`. macOS는 Apple Silicon(arm64) DMG, Windows는 x64 NSIS만 만든다.
 - ad-hoc 서명(`identity: "-"`)만 하고 공증은 하지 않는다. 개발자 ID 인증서가 생기면 identity/hardenedRuntime/notarize를 다시 정한다.
 - 앱 안의 파일 이름은 영문(`kkumikkumi.app`)이고, 보이는 이름은 "꾸미꾸미"다(이유는 electron-builder.yml 주석과 verified-facts.md).
 - 아이콘: 로고 원본 `apps/desktop/build/logo-source.png`를 바꾸면 `node apps/desktop/scripts/make-icon.mjs`로 `build/icon.png`를 다시 만든다(둥근 사각형 바깥 투명, 본체 824px).
@@ -39,12 +43,12 @@ shasum -a 256 dist/*.dmg                                          # 받는 사�
 DMG는 130MB 정도라 저장소에 커밋할 수 없다(GitHub 파일당 100MB 제한, zip으로 묶어도 거의 줄지 않음). 릴리스에 첨부한다.
 
 ```sh
-gh release create v<버전> apps/desktop/dist/kkumikkumi-<버전>-arm64.dmg \
+gh release create v<버전> apps/desktop/dist/kkumikkumi-<버전>-arm64.dmg <받은 폴더>/kkumikkumi-<버전>-x64-setup.exe \
   --target <빌드한 커밋> --title "꾸미꾸미 <버전>" --notes-file <CHANGELOG 그 버전 + 설치 방법 + SHA-256>
 ```
 
 - 저장소가 공개라 릴리스 파일은 누구나 받을 수 있다.
-- README 맨 위 "다운로드" 링크의 버전(파일 이름)을 새 버전으로 바꾼다. "최신 릴리스" 링크는 그대로 둬도 된다.
+- README 맨 위 "다운로드" 링크 두 개(macOS, Windows)의 버전(파일 이름)을 새 버전으로 바꾼다. "최신 릴리스" 링크는 그대로 둬도 된다.
 
 ## 받는 사람: 설치와 첫 실행
 
@@ -52,8 +56,10 @@ gh release create v<버전> apps/desktop/dist/kkumikkumi-<버전>-arm64.dmg \
 2. 처음 열면 "확인되지 않은 개발자" 경고로 열리지 않는다(공증하지 않았기 때문).
    - 시스템 설정 → 개인정보 보호 및 보안 → 아래쪽 "확인 없이 열기"(Open Anyway) → 암호 입력 → 열기.
    - 또는 터미널: `xattr -dr com.apple.quarantine /Applications/kkumikkumi.app` (믿을 수 있는 사람에게 받은 파일일 때만)
-3. 데이터는 이 Mac 안에만 저장된다: `~/Library/Application Support/kkumikkumi`. 오류 기록은 메뉴 "도움말 → 오류 기록 폴더 열기"(사용자 데이터는 들어 있지 않다).
+3. 데이터는 이 Mac에 저장된다: `~/Library/Application Support/kkumikkumi`(기기 간 동기화를 켜면 연결한 서버에도). 오류 기록은 메뉴 "도움말 → 오류 기록 폴더 열기"(사용자 데이터는 들어 있지 않다).
+
+Windows: 설치 파일을 실행하고, SmartScreen 경고가 나오면 "추가 정보 → 실행". 데이터는 `%APPDATA%/kkumikkumi`.
 
 ## 업데이트
 
-자동 업데이트 없음. 새 DMG로 앱을 덮어쓰면 데이터는 그대로 남는다(DB 마이그레이션은 앱이 시작할 때 실행). 이전 버전으로 되돌리면 새 DB를 열지 못할 수 있다(future_db_version 안내).
+자동 업데이트 없음. 새 DMG로 앱을 덮어쓰거나 새 설치 파일을 실행하면 데이터는 그대로 남는다(DB 마이그레이션은 앱이 시작할 때 실행). 이전 버전으로 되돌리면 새 DB를 열지 못할 수 있다(future_db_version 안내).
