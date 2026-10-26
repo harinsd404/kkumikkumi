@@ -7,6 +7,11 @@ import { createRequire } from 'node:module'
 const require = createRequire(import.meta.url)
 const { buildSync } = createRequire(require.resolve('vite'))('esbuild')
 const dir = mkdtempSync(join(tmpdir(), 'kkumi-image-test-'))
+const env = { ...process.env }
+// On Windows, even an empty ELECTRON_RUN_AS_NODE can select Node mode.
+// Remove the variable entirely so this test uses the real browser process.
+for (const key of Object.keys(env))
+  if (key.toUpperCase() === 'ELECTRON_RUN_AS_NODE') delete env[key]
 try {
   buildSync({
     entryPoints: ['scripts/fixtures/images-main.ts'],
@@ -27,7 +32,7 @@ try {
   const result = spawnSync(require('electron'), [join(dir, 'main.cjs')], {
     stdio: 'inherit',
     timeout: 20000,
-    env: { ...process.env, ELECTRON_RUN_AS_NODE: '' },
+    env,
   })
   process.exitCode = result.status ?? 1
 } finally {
