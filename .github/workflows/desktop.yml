@@ -1,0 +1,53 @@
+name: Desktop and sync server
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm test:electron
+      - run: pnpm lint
+      - run: pnpm build
+      - if: runner.os == 'Windows'
+        run: pnpm --filter @kkumikkumi/desktop exec electron-builder --win --x64 --publish never
+      - if: runner.os == 'macOS'
+        run: pnpm --filter @kkumikkumi/desktop exec electron-builder --mac --dir --publish never
+      - if: runner.os == 'Windows'
+        run: node apps/desktop/scripts/smoke-packaged.mjs apps/desktop/dist/win-unpacked/kkumikkumi.exe
+      - if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: apps/desktop/dist/*-setup.exe
+  server-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f apps/sync-server/Dockerfile -t kkumikkumi-sync:test .
+      - run: |
+          docker run -d --name sync-test -p 127.0.0.1:8787:8787 kkumikkumi-sync:test
+          for i in $(seq 1 30); do
+            if curl --fail http://127.0.0.1:8787/health; then exit 0; fi
+            sleep 1
+          done
+          docker logs sync-test
+          exit 1

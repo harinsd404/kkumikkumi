@@ -126,3 +126,32 @@
 | Codex MCP 설정            | `~/.codex/config.toml`의 `[mcp_servers.<이름>]`에 `command`, `args`(stdio). 또는 `codex mcp add <이름> -- <명령>`                                                                                                                                                     | https://learn.chatgpt.com/docs/extend/mcp?surface=cli                     | -                          | 2026-10-17 |
 | macOS Unix 소켓 경로 길이 | 104바이트를 넘으면 `listen EINVAL`. 앱 소켓 경로는 `~/Library/Application Support/kkumikkumi/mcp/kkumikkumi.sock`(약 70바이트)                                                                                                                                        | Node `net.listen` 실측                                                    | Node 25.8.1 / macOS 26.5.1 | 2026-10-17 |
 | `/usr/bin/nc -U` 중계     | stdin이 끝나면 소켓에 EOF를 보내고, 서버가 닫으면 종료(exit 0). 소켓이 없거나 앱이 꺼져 있으면 바로 exit 1. 그래서 AI 앱은 `nc -U <소켓>`을 stdio MCP 서버로 실행하면 된다(Node 설치 불필요)                                                                          | 실측                                                                      | macOS 26.5.1               | 2026-10-17 |
+
+## Windows와 개인 서버 동기화 (2026-10-23)
+
+| 항목               | 결론                                                                                                                                                      | 출처                                                                        | 버전                                | 확인일     |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------------- | ---------- |
+| Windows MCP IPC    | Windows는 Named Pipe, macOS는 Unix 소켓을 사용한다. Named Pipe의 공유 이름만으로 인증하지 않고 프로필별 비밀키 핸드셰이크를 추가했다.                     | https://nodejs.org/api/net.html#ipc-support                                 | Node 24 / Electron 44.7.0           | 2026-10-23 |
+| Windows 패키징     | 대상 OS에서 패키징해 네이티브 의존성을 검증한다. Windows CI에서 x64 NSIS 설치 파일과 패키지 실행 파일의 MCP 진입점을 검사한다.                            | https://www.electron.build/v26/docs/features/multi-platform-build/          | electron-builder 26.15.3            | 2026-10-23 |
+| SQLite 온라인 백업 | 실행 중인 WAL DB는 파일 하나를 복사하지 않고 `node:sqlite`의 `backup()`을 사용한다. ARM64 Ubuntu 배포에서 재시작 후 데이터 유지와 온라인 백업을 실측했다. | https://nodejs.org/api/sqlite.html#sqlitebackupsourceDb-destination-options | Node 24 Docker / Ubuntu 24.04 ARM64 | 2026-10-23 |
+| 도메인 없는 접속   | 루프백 HTTP 서버를 SSH 터널로 연결한다. 도메인 사용 시 HTTPS 프록시로 바꾸며 기본적인 ACME HTTP/TLS 검증에는 TCP 80/443 접근이 필요하다.                  | https://caddyserver.com/docs/quick-starts/https                             | Caddy 문서 / OpenSSH 터널 실측      | 2026-10-23 |
+
+## 전체 동기화 v2 (2026-10-23)
+
+- 저장 범위는 `SyncDocumentSchema`의 15개 컬렉션으로 정의한다. 접속키, MCP 권한, 창 위치, 실행 중 타이머는 포함하지 않는다.
+- 사진/테마 이미지는 SHA-256 주소와 계정별 SQLite BLOB으로 저장한다. 기존 `node:sqlite.backup`에 이미지가 함께 포함되므로 별도 서버 파일 백업을 조합할 필요가 없다.
+- 클라이언트는 설치된 sharp 0.35.5 API(`metadata`, `raw().toBuffer`, `limitInputPixels`, `failOn`)로 이미지 전체를 검증한다. 새 의존성은 없다.
+- 로컬 파일 복구는 SQLite에 남은 `sync.files` 적용 의도를 bootstrap의 기본 테마 생성/정리보다 먼저 재실행한다. IPC/MCP는 파일 적용이 끝나기 전 데이터에 접근하지 않는다.
+- 검증: 두 프로필 전체 데이터/사진 복제, 수정/삭제 전파, v1 전환 동의, 이미지 손상/누락/계정 격리, 파일 적용 실패 후 bootstrap 복구, 진행 중 파일 작업과 동기화 충돌 방지 테스트.
+
+### Windows 연결 시 저장 경고 판정 수정 (2026-10-23)
+
+- 연결용 URL/접속키 입력칸, 체크박스·라디오·슬라이더·읽기 전용/비활성 컨트롤은 동기화할 문서 초안으로 취급하지 않는다. 할 일/메모 입력과 날짜/시각 편집, 열린 편집창은 계속 보호한다.
+- 렌더러는 `ready`/`editing`/`save_failed`를 구분해서 응답한다. 응답 시간 초과와 진행 중인 IPC 작업도 별도 대기 코드로 표시한다. 실제 저장 실패에만 저장 오류 안내를 표시한다.
+- 렌더러 응답 제한을 3초에서 10초로 늘렸다. 연결 칸 포커스, 체크박스 포커스, 실제 초안 보호, 저장 중 새 입력, 저장 실패/재시도, 느린 응답·시간 초과·잘못된 응답을 회귀 테스트한다.
+
+### 동기화와 진행 중 파일 작업의 경합 수정 (2026-10-23)
+
+- 실제 `createHandlers`와 `SyncData`를 함께 연결한 HTTP 통합 테스트에서, `themes.get` 또는 `themes.save`가 렌더러 응답과 겹치면 곧바로 `sync_saving`으로 중단되는 것을 재현했다. 이전 테스트는 서비스를 직접 호출해 이 경로를 놓쳤다.
+- 로컬 스냅샷/이미지 캐시와 최종 적용은 진행 중인 IPC/MCP 데이터 호출이 끝나기를 최대 10초 기다린다. 이 구간에 들어오는 새 호출은 대기시켜 동기화가 계속 밀리지 않게 한다. 네트워크 요청과 렌더러 저장 요청 동안에는 잠그지 않는다.
+- 동기화 문서에 영향을 주지 않는 `app.*`/`mcp.*` 제어는 대기 대상에서 제외한다. 실제 저장 중 적용 금지, 늦게 완료된 로컬 수정과 서버 수정의 동시 보존, 대기 시간 초과/오류 후 잠금 해제, 최초 연결과 수동 동기화를 검증한다. 새 의존성은 없다.

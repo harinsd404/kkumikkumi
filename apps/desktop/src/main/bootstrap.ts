@@ -1,3 +1,4 @@
+import { recoverSyncFiles } from './sync/data'
 import { join } from 'node:path'
 import { SettingsSchema } from '@kkumikkumi/schema'
 import { openDb, transaction, type Db } from './db/connection'
@@ -31,6 +32,7 @@ export async function bootstrap(d: BootstrapDeps): Promise<AppCore> {
   const db = openDb(join(d.userDataDir, 'userdata.db'))
   try {
     migrate(db, migrations)
+    recoverSyncFiles(db, d.userDataDir)
     const repos = createRepos(db)
     const themes = new ThemeStore(join(d.userDataDir, 'themes'), { now: d.now, newId: d.newId })
 

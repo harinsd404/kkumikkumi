@@ -1,0 +1,22 @@
+{
+  "name": "@kkumikkumi/sync-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "build": "esbuild src/main.ts src/admin.ts --bundle --platform=node --format=esm --target=node24 --outdir=dist",
+    "typecheck": "tsc -p tsconfig.json",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@kkumikkumi/schema": "workspace:*",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.1",
+    "esbuild": "0.25.12"
+  }
+}

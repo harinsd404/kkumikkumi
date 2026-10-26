@@ -1,0 +1,15 @@
+**
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!tsconfig.base.json
+!apps
+!apps/sync-server
+!apps/sync-server/**
+!packages
+!packages/schema
+!packages/schema/**
+**/node_modules
+**/dist
+**/data
+**/.env*

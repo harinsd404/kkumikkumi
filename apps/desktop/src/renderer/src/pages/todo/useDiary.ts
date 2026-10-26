@@ -1,6 +1,7 @@
 import { ASSET_EXT_BY_MIME, type DiaryEntry, type DiaryPhoto } from '@kkumikkumi/schema'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import type { DiarySummary } from '../../../../shared/api'
+import { trackSave } from '../../app/saveBarrier'
 import { useKeyedAsync } from '../../board/useKeyedAsync'
 
 export type DiarySave = Partial<Pick<DiaryEntry, 'body' | 'mood' | 'photos'>>
@@ -42,7 +43,11 @@ export function useDiary(fromDate: string | undefined, toDate: string | undefine
   // 저장은 차례대로 보내고, 창을 열 때는 앞선 저장이 끝난 뒤 읽는다(닫자마자 다시 열어도 새 글이 보이도록)
   const queue = useRef<Promise<unknown>>(Promise.resolve())
   const save = useCallback((d: string, patch: DiarySave) => {
-    const p = queue.current.then(() => window.kkumi.invoke('diary.save', { date: d, ...patch }))
+    const p = trackSave(
+      `diary/${d}`,
+      queue.current.then(() => window.kkumi.invoke('diary.save', { date: d, ...patch })),
+      (r) => r.ok,
+    )
     queue.current = p.catch(() => undefined)
     return p.then((r) => {
       setVersion((v) => v + 1)

@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { localDateTime } from '../calendar'
 import {
   focusByDay,
@@ -8,16 +8,6 @@ import {
   studyStreak,
   summarize,
 } from '../timerStats'
-
-declare const process: { env: Record<string, string | undefined> }
-const prev = process.env['TZ']
-beforeAll(() => {
-  process.env['TZ'] = 'Asia/Seoul'
-})
-afterAll(() => {
-  if (prev === undefined) delete process.env['TZ']
-  else process.env['TZ'] = prev
-})
 
 const MIN = 60_000
 const s = (

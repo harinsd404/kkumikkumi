@@ -102,6 +102,10 @@ export interface SprintFields {
 }
 
 export interface IpcSpec {
+  'sync.status': { in: undefined; out: SyncStatus }
+  'sync.connect': { in: { url: string; token: string; importLocal: boolean }; out: SyncStatus }
+  'sync.disconnect': { in: undefined; out: SyncStatus }
+  'sync.run': { in: { prefer?: 'local' | 'remote'; upgrade?: boolean }; out: SyncStatus }
   'themes.list': { in: undefined; out: ThemeSummary[] }
   'themes.get': { in: Id; out: Theme }
   'themes.create': { in: ThemeLook & { name: string; template: ThemeTemplateId }; out: Theme }
@@ -301,6 +305,8 @@ export interface TimetableData {
 }
 
 export interface McpStatus {
+  /** Windows uses the installed executable as a stdio bridge. No Node installation required. */
+  bridgeCommand?: string
   mode: McpMode
   /** AI 앱이 연결할 소켓 경로(설정 안내용) */
   socketPath: string
@@ -310,6 +316,17 @@ export interface McpStatus {
   error: 'path_too_long' | 'listen_failed' | null
 }
 
+export interface SyncStatus {
+  requiresUpgrade: boolean
+  url: string
+  enabled: boolean
+  busy: boolean
+  pending: number
+  conflicts: number
+  error: string | null
+  lastSyncedAt: number | null
+}
+
 /** 설정 페이지에서 Finder로 열 수 있는 폴더 */
 export type AppFolder = 'logs' | 'userData'
 
@@ -317,7 +334,7 @@ export type AppFolder = 'logs' | 'userData'
 export type SettingsSection = 'mcp'
 
 /** 외부(MCP)에서 사용자 데이터가 바뀌었을 때 renderer가 다시 읽을 영역 */
-export type DataDomain = 'todo' | 'calendar' | 'memos' | 'timetable' | 'habits'
+export type DataDomain = 'todo' | 'calendar' | 'memos' | 'timetable' | 'habits' | 'sync'
 
 export interface TimerDoneInfo {
   mode: TimerMode
@@ -330,12 +347,16 @@ export interface TimerDoneInfo {
 export type IpcError = { code: string }
 export type IpcResult<T> = { ok: true; value: T } | { ok: false; error: IpcError }
 
+export type SyncReadiness = 'ready' | 'editing' | 'save_failed'
+
 export interface KkumiApi {
   readonly platform: string
   /**
    * 창을 닫기 직전에 호출된다(저장 마무리용). cb가 끝나면(최대 약 1.5초) 창이 닫힌다. 마지막 등록만 유효.
    */
   onBeforeClose(cb: () => Promise<void> | void): void
+  /** 동기화 직전 저장 확인. 입력 중인 상태와 실제 저장 실패를 구분한다. */
+  onBeforeSync(cb: () => Promise<SyncReadiness>): void
   /** main이 타이머 상태를 바꿀 때마다(완료 포함). 마지막 등록만 유효. */
   onTimerChanged(cb: (s: TimerState) => void): void
   /** 실행 중이던 타이머가 끝났을 때. 마지막 등록만 유효. */

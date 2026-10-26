@@ -2303,3 +2303,22 @@
 .tdo-item [draggable='true'] {
   cursor: grab;
 }
+.st-sync-form {
+  display: grid;
+  gap: 12px;
+}
+.st-sync-form > label:not(.st-toggle) {
+  display: grid;
+  gap: 6px;
+}
+.st-sync-form input[type='url'],
+.st-sync-form input[type='password'] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  font: inherit;
+  color: inherit;
+  border: 1px solid var(--ui-line);
+  border-radius: 8px;
+  background: var(--ui-control);
+}

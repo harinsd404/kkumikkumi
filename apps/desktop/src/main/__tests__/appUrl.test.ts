@@ -1,4 +1,4 @@
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { devServerUrlFor, isAppUrlFor } from '../appUrl'
 
@@ -15,7 +15,7 @@ describe('isAppUrlFor', () => {
     expect(isAppUrlFor('not a url', index)).toBe(false)
   })
   it('prod: 한글 경로의 NFD/NFC, 인코딩 차이는 같은 파일로 본다', () => {
-    const nfd = pathToFileURL(decodeURIComponent(index.pathname).normalize('NFD'))
+    const nfd = pathToFileURL(fileURLToPath(index).normalize('NFD'))
     expect(isAppUrlFor(nfd.href, index)).toBe(true)
   })
   it('dev: 개발 서버 origin만', () => {
