@@ -39,17 +39,19 @@ export function BlockSection({
         />
         {block.type === 'image' && (
           <>
-            <button
-              type="button"
-              onClick={() => {
-                if (ed.dispatch({ type: 'block/freeImage', id: block.id })) {
-                  ed.adjust(null)
-                  ed.select({ kind: 'free', id: block.id })
-                }
-              }}
-            >
-              자유 크기로 바꾸기
-            </button>
+            <div className="ki-buttons">
+              <button
+                type="button"
+                onClick={() => {
+                  if (ed.dispatch({ type: 'block/freeImage', id: block.id })) {
+                    ed.adjust(null)
+                    ed.select({ kind: 'free', id: block.id })
+                  }
+                }}
+              >
+                자유 크기로 바꾸기
+              </button>
+            </div>
             <p className="ki-note">
               모서리를 끌면 칸에 맞추지 않고 크기를 바꿀 수 있어요. Shift를 누르면 비율을 유지해요.
               {block.style.bg !== null && ' 배경색은 먼저 투명으로 바꿔 주세요.'}
