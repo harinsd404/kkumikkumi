@@ -52,6 +52,10 @@ sudo systemctl list-timers kkumikkumi-sync-cert.timer
 장애는 `journalctl -u kkumikkumi-sync-cert.service`에서 확인한다. IP가 바뀌면 새 IP로 인증서 발급과 앱 URL 변경이 필요하다.
 인증서 만료나 검증 실패를 피하려고 앱의 인증서 검증을 끄지 않는다.
 
+## 이미지 블록 칸 크기 (앱 0.3.1)
+
+이미지의 직접 지정한 칸 수는 테마의 `span` 필드에 저장한다. 이 기능을 쓰기 전에 같은 소스의 동기화 서버와 모든 Mac/Windows 앱을 0.3.1로 업데이트한다. 구버전 앱은 새 칸 수를 읽지 못해 동기화 오류를 표시할 수 있다. 기존 키와 데이터는 그대로 사용한다.
+
 ## 소스와 배포 관리
 
 - `apps/desktop`: 앱과 동기화 클라이언트. 접속키는 Electron `safeStorage`로 암호화해 보관하며 UI로 다시 반환하지 않는다.

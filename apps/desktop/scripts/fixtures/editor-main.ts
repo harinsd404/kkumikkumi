@@ -69,46 +69,48 @@ void app
     assert.equal(
       await js('JSON.stringify(window.editor.theme)'),
       original,
-      'handle click must not convert',
+      'handle click must not resize',
     )
-    await drag(start, { x: start.x - 100, y: start.y + 40 })
-    let image = await js('window.editor.theme.freeItems[0]')
-    assert.equal(image.kind, 'image')
-    assert.ok(Math.abs(image.w - 1350) <= 3, 'scaled pointer changes widget width')
-    assert.ok(Math.abs(image.h - 250) <= 3, 'scaled pointer changes widget height')
-    assert.equal(await js('window.editor.selection.kind'), 'free')
-    assert.equal(await js("document.querySelectorAll('.ke-free.is-selected .ke-handle').length"), 4)
+    await drag(start, { x: start.x - 100, y: start.y + 10 })
+    let image = await js('window.editor.theme.blocks[0]')
+    assert.equal(image.type, 'image')
+    assert.deepEqual(image.span, { w: 7, h: 1 }, 'scaled drag snaps to whole cells')
+    assert.equal(await js('window.editor.theme.freeItems.length'), 0, 'image remains a grid block')
+    assert.equal(await js('window.editor.selection.kind'), 'block')
     await js('window.editor.undo()')
     await pause()
     assert.equal(
       await js('JSON.stringify(window.editor.theme)'),
       original,
-      'one undo restores original grid widget',
+      'one undo restores the grid layout',
     )
-    assert.equal(await js('window.editor.selection.kind'), 'block')
     await js('window.editor.redo()')
     await pause()
-    assert.equal(await js('window.editor.selection.kind'), 'free')
-    const ratio = image.w / image.h
+    const beforeInvalid = await js('JSON.stringify(window.editor.theme)')
     const again = await handle()
-    await drag(again, { x: again.x - 70, y: again.y + 150 }, true)
-    image = await js('window.editor.theme.freeItems[0]')
-    assert.ok(
-      Math.abs(image.w / image.h - ratio) < 0.0001,
-      'Shift preserves aspect at canvas limits',
+    await drag(again, { x: 799, y: 490 })
+    assert.equal(
+      await js('JSON.stringify(window.editor.theme)'),
+      beforeInvalid,
+      'collision failure preserves layout',
     )
-    // Exercise the real inspector input and its Enter commit, not just the reducer.
-    await js(`(() => {
-    const input = [...document.querySelectorAll('input[type="number"]')][2];
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '637');
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  })()`)
-    await pause()
-    await js(
-      `document.querySelectorAll('input[type="number"]')[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))`,
-    )
-    await pause()
-    assert.equal(await js('window.editor.theme.freeItems[0].w'), 637)
+    const number = async (index: number, value: number) => {
+      await js(`(() => {
+        const input = document.querySelectorAll('input[type="number"]')[${index}];
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '${value}');
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      })()`)
+      await pause()
+      await js(
+        `document.querySelectorAll('input[type="number"]')[${index}].dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))`,
+      )
+      await pause()
+    }
+    await number(0, 3)
+    await number(1, 2)
+    image = await js('window.editor.theme.blocks[0]')
+    assert.deepEqual(image.span, { w: 3, h: 2 }, 'inspector accepts cell counts')
+    assert.equal(await js('window.editor.theme.freeItems.length'), 0)
     assert.equal(await js('window.editor.flush()'), true)
     const persisted = await js('JSON.stringify(window.saved())')
     await js('window.reload()')
@@ -116,10 +118,37 @@ void app
     assert.equal(
       await js('JSON.stringify(window.editor.theme)'),
       persisted,
-      'arbitrary size survives save and reopen',
+      'grid cell size survives save and reopen',
+    )
+    await js(`(() => {
+      const ed = window.editor;
+      const source = ed.theme.blocks[0];
+      ed.dispatch({ type: 'free/add', item: {
+        id: '00000000-0000-7000-8000-000000000099', kind: 'image',
+        x: 1206.25, y: 805, w: 368.75, h: 170, rotation: 0, z: 0,
+        layer: 'front', locked: false,
+        decor: { opacity: 1, radius: 15, border: { width: 0, color: null }, shadow: 'none' },
+        content: source.props,
+      } });
+      ed.select({ kind: 'free', id: '00000000-0000-7000-8000-000000000099' });
+    })()`)
+    await pause()
+    await js(
+      `[...document.querySelectorAll('button')].find(b => b.textContent === '블록 칸에 맞추기').click()`,
+    )
+    await pause()
+    assert.equal(await js('window.editor.selection.kind'), 'block')
+    assert.equal(await js('window.editor.theme.freeItems.length'), 0)
+    assert.equal(await js('window.editor.flush()'), true)
+    await js('window.editor.undo()')
+    await pause()
+    assert.equal(
+      await js('window.editor.selection.kind'),
+      'free',
+      'conversion undo keeps selection',
     )
     console.log(
-      'PASS: image widget handles, scaled drag, single undo/redo, Shift ratio, numeric size, save/reopen',
+      'PASS: image grid handles, cell snapping, collision rejection, undo/redo, cell count input, save/reopen',
     )
     win.destroy()
     app.quit()

@@ -143,7 +143,7 @@ export function NumberField(props: {
 
 export function Segmented<T extends string | number>(props: {
   label: string
-  value: T
+  value: T | null
   options: readonly { value: T; label: string; disabled?: boolean }[]
   onChange(v: T): void
 }) {

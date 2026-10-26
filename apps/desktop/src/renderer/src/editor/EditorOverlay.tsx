@@ -19,6 +19,7 @@ import { usePointerTrack } from '../board/pointerTrack'
 import {
   panFocus,
   resizeFromCorner,
+  resizeGridFromCorner,
   rotationFromPointer,
   snapToCell,
   toLocalDelta,
@@ -26,6 +27,7 @@ import {
   type Point,
 } from './state/geometry'
 import type { AdjustTarget, EditorApi } from './useEditor'
+import { reduce } from './state/reducer'
 
 /** 화면 좌표 → 캔버스 좌표(갤러리에서 끌어 올 때 부모가 쓴다) */
 export type ToCanvas = (client: { clientX: number; clientY: number }) => Point
@@ -233,42 +235,25 @@ export function EditorOverlay({ ed, scale, onDropFile, incoming, toCanvasRef }: 
     e.preventDefault()
     ed.adjust(null)
     const start = toCanvas(e)
-    const initial = { x: box.left, y: box.top, w: box.width, h: box.height, rotation: 0 }
-    const offset = {
-      x: box.left + (corner.endsWith('e') ? box.width : 0) - start.x,
-      y: box.top + (corner.startsWith('s') ? box.height : 0) - start.y,
-    }
-    const opts = { groupKey: `resize:${b.id}`, continuous: true }
-    let converted = false
-    let failed = false
+    const original = blockRect(b)!
+    let last: { rect: GridRect; valid: boolean } | null = null
     track(
       (ev) => {
-        if (failed) return
         const p = toCanvas(ev)
-        if (!converted) {
-          if (Math.hypot((p.x - start.x) * scale, (p.y - start.y) * scale) < DRAG_THRESHOLD) return
-          if (!ed.dispatch({ type: 'block/freeImage', id: b.id }, opts)) {
-            failed = true
-            return
-          }
-          converted = true
-          ed.select({ kind: 'free', id: b.id })
-        }
-        ed.dispatch(
-          {
-            type: 'free/update',
-            id: b.id,
-            patch: resizeFromCorner(
-              initial,
-              corner,
-              { x: p.x + offset.x, y: p.y + offset.y },
-              ev.shiftKey,
-            ),
-          },
-          opts,
-        )
+        const rect = resizeGridFromCorner(original, corner, { x: p.x - start.x, y: p.y - start.y })
+        const valid = reduce(t, { type: 'block/resizeImage', id: b.id, rect }).ok
+        last = { rect, valid }
+        setGhost({ rect, from: box, at: blockBox(rect), valid })
       },
-      () => ed.endGesture(),
+      () => {
+        setGhost(null)
+        if (!last) return
+        if (!last.valid) {
+          ed.showNotice('다른 블록을 옮길 빈 칸이 없어서 크기를 유지했어요')
+          return
+        }
+        ed.dispatch({ type: 'block/resizeImage', id: b.id, rect: last.rect })
+      },
     )
   }
 
@@ -316,8 +301,6 @@ export function EditorOverlay({ ed, scale, onDropFile, incoming, toCanvasRef }: 
                 className={`ke-handle ke-handle--${c}`}
                 style={{ width: handle, height: handle, margin: -handle / 2, borderWidth: px(1.5) }}
                 onPointerDown={startResize(f, c)}
-                title="크기 조절 (Shift: 비율 유지)"
-                aria-label={`크기 조절 ${c}`}
               />
             ))}
             <span
@@ -394,8 +377,8 @@ export function EditorOverlay({ ed, scale, onDropFile, incoming, toCanvasRef }: 
                   className={`ke-handle ke-handle--${c}`}
                   style={{ width: px(12), height: px(12), margin: -px(6), borderWidth: px(1.5) }}
                   onPointerDown={startImageResize(b, box, c)}
-                  title="자유 크기 조절 (Shift: 비율 유지)"
-                  aria-label={`크기 조절 ${c}`}
+                  title="칸 단위로 크기 조절"
+                  aria-label={`이미지 칸 크기 조절 ${c}`}
                 />
               ))}
           </div>

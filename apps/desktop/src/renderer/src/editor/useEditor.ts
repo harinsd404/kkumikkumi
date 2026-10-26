@@ -27,7 +27,6 @@ const ERROR_TEXT: Record<ReduceError, string> = {
   locked: '잠긴 꾸미기예요. 잠금을 풀어 주세요',
   too_many: '꾸미기는 100개까지 넣을 수 있어요',
   background_not_color: '이미지 배경에서는 바꿀 수 없어요',
-  image_background: '자유 크기를 쓰려면 스타일의 배경색을 투명으로 바꿔 주세요',
 }
 
 export interface EditorApi {

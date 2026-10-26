@@ -5,7 +5,6 @@ import type { EditorApi } from '../useEditor'
 import { DecorFields, FreeImageFields } from './decor'
 import { groupOf } from './group'
 import { Actions } from './pickers'
-import type { BlockDataApis } from './BlockProps'
 
 const BOX_FIELDS = [
   ['x', 'X'],
@@ -28,14 +27,12 @@ export function FreeSection({
   swatches,
   onDuplicate,
   onDelete,
-  pickImage,
 }: {
   ed: EditorApi
   free: FreeItem
   swatches: readonly SwatchGroup[]
   onDuplicate(): void
   onDelete(): void
-  pickImage?: BlockDataApis['pickImage'] | undefined
 }) {
   const update = (patch: Partial<FreeItem>, key?: string) =>
     ed.dispatch({ type: 'free/update', id: free.id, patch }, groupOf(free.id, key))
@@ -43,9 +40,25 @@ export function FreeSection({
     <>
       <Section title="위치와 크기">
         {free.kind === 'image' && (
-          <p className="ki-note">
-            모서리를 끌거나 너비·높이를 입력하세요. Shift를 누르고 끌면 비율을 유지해요.
-          </p>
+          <>
+            <div className="ki-buttons">
+              <button
+                type="button"
+                disabled={free.locked}
+                onClick={() => {
+                  if (ed.dispatch({ type: 'free/gridImage', id: free.id })) {
+                    ed.adjust(null)
+                    ed.select({ kind: 'block', id: free.id })
+                  }
+                }}
+              >
+                블록 칸에 맞추기
+              </button>
+            </div>
+            <p className="ki-note">
+              가장 가까운 칸 수와 위치에 맞춰 이미지 블록으로 바꿔요. 회전은 풀려요.
+            </p>
+          </>
         )}
         <div className="ki-grid2">
           {BOX_FIELDS.map(([k, label]) => (
@@ -95,7 +108,7 @@ export function FreeSection({
           />
         </Row>
       </Section>
-      {free.kind === 'image' && <FreeImageFields ed={ed} item={free} pickImage={pickImage} />}
+      {free.kind === 'image' && <FreeImageFields ed={ed} item={free} />}
       <Section title="장식">
         <DecorFields
           decor={free.decor}

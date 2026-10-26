@@ -1,6 +1,6 @@
 {
   "name": "@kkumikkumi/desktop",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "꾸미꾸미",
   "main": "./out/main/index.js",
