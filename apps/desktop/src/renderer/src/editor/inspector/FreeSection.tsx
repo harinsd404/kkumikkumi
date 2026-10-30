@@ -39,6 +39,27 @@ export function FreeSection({
   return (
     <>
       <Section title="위치와 크기">
+        {free.kind === 'image' && (
+          <>
+            <div className="ki-buttons">
+              <button
+                type="button"
+                disabled={free.locked}
+                onClick={() => {
+                  if (ed.dispatch({ type: 'free/gridImage', id: free.id })) {
+                    ed.adjust(null)
+                    ed.select({ kind: 'block', id: free.id })
+                  }
+                }}
+              >
+                블록 칸에 맞추기
+              </button>
+            </div>
+            <p className="ki-note">
+              가장 가까운 칸 수와 위치에 맞춰 이미지 블록으로 바꿔요. 회전은 풀려요.
+            </p>
+          </>
+        )}
         <div className="ki-grid2">
           {BOX_FIELDS.map(([k, label]) => (
             <NumberField

@@ -52,6 +52,29 @@ const addMemo = (env: TestEnv, body: string) =>
   env.core.repos.memos.insert({ id: randomUUID(), body, pinned: false, createdAt: 1, updatedAt: 1 })
 
 describe('two-device sync', () => {
+  it('keeps the merge baseline when the same account moves from a tunnel to HTTPS', async () => {
+    const s = await setup(),
+      a = await s.client(),
+      b = await s.client()
+    const removedLocally = addMemo(a.env, 'local deletion')
+    const removedRemotely = addMemo(a.env, 'remote deletion')
+    await s.connect(a.service)
+    await s.connect(b.service)
+    a.env.core.repos.memos.delete(removedLocally.id)
+    b.env.core.repos.memos.delete(removedRemotely.id)
+    await b.service.run()
+    const https = 'https://sync.example.test:8787'
+    const moved = new SyncService({
+      ...a.deps,
+      fetch: (input, init) => fetch(String(input).replace(https, s.url), init),
+    })
+    const status = await moved.connect({ url: https, token: s.account.token, importLocal: true })
+    expect(status.error).toBeNull()
+    expect(status.url).toBe(https)
+    expect(a.env.core.repos.memos.get(removedLocally.id)).toBeNull()
+    expect(a.env.core.repos.memos.get(removedRemotely.id)).toBeNull()
+    expect(s.store.snapshot(s.account.accountId).document.memos).toHaveLength(0)
+  })
   it('does not replace local rows if the renderer cannot save its draft', async () => {
     const s = await setup(),
       a = await s.client(),

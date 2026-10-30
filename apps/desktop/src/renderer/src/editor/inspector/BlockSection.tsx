@@ -1,6 +1,6 @@
-import { ALLOWED_SIZES, BLOCK_SIZES, type GridBlock } from '@kkumikkumi/schema'
+import { ALLOWED_SIZES, BLOCK_SIZES, blockRect, type GridBlock } from '@kkumikkumi/schema'
 import type { SwatchGroup } from '../../app/colorGroups'
-import { ColorField, FontSelect, Row, Section, Segmented, Slider } from '../fields'
+import { ColorField, FontSelect, NumberField, Row, Section, Segmented, Slider } from '../fields'
 import type { EditorApi } from '../useEditor'
 import { BlockProps, type BlockDataApis } from './BlockProps'
 import { DecorFields } from './decor'
@@ -30,13 +30,36 @@ export function BlockSection({
       <Section title="크기">
         <Segmented
           label="크기"
-          value={block.size}
+          value={block.type === 'image' && block.span ? null : block.size}
           options={(ALLOWED_SIZES[block.type] as readonly GridBlock['size'][]).map((s) => {
             const c = (BLOCK_SIZES[block.type] as Record<string, { w: number; h: number }>)[s]!
             return { value: s, label: `${s} ${c.w}×${c.h}` }
           })}
           onChange={(size) => ed.dispatch({ type: 'block/resize', id: block.id, size })}
         />
+        {block.type === 'image' && (
+          <>
+            <div className="ki-grid2">
+              {(['w', 'h'] as const).map((key) => (
+                <NumberField
+                  key={key}
+                  label={key === 'w' ? '가로 (칸)' : '세로 (칸)'}
+                  value={blockRect(block)![key]}
+                  onChange={(value) =>
+                    ed.dispatch({
+                      type: 'block/resizeImage',
+                      id: block.id,
+                      rect: { ...blockRect(block)!, [key]: value },
+                    })
+                  }
+                />
+              ))}
+            </div>
+            <p className="ki-note">
+              모서리를 끌거나 칸 수를 입력하세요. 가로 1~8칸, 세로 1~5칸으로 맞춰져요.
+            </p>
+          </>
+        )}
       </Section>
       <BlockProps ed={ed} block={block} apis={apis} />
       <Section title="스타일">

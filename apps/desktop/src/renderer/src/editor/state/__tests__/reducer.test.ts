@@ -1,6 +1,8 @@
 import { createDefaultTheme, parseTheme, type Asset, type Theme } from '@kkumikkumi/schema'
 import { describe, expect, it } from 'vitest'
 import { newFreeItem, reduce, type EditorAction } from '../reducer'
+import { commit, createHistory, undo } from '../history'
+import { blockRect } from '@kkumikkumi/schema'
 
 const U = (n: number) => `00000000-0000-7000-8000-${String(n).padStart(12, '0')}`
 const H = (c: string) => c.repeat(64)
@@ -260,5 +262,80 @@ describe('테마', () => {
       palette: { accent: '#ff0000', text: '#4a3a36' },
     })
     expect(valid(t)).toBe(true)
+  })
+})
+
+describe('이미지 블록 칸 크기', () => {
+  it('3×2 칸으로 늘려도 블록·사진·배경색·장식을 유지하고 충돌 블록만 옮긴다', () => {
+    const t = run(
+      base(),
+      { type: 'asset/add', asset },
+      {
+        type: 'block/props',
+        id: BANNER,
+        patch: { assetHash: asset.hash, focus: { x: 0.2, y: 0.7, zoom: 1.5 } },
+      },
+      { type: 'block/style', id: BANNER, patch: { bg: '#112233' } },
+    )
+    const before = t.blocks.find((b) => b.id === BANNER)!
+    const after = run(t, {
+      type: 'block/resizeImage',
+      id: BANNER,
+      rect: { col: 0, row: 0, w: 3, h: 2 },
+    })
+    expect(after.freeItems).toEqual(t.freeItems)
+    expect(after.blocks.find((b) => b.id === BANNER)).toMatchObject({
+      id: BANNER,
+      type: 'image',
+      span: { w: 3, h: 2 },
+      props: before.props,
+      style: before.style,
+    })
+    expect(after.blocks.find((b) => b.id === CAL)?.row).toBe(2)
+    expect(valid(after)).toBe(true)
+    expect(undo(commit(createHistory(t), after)).present).toEqual(t)
+  })
+  it('칸 크기가 이동·복제·기본 크기 선택에도 반영된다', () => {
+    const t = run(base(), {
+      type: 'block/resizeImage',
+      id: BANNER,
+      rect: { col: 0, row: 0, w: 3, h: 1 },
+    })
+    expect(err(t, { type: 'block/move', id: BANNER, col: 6, row: 0 })).toBe('collision')
+    const copied = run(t, { type: 'block/duplicate', id: BANNER, newId: U(99) })
+    expect(copied.blocks.find((b) => b.id === U(99))).toMatchObject({ span: { w: 3, h: 1 } })
+    expect(valid(copied)).toBe(true)
+    const reset = run(t, { type: 'block/resize', id: BANNER, size: 'W' })
+    expect(reset.blocks.find((b) => b.id === BANNER)).not.toHaveProperty('span')
+    expect(blockRect(reset.blocks.find((b) => b.id === BANNER)!)).toMatchObject({ w: 8, h: 1 })
+  })
+  it('빈 공간이 없거나 잘못된 칸 수면 원본을 유지한다', () => {
+    const t = base()
+    expect(
+      err(t, { type: 'block/resizeImage', id: BANNER, rect: { col: 0, row: 0, w: 8, h: 5 } }),
+    ).toBe('no_room')
+    expect(
+      err(t, { type: 'block/resizeImage', id: BANNER, rect: { col: 0, row: 0, w: 2.5, h: 1 } }),
+    ).toBe('size_not_allowed')
+    expect(
+      err(t, { type: 'block/resizeImage', id: TODO, rect: { col: 0, row: 0, w: 3, h: 2 } }),
+    ).toBe('not_found')
+    expect(t).toEqual(base())
+  })
+  it('자유 이미지를 블록으로 되돌리고 한 번에 취소한다', () => {
+    const item = newFreeItem('image', U(90), asset, { x: 300, y: 300 })
+    Object.assign(item, { x: 25, y: 805, w: 560, h: 170 })
+    const t = run(base(), { type: 'asset/add', asset }, { type: 'free/add', item })
+    const next = run(t, { type: 'free/gridImage', id: item.id })
+    expect(next.freeItems).toHaveLength(0)
+    expect(next.blocks.find((b) => b.id === item.id)).toMatchObject({
+      type: 'image',
+      col: 0,
+      row: 4,
+      span: { w: 3, h: 1 },
+      props: item.kind === 'image' ? item.content : {},
+    })
+    expect(valid(next)).toBe(true)
+    expect(undo(commit(createHistory(t), next)).present).toEqual(t)
   })
 })

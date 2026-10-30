@@ -177,6 +177,40 @@ async function fill(c: Awaited<ReturnType<Awaited<ReturnType<typeof setup>>['cli
 }
 
 describe('full sync', () => {
+  it('preserves custom image cells and photos across two clients and server', async () => {
+    const s = await setup(),
+      a = await s.client(),
+      b = await s.client()
+    const data = await fill(a)
+    const theme = await a.env.core.themes.read(data.themeId)
+    const block = theme.blocks.find((x) => x.type === 'image')
+    if (!block || block.type !== 'image') throw new Error('missing fixture image')
+    block.span = { w: 3, h: 1 }
+    block.props.assetHash = data.photo.hash
+    block.style.bg = '#112233'
+    await a.env.core.themes.save(theme)
+    expect((await s.connect(a.service)).error).toBeNull()
+    await s.connect(b.service)
+    expect((await b.service.run('remote')).error).toBeNull()
+    expect((await a.service.run()).error).toBeNull()
+    const copy = await b.env.core.themes.read(data.themeId)
+    expect(copy.blocks.find((x) => x.id === block.id)).toMatchObject({
+      span: { w: 3, h: 1 },
+      props: block.props,
+      style: block.style,
+    })
+    const edited = copy.blocks.find((x) => x.id === block.id)!
+    if (edited.type !== 'image') throw new Error('wrong fixture image')
+    edited.span = { w: 1, h: 1 }
+    await b.env.core.themes.save(copy)
+    expect((await b.service.run()).error).toBeNull()
+    expect((await a.service.run()).error).toBeNull()
+    const back = await a.env.core.themes.read(data.themeId)
+    expect(back.blocks.find((x) => x.id === block.id)).toMatchObject({
+      span: { w: 1, h: 1 },
+      props: block.props,
+    })
+  })
   it.each(['connect', 'run'] as const)(
     'finishes %s when a theme read overlaps the renderer flush',
     async (kind) => {

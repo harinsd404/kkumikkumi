@@ -1,0 +1,24 @@
+# Start the API with KKUMI_LOCAL_PORT=18787 before starting this gateway.
+name: kkumikkumi-sync-tls
+services:
+  gateway:
+    image: nginx:1.29.7-alpine
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      KKUMI_PUBLIC_IP: ${KKUMI_PUBLIC_IP:?Set the public IPv4 address}
+      NGINX_ENVSUBST_FILTER: KKUMI_PUBLIC_IP
+    volumes:
+      - ./${KKUMI_TLS_CONFIG:-https}.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ${KKUMI_TLS_STATE:-/var/lib/kkumikkumi-tls}/webroot:/var/www/acme:ro
+      - ${KKUMI_TLS_STATE:-/var/lib/kkumikkumi-tls}/letsencrypt:/etc/letsencrypt:ro
+    logging:
+      driver: local
+  certbot:
+    image: certbot/certbot:v5.8.0
+    profiles: [tools]
+    volumes:
+      - ${KKUMI_TLS_STATE:-/var/lib/kkumikkumi-tls}/webroot:/var/www/acme
+      - ${KKUMI_TLS_STATE:-/var/lib/kkumikkumi-tls}/letsencrypt:/etc/letsencrypt
+      - ${KKUMI_TLS_STATE:-/var/lib/kkumikkumi-tls}/lib:/var/lib/letsencrypt
+      - ${KKUMI_TLS_STATE:-/var/lib/kkumikkumi-tls}/logs:/var/log/letsencrypt

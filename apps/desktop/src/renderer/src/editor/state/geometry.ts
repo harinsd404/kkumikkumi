@@ -1,4 +1,4 @@
-import { CANVAS, type FreeItem } from '@kkumikkumi/schema'
+import { CANVAS, type FreeItem, type GridRect } from '@kkumikkumi/schema'
 import { BOARD_GAP, BOARD_PADDING, pitchX, pitchY } from '../../board/layout'
 
 export interface Point {
@@ -48,6 +48,26 @@ export function clampPosition(x: number, y: number, w: number, h: number): Point
 
 type Box = Pick<FreeItem, 'x' | 'y' | 'w' | 'h' | 'rotation'>
 export type Corner = 'nw' | 'ne' | 'sw' | 'se'
+
+/** 이미지 블록 모서리를 한 칸 단위로 늘린다. 반대 모서리와 보드 경계를 지킨다. */
+export function resizeGridFromCorner(b: GridRect, corner: Corner, delta: Point): GridRect {
+  const dx = Math.round(delta.x / pitchX)
+  const dy = Math.round(delta.y / pitchY)
+  const left = corner.endsWith('w') ? clamp(b.col + dx, 0, b.col + b.w - 1) : b.col
+  const top = corner.startsWith('n') ? clamp(b.row + dy, 0, b.row + b.h - 1) : b.row
+  const right = corner.endsWith('e') ? clamp(b.col + b.w + dx, b.col + 1, CANVAS.cols) : b.col + b.w
+  const bottom = corner.startsWith('s')
+    ? clamp(b.row + b.h + dy, b.row + 1, CANVAS.rows)
+    : b.row + b.h
+  return { col: left, row: top, w: right - left, h: bottom - top }
+}
+
+/** 자유 이미지를 가장 가까운 블록 칸으로 되돌릴 때 쓸 위치와 칸 수. */
+export function imageGridRect(b: Pick<FreeItem, 'x' | 'y' | 'w' | 'h'>): GridRect {
+  const w = clamp(Math.round((b.w + BOARD_GAP) / pitchX), 1, CANVAS.cols)
+  const h = clamp(Math.round((b.h + BOARD_GAP) / pitchY), 1, CANVAS.rows)
+  return { ...snapToCell(b.x, b.y, w, h), w, h }
+}
 
 const SIGN: Record<Corner, Point> = {
   nw: { x: -1, y: -1 },
