@@ -19,6 +19,7 @@ import { usePointerTrack } from '../board/pointerTrack'
 import {
   panFocus,
   resizeFromCorner,
+  resizeGridFromCorner,
   rotationFromPointer,
   snapToCell,
   toLocalDelta,
@@ -26,6 +27,7 @@ import {
   type Point,
 } from './state/geometry'
 import type { AdjustTarget, EditorApi } from './useEditor'
+import { reduce } from './state/reducer'
 
 /** 화면 좌표 → 캔버스 좌표(갤러리에서 끌어 올 때 부모가 쓴다) */
 export type ToCanvas = (client: { clientX: number; clientY: number }) => Point
@@ -227,6 +229,34 @@ export function EditorOverlay({ ed, scale, onDropFile, incoming, toCanvasRef }: 
     )
   }
 
+  const startImageResize = (b: GridBlock, box: Box, corner: Corner) => (e: ReactPointerEvent) => {
+    if (e.button !== 0 || b.type !== 'image') return
+    e.stopPropagation()
+    e.preventDefault()
+    ed.adjust(null)
+    const start = toCanvas(e)
+    const original = blockRect(b)!
+    let last: { rect: GridRect; valid: boolean } | null = null
+    track(
+      (ev) => {
+        const p = toCanvas(ev)
+        const rect = resizeGridFromCorner(original, corner, { x: p.x - start.x, y: p.y - start.y })
+        const valid = reduce(t, { type: 'block/resizeImage', id: b.id, rect }).ok
+        last = { rect, valid }
+        setGhost({ rect, from: box, at: blockBox(rect), valid })
+      },
+      () => {
+        setGhost(null)
+        if (!last) return
+        if (!last.valid) {
+          ed.showNotice('다른 블록을 옮길 빈 칸이 없어서 크기를 유지했어요')
+          return
+        }
+        ed.dispatch({ type: 'block/resizeImage', id: b.id, rect: last.rect })
+      },
+    )
+  }
+
   const startRotate = (f: FreeItem) => (e: ReactPointerEvent) => {
     if (e.button !== 0) return
     e.stopPropagation()
@@ -338,7 +368,20 @@ export function EditorOverlay({ ed, scale, onDropFile, incoming, toCanvasRef }: 
                 ed.adjust({ kind: 'blockBg', id: b.id })
             }}
             aria-label={`${b.type} 블록`}
-          />
+          >
+            {selected &&
+              b.type === 'image' &&
+              CORNERS.map((c) => (
+                <span
+                  key={c}
+                  className={`ke-handle ke-handle--${c}`}
+                  style={{ width: px(12), height: px(12), margin: -px(6), borderWidth: px(1.5) }}
+                  onPointerDown={startImageResize(b, box, c)}
+                  title="칸 단위로 크기 조절"
+                  aria-label={`이미지 칸 크기 조절 ${c}`}
+                />
+              ))}
+          </div>
         )
       })}
       {front.map(freeHit)}

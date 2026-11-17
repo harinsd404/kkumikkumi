@@ -281,3 +281,45 @@ describe('blockRect', () => {
     expect(blockRect({ type: 'memo', col: 0, row: 0, size: 'W' })).toBeNull()
   })
 })
+
+describe('이미지의 직접 지정한 칸 수', () => {
+  const theme = (span: unknown) => {
+    const t = baseTheme()
+    const image = t.blocks.find((b: { type: string }) => b.type === 'image')!
+    t.blocks = [{ ...image, col: 0, row: 0, size: 'S', span }]
+    return t
+  }
+  it('1×1, 3×2, 8×5를 저장하고 실제 칸 수를 사용한다', () => {
+    for (const span of [
+      { w: 1, h: 1 },
+      { w: 3, h: 2 },
+      { w: 8, h: 5 },
+    ]) {
+      const t = theme(span)
+      expectOk(t)
+      expect(blockRect(t.blocks[0])).toEqual({ col: 0, row: 0, ...span })
+    }
+    expectOk(baseTheme())
+  })
+  it('소수·음수·초과·알 수 없는 키 및 이미지 이외의 span을 거부한다', () => {
+    for (const span of [
+      { w: 0, h: 1 },
+      { w: 9, h: 1 },
+      { w: 1, h: 6 },
+      { w: 1.5, h: 1 },
+      { w: 2, h: 2, px: 300 },
+    ])
+      expectBad(theme(span))
+    const t = baseTheme()
+    t.blocks[0].span = { w: 1, h: 1 }
+    expectBad(t)
+  })
+  it('새 칸 수로 보드 밖/다른 블록과의 겹침을 검사한다', () => {
+    const t = theme({ w: 3, h: 2 })
+    t.blocks[0].col = 6
+    expectBad(t, '범위')
+    t.blocks[0].col = 0
+    t.blocks.push({ ...t.blocks[0], id: U(987), col: 2 })
+    expectBad(t, '겹침')
+  })
+})

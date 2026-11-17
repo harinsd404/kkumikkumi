@@ -1,5 +1,6 @@
 import {
   ALLOWED_SIZES,
+  BLOCK_SIZES,
   blockRect,
   CANVAS,
   canPlace,
@@ -10,10 +11,11 @@ import {
   type Asset,
   type FreeItem,
   type GridBlock,
+  type GridRect,
   type Theme,
 } from '@kkumikkumi/schema'
 import { gridItems } from '../../board/layout'
-import { clampPosition, MIN_ITEM_SIZE } from './geometry'
+import { clampPosition, imageGridRect, MIN_ITEM_SIZE } from './geometry'
 
 /**
  * 에디터 동작 → 새 테마(순수). 실패하면 이유 코드를 돌려주고 테마는 그대로 둔다.
@@ -29,6 +31,7 @@ export type EditorAction =
     }
   | { type: 'block/move'; id: string; col: number; row: number }
   | { type: 'block/resize'; id: string; size: GridBlock['size'] }
+  | { type: 'block/resizeImage'; id: string; rect: GridRect }
   | { type: 'block/delete'; id: string }
   | { type: 'block/duplicate'; id: string; newId: string }
   | { type: 'block/style'; id: string; patch: Partial<GridBlock['style']> }
@@ -36,6 +39,7 @@ export type EditorAction =
   | { type: 'block/styleAll'; patch: Partial<GridBlock['style']> }
   | { type: 'block/props'; id: string; patch: Record<string, unknown> }
   | { type: 'free/add'; item: FreeItem }
+  | { type: 'free/gridImage'; id: string }
   | {
       type: 'free/update'
       id: string
@@ -95,6 +99,18 @@ const renumber = (items: FreeItem[]): FreeItem[] => {
 const topZ = (items: readonly FreeItem[], layer: FreeItem['layer']) =>
   items.filter((i) => i.layer === layer).reduce((m, i) => Math.max(m, i.z + 1), 0)
 
+const imageWithRect = (b: Extract<GridBlock, { type: 'image' }>, r: GridRect): GridBlock => {
+  const preset = Object.entries(BLOCK_SIZES.image).find(
+    ([, size]) => size.w === r.w && size.h === r.h,
+  )?.[0] as GridBlock['size'] | undefined
+  const next = { ...b, col: r.col, row: r.row }
+  if (preset) {
+    next.size = preset
+    delete next.span
+  } else next.span = { w: r.w, h: r.h }
+  return next
+}
+
 export function reduce(t: Theme, a: EditorAction): ReduceResult {
   switch (a.type) {
     case 'block/add': {
@@ -122,7 +138,9 @@ export function reduce(t: Theme, a: EditorAction): ReduceResult {
       if (!b) return fail('not_found')
       if (!(ALLOWED_SIZES[b.type] as readonly string[]).includes(a.size))
         return fail('size_not_allowed')
-      const r = blockRect({ ...b, size: a.size })
+      const resized = { ...b, size: a.size }
+      if (resized.type === 'image') delete resized.span
+      const r = blockRect(resized)
       // 겹치는 블록은 가장 가까운 빈자리로 민다. 밀 곳이 없으면 거부.
       const moves = r && placeWithPush(CANVAS, gridItems(t.blocks), a.id, r)
       if (!moves) return fail('no_room')
@@ -130,8 +148,30 @@ export function reduce(t: Theme, a: EditorAction): ReduceResult {
         ...t,
         blocks: t.blocks.map((x) => {
           const m = moves.get(x.id)
-          const next = m ? { ...x, ...m } : x
-          return (x.id === a.id ? { ...next, size: a.size } : next) as GridBlock
+          const source = x.id === a.id ? resized : x
+          return m ? { ...source, ...m } : source
+        }),
+      })
+    }
+    case 'block/resizeImage': {
+      const b = t.blocks.find((x) => x.id === a.id)
+      if (!b || b.type !== 'image') return fail('not_found')
+      if (![a.rect.col, a.rect.row, a.rect.w, a.rect.h].every(Number.isInteger))
+        return fail('size_not_allowed')
+      const moves = placeWithPush(CANVAS, gridItems(t.blocks), a.id, a.rect)
+      if (!moves) return fail('no_room')
+      const old = blockRect(b)!
+      if (old.w === a.rect.w && old.h === a.rect.h && moves.size === 0) return ok(t)
+      return ok({
+        ...t,
+        blocks: t.blocks.map((x) => {
+          const pos = moves.get(x.id)
+          if (x.id !== b.id) return pos ? { ...x, ...pos } : x
+          return imageWithRect(b, {
+            ...a.rect,
+            col: Math.max(0, Math.min(a.rect.col, CANVAS.cols - a.rect.w)),
+            row: Math.max(0, Math.min(a.rect.row, CANVAS.rows - a.rect.h)),
+          })
         }),
       })
     }
@@ -161,6 +201,27 @@ export function reduce(t: Theme, a: EditorAction): ReduceResult {
         mapBlock(t, a.id, (b) => ({ ...b, props: { ...b.props, ...a.patch } }) as GridBlock),
       )
 
+    case 'free/gridImage': {
+      const item = t.freeItems.find((f) => f.id === a.id)
+      if (!item || item.kind !== 'image') return fail('not_found')
+      if (item.locked) return fail('locked')
+      if (t.blocks.length >= CANVAS.cols * CANVAS.rows) return fail('no_space')
+      const rect = imageGridRect(item)
+      const moves = placeWithPush(CANVAS, gridItems(t.blocks), item.id, rect)
+      if (!moves) return fail('no_room')
+      const block = newBlock('image', 'S', item.id, rect.col, rect.row)
+      if (block.type !== 'image') return fail('not_found')
+      block.props = item.content
+      block.style = { ...block.style, ...item.decor, bg: null }
+      return ok({
+        ...t,
+        blocks: [
+          ...t.blocks.map((b) => (moves.has(b.id) ? { ...b, ...moves.get(b.id)! } : b)),
+          imageWithRect(block, rect),
+        ],
+        freeItems: t.freeItems.filter((f) => f.id !== item.id),
+      })
+    }
     case 'free/add': {
       if (t.freeItems.length >= 100) return fail('too_many')
       const item = {

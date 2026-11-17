@@ -1,3 +1,4 @@
+import { AssetImage } from '../ui/AssetImage'
 import type { GridBlock } from '@kkumikkumi/schema'
 import { useRef, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react'
 import { WIDGET_LABEL } from './blockLabels'
@@ -82,7 +83,7 @@ export function BlockView({ block, box }: { block: GridBlock; box: Box }) {
     >
       {bgImage && bgUrl && (
         <div className="kb-bgimg" aria-hidden>
-          <img
+          <AssetImage
             src={bgUrl}
             alt=""
             draggable={false}

@@ -4,6 +4,9 @@ import { protocol } from 'electron'
 import type { DiaryPhotoStore } from '../diary/photoStore'
 import type { ThemeStore } from '../themes/themeStore'
 import { ASSET_SCHEME, DIARY_HOST, parseAssetUrl } from './assetUrl'
+import { logError } from '../log'
+
+const notFound = () => new Response(null, { status: 404, headers: { 'cache-control': 'no-store' } })
 
 /** app ready 전에 호출해야 한다. CSP는 우회하지 않는다(bypassCSP 없음). */
 export function registerAssetScheme(): void {
@@ -16,7 +19,7 @@ export function registerAssetScheme(): void {
 export function handleAssetProtocol(themes: ThemeStore, diary: DiaryPhotoStore): void {
   protocol.handle(ASSET_SCHEME, async (request) => {
     const parsed = parseAssetUrl(request.url)
-    if (!parsed || request.method !== 'GET') return new Response(null, { status: 404 })
+    if (!parsed || request.method !== 'GET') return notFound()
     const mime = ASSET_MIME_BY_EXT[parsed.ext]
     try {
       const file =
@@ -32,8 +35,15 @@ export function handleAssetProtocol(themes: ThemeStore, diary: DiaryPhotoStore):
           'x-content-type-options': 'nosniff',
         },
       })
-    } catch {
-      return new Response(null, { status: 404 })
+    } catch (error) {
+      // Never record the URL/path (user content). Failed reads must not be cached:
+      // a sync restore or a transient filesystem error can make the next read succeed.
+      const code = (error as NodeJS.ErrnoException).code
+      logError(
+        '[asset] read',
+        ['ENOENT', 'EACCES', 'EPERM', 'EBUSY', 'EIO'].includes(code ?? '') ? code : 'failed',
+      )
+      return notFound()
     }
   })
 }

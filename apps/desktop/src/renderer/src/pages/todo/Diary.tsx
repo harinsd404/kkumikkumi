@@ -1,3 +1,4 @@
+import { AssetImage } from '../../ui/AssetImage'
 import {
   DIARY_MAX_CHARS,
   DIARY_MAX_PHOTOS,
@@ -45,7 +46,7 @@ export function DiaryCard({
           {entry.photos.length > 0 && (
             <span className="tdo-diary-thumbs">
               {entry.photos.map((p) => (
-                <img key={p.hash} src={diaryPhotoUrl(p)} alt="" draggable={false} />
+                <AssetImage key={p.hash} src={diaryPhotoUrl(p)} alt="" draggable={false} />
               ))}
             </span>
           )}
@@ -166,7 +167,7 @@ export function DiaryDialog({
         <div className="tdo-diary-photos">
           {photos.map((p) => (
             <figure key={p.hash}>
-              <img src={diaryPhotoUrl(p)} alt="" draggable={false} />
+              <AssetImage src={diaryPhotoUrl(p)} alt="" draggable={false} />
               <button
                 type="button"
                 aria-label="사진 빼기"

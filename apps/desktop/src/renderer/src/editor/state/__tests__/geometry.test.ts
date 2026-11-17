@@ -7,6 +7,8 @@ import {
   MIN_VISIBLE,
   panFocus,
   resizeFromCorner,
+  resizeGridFromCorner,
+  imageGridRect,
   rotationFromPointer,
   snapToCell,
   toLocalDelta,
@@ -140,5 +142,34 @@ describe('panFocus (사진 끌어서 위치 조정)', () => {
     const d = toLocalDelta(10, 0, 90)
     expect(d.dx).toBeCloseTo(0)
     expect(d.dy).toBeCloseTo(-10)
+  })
+})
+
+describe('이미지 칸 크기', () => {
+  const r = { col: 2, row: 1, w: 3, h: 2 }
+  it('칸의 절반 전까지 유지하고 이후 한 칸에 맞춘다', () => {
+    expect(resizeGridFromCorner(r, 'se', { x: 90, y: 90 })).toEqual(r)
+    expect(resizeGridFromCorner(r, 'se', { x: 110, y: 110 })).toEqual({ ...r, w: 4, h: 3 })
+  })
+  it.each([
+    ['nw', { col: 1, row: 0, w: 4, h: 3 }],
+    ['ne', { col: 2, row: 0, w: 2, h: 3 }],
+    ['sw', { col: 1, row: 1, w: 4, h: 1 }],
+    ['se', { col: 2, row: 1, w: 2, h: 1 }],
+  ] as const)('%s: 반대 모서리를 유지한다', (corner, expected) => {
+    expect(resizeGridFromCorner(r, corner, { x: -197, y: -195 })).toEqual(expected)
+  })
+  it('최소 1칸, 최대 보드 경계까지', () => {
+    expect(resizeGridFromCorner(r, 'se', { x: -9999, y: -9999 })).toEqual({ ...r, w: 1, h: 1 })
+    expect(resizeGridFromCorner(r, 'se', { x: 9999, y: 9999 })).toEqual({ ...r, w: 6, h: 4 })
+    expect(resizeGridFromCorner(r, 'nw', { x: -9999, y: -9999 })).toEqual({
+      col: 0,
+      row: 0,
+      w: 5,
+      h: 3,
+    })
+  })
+  it('이미 자유 크기가 된 배너도 가까운 칸으로 복귀한다', () => {
+    expect(imageGridRect({ x: 25, y: 25, w: 1528, h: 360 })).toEqual({ col: 0, row: 0, w: 8, h: 2 })
   })
 })

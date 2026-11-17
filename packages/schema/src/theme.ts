@@ -158,6 +158,12 @@ export const ProgressPeriodSchema = z.discriminatedUnion('kind', [
 
 const SizeSchema = z.enum(['S', 'M', 'L', 'W'])
 
+/** 이미지 블록의 직접 지정한 칸 수. 없으면 기존 S/M/L/W 크기를 사용한다. */
+export const ImageSpanSchema = z.strictObject({
+  w: z.number().int().min(1).max(CANVAS.cols),
+  h: z.number().int().min(1).max(CANVAS.rows),
+})
+
 const blockBase = {
   id: Uuid,
   size: SizeSchema,
@@ -195,6 +201,7 @@ export const BlockSchema = z.discriminatedUnion('type', [
   z.strictObject({
     ...blockBase,
     type: z.literal('image'),
+    span: ImageSpanSchema.optional(),
     props: ImageContentSchema,
   }),
   z.strictObject({
@@ -372,9 +379,11 @@ export const blockRect = (b: {
   col: number
   row: number
   size: string
+  span?: { w: number; h: number } | undefined
 }): GridRect | null => {
   const cells = blockCells(b.type, b.size)
-  return cells ? { col: b.col, row: b.row, ...cells } : null
+  if (!cells) return null
+  return { col: b.col, row: b.row, ...(b.type === 'image' && b.span ? b.span : cells) }
 }
 
 /* ───────── 테마 ───────── */
