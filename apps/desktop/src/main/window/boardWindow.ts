@@ -4,13 +4,8 @@ import type { AppCore } from '../bootstrap'
 import { maybeCaptureAndQuit } from '../devCapture'
 import { isTrustedFrame, secureWebPreferences } from '../security'
 import { loadApp, persistBounds } from './appWindow'
-import {
-  BOARD_RATIO,
-  fitWindowBounds,
-  MIN_BOARD_WIDTH,
-  TITLE_BAR_HEIGHT,
-  windowSizeForBoard,
-} from './geometry'
+import { adaptBoardToDisplays } from './displayFit'
+import { fitWindowBounds, MIN_BOARD_WIDTH, windowSizeForBoard } from './geometry'
 
 let boardWin: BrowserWindow | null = null
 let quitting = false
@@ -43,7 +38,8 @@ export function createBoardWindow(getCore: () => AppCore | null): BrowserWindow 
     ...bounds,
     minWidth: min.width,
     minHeight: min.height,
-    useContentSize: true,
+    // 이전 저장값은 콘텐츠 크기, 새 저장값은 일반 상태의 창 경계로 복원한다.
+    useContentSize: saved?.maximized === undefined,
     show: false,
     title: APP_DISPLAY_NAME,
     // 타이틀바는 앱이 그린다(보드 위 36px). 신호등 버튼은 시스템 것을 쓰고 위치만 맞춘다.
@@ -57,13 +53,17 @@ export function createBoardWindow(getCore: () => AppCore | null): BrowserWindow 
   win.on('closed', () => {
     if (boardWin === win) boardWin = null
   })
-  // extraSize: 콘텐츠 안쪽의 타이틀바 높이. 창-콘텐츠 크기 차이는 API가 이미 반영한다(electron.d.ts).
-  win.setAspectRatio(BOARD_RATIO, { width: 0, height: TITLE_BAR_HEIGHT })
-  win.once('ready-to-show', () => win.show())
+  // 보드만 렌더러에서 균일 축소한다. 창에 비율 제한을 걸면 16:9 모니터에 틈이 남는다.
+  adaptBoardToDisplays(win, screen)
+  win.once('ready-to-show', () => {
+    if (saved?.maximized) win.maximize()
+    win.show()
+  })
   maybeCaptureAndQuit(win)
 
   const flushBounds = persistBounds(win, {
     resize: true,
+    normalBounds: true,
     save: (b) => getCore()?.repos.windowState.save(b),
     skip: () => win.isFullScreen() || win.isMinimized(),
   })

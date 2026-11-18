@@ -396,6 +396,8 @@ export const WindowStateSchema = z.strictObject({
   y: z.number().int(),
   width: z.number().int().min(1).max(20000),
   height: z.number().int().min(1).max(20000),
+  /** 보드 창만 사용. 없으면 이전 버전의 콘텐츠 경계이며, 있으면 일반 상태의 창 경계. */
+  maximized: z.boolean().optional(),
 })
 
 export type WindowState = z.infer<typeof WindowStateSchema>

@@ -2,6 +2,13 @@
 
 공식 문서, npm 레지스트리, 설치된 패키지, 실측으로 확인한 내용만 적는다. 형식: 항목 / 결론 / 출처 / 버전 / 확인일.
 
+## 모니터 맞춤 창 크기 (2026-11-18)
+
+- Electron 44.7.0의 `getNormalBounds()`는 최대화·최소화·전체 화면 중에도 일반 창 경계를 반환한다. 보드 창은 이 경계와 `isMaximized()`를 저장하고 다음 실행에서 `maximize()`로 복원한다. 이전 콘텐츠 경계만 있는 저장값도 읽는다.
+- `screen`의 `display-added`, `display-removed`, `display-metrics-changed`로 화면 연결과 작업 영역·배율·회전 변경을 감지한다. 화면 좌표는 DIP 기준으로 처리하고 물리 픽셀 배율을 다시 곱하지 않는다.
+- 창의 `setAspectRatio` 제한을 제거하고 렌더러 보드에만 균일 스케일을 유지한다. 실제 Electron 격리 프로필에서 넓은 창/높은 창, 작업 영역 전체 너비 최대화, 최대화 저장·재실행·일반 크기 복원을 검사한다. 실제 모니터 분리와 Windows 125/150% 배율은 별도 수동 확인 대상이다.
+- 출처: [BrowserWindow](https://www.electronjs.org/docs/latest/api/browser-window), [screen](https://www.electronjs.org/docs/latest/api/screen), 설치된 `electron.d.ts` 및 `pnpm --filter @kkumikkumi/desktop test:window`. 새 의존성은 없다.
+
 ## 환경
 
 | 항목                    | 결론                                                                         | 출처                                                       | 버전   | 확인일     |
