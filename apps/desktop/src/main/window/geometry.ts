@@ -1,6 +1,6 @@
 import type { WindowState } from '@kkumikkumi/schema'
 
-/** 보드 비율 16:10 + 앱이 그리는 타이틀바 높이(콘텐츠 안쪽이라 setAspectRatio의 extraSize로 전달) */
+/** 최초 창 크기에만 사용하는 보드 비율. 실제 창 크기/최대화는 모니터 비율을 따른다. */
 export const BOARD_RATIO = 16 / 10
 export const TITLE_BAR_HEIGHT = 36
 export const DEFAULT_BOARD_WIDTH = 1280
@@ -19,12 +19,26 @@ export const windowSizeForBoard = (boardWidth: number) => ({
   height: Math.round(boardWidth / BOARD_RATIO) + TITLE_BAR_HEIGHT,
 })
 
-const intersects = (a: Rect, b: Rect) =>
-  a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
+const overlap = (a: Rect, b: Rect) =>
+  Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) *
+  Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y))
+
+/** 두 화면에 걸친 창은 가장 많이 겹치는 작업 영역을 사용한다. */
+export function windowWorkArea(
+  saved: Rect | null,
+  workAreas: readonly Rect[],
+  primary: Rect,
+): Rect {
+  if (!saved) return primary
+  return workAreas.reduce(
+    (best, area) => (overlap(saved, area) > overlap(saved, best) ? area : best),
+    primary,
+  )
+}
 
 /**
  * 저장된 창 상태를 현재 화면에 맞게 보정한다(순수 함수).
- * - 비율은 저장값의 폭 기준으로 다시 계산(setSize는 aspect ratio를 강제하지 않음)
+ * - 저장된 가로/세로 크기를 독립적으로 유지한다(16:9·세로 화면도 허용).
  * - 작업 영역보다 크면 줄이고, 어떤 화면과도 겹치지 않으면 주 화면 가운데로
  */
 export function fitWindowBounds(
@@ -32,17 +46,15 @@ export function fitWindowBounds(
   workAreas: readonly Rect[],
   primary: Rect,
 ): Rect {
-  const target = saved ? workAreas.find((w) => intersects(w, saved)) : undefined
-  const area = target ?? primary
-  const maxBoardWidth = Math.min(area.width, (area.height - TITLE_BAR_HEIGHT) * BOARD_RATIO)
-  const wanted = saved?.width ?? DEFAULT_BOARD_WIDTH
-  const boardWidth = Math.max(
-    Math.min(MIN_BOARD_WIDTH, maxBoardWidth),
-    Math.min(wanted, maxBoardWidth),
-  )
-  const size = windowSizeForBoard(boardWidth)
+  const area = windowWorkArea(saved, workAreas, primary)
+  const defaults = windowSizeForBoard(DEFAULT_BOARD_WIDTH)
+  const min = windowSizeForBoard(MIN_BOARD_WIDTH)
+  const size = {
+    width: Math.min(area.width, Math.max(min.width, saved?.width ?? defaults.width)),
+    height: Math.min(area.height, Math.max(min.height, saved?.height ?? defaults.height)),
+  }
 
-  if (saved && target) {
+  if (saved && overlap(saved, area) > 0) {
     // 화면 안으로 끌어들인다
     const x = Math.min(Math.max(saved.x, area.x), area.x + area.width - size.width)
     const y = Math.min(Math.max(saved.y, area.y), area.y + area.height - size.height)

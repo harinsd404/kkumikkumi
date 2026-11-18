@@ -74,7 +74,17 @@ export function Board({
 
   return (
     <BoardProvider value={ctx}>
-      <div ref={hostRef} className="kb-host" data-mode={mode}>
+      <div
+        ref={hostRef}
+        className="kb-host"
+        data-mode={mode}
+        style={{
+          background:
+            theme.background.type === 'color'
+              ? theme.background.color
+              : theme.defaults.palette.surface,
+        }}
+      >
         <div className="kb-canvas" style={canvasStyle}>
           <Background />
           <div className="kb-layer">

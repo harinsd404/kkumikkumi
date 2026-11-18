@@ -14,20 +14,38 @@ export function loadApp(win: BrowserWindow, hash?: string): void {
  */
 export function persistBounds(
   win: BrowserWindow,
-  o: { resize: boolean; save(b: WindowState): void; skip?(): boolean },
+  o: { resize: boolean; normalBounds?: boolean; save(b: WindowState): void; skip?(): boolean },
 ): () => void {
   let saveTimer: NodeJS.Timeout | undefined
   const saveNow = () => {
     if (win.isDestroyed() || o.skip?.()) return
-    const b = win.getContentBounds()
-    o.save({ x: b.x, y: b.y, width: b.width, height: b.height })
+    // 최대화 크기로 일반 창 크기를 덮어쓰지 않는다. Windows의 OS 프레임도 포함한다.
+    const b = o.normalBounds ? win.getNormalBounds() : win.getContentBounds()
+    o.save({
+      x: b.x,
+      y: b.y,
+      width: b.width,
+      height: b.height,
+      ...(o.normalBounds ? { maximized: win.isMaximized() } : {}),
+    })
   }
   const schedule = () => {
     clearTimeout(saveTimer)
     saveTimer = setTimeout(saveNow, 500)
   }
   if (o.resize) win.on('resize', schedule)
+  if (o.normalBounds) {
+    win.on('maximize', schedule)
+    win.on('unmaximize', schedule)
+  }
   win.on('move', schedule)
+  win.once('closed', () => {
+    clearTimeout(saveTimer)
+    win.removeListener('resize', schedule)
+    win.removeListener('move', schedule)
+    win.removeListener('maximize', schedule)
+    win.removeListener('unmaximize', schedule)
+  })
   return () => {
     clearTimeout(saveTimer)
     saveNow()

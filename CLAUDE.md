@@ -24,7 +24,7 @@ macOS와 Windows x64용 데스크탑 앱. 사용자가 일반 창 안의 "보드
   - 테마 색은 defaults.palette(text, subText, accent, check, surface, control), 배경은 색 + 내장 무늬(stars/dots). 블록 style의 null 값은 팔레트로 대체.
   - 자유 배치 레이어: 스티커와 이미지. 위치/크기/회전/z-order, back/front 레이어.
   - 이미지 블록: 그리드 image 블록과 자유 image 아이템이 같은 ImageContent 구조를 공유.
-- 리사이즈: 고정 논리 캔버스(1600x1000, 8x5 그리드)를 균일 스케일로 그리고 창 비율을 잠근다. 반응형 재배치 없음.
+- 리사이즈: 창은 자유 비율로 늘리고 모니터 작업 영역까지 최대화한다. 보드만 고정 논리 캔버스(1600x1000, 8x5 그리드)를 균일 스케일로 그리며 남는 영역은 테마 색으로 채운다. 위젯 반응형 재배치 없음.
 - 데이터: 로컬 우선. 2026-10-23 사용자 지시로 선택적 개인 서버 동기화를 추가한다. v2는 할 일·카테고리·스프린트·메모·일정·시간표·습관/체크·일기/사진·타이머 기록·테마/이미지/규칙·색 조합·공통 설정을 동기화한다. 접속키·MCP 권한·창 위치·실행 중 타이머는 기기별로 유지한다. 마지막으로 확인한 서버 문서와 로컬 DB 차이를 영속 변경 목록으로 사용하며, revision과 3-way merge로 충돌을 처리한다. `docs/self-hosting.md` 참고.
 - 저장: 사용자 데이터는 SQLite(node:sqlite, 2026-10-12 결정 — better-sqlite3는 Electron 44 prebuild 없음), 테마는 폴더(theme.json + assets/<hash>.<ext>).
 - 에셋: sharp로 재인코딩. 저장 포맷은 PNG/JPEG로 정규화(WebP는 투명이면 PNG, 아니면 JPEG), 펫은 PNG만. 긴 변 상한 image 3200px / pet 512px.
@@ -45,9 +45,9 @@ macOS와 Windows x64용 데스크탑 앱. 사용자가 일반 창 안의 "보드
 
 ## 가정 (미확정, 변경 가능)
 
-- 창 비율 전역 고정(16:10).
+- 최초 창 크기는 보드 16:10을 기준으로 하며, 이후 창 비율은 자유롭다.
 - 크기표(2026-10-12 시안 반영): 8x5 그리드(1칸 200px). calendar M=2x2/L=4x3, todo S=2x2/M=2x3/L=4x3, timer S=2x1/M=2x2, image S=2x1/M=2x2/L=4x3/W=8x1, memo S=2x2/M=2x3/L=4x3, timetable S=2x2/M=2x3/L=4x3, dday S=2x1/M=2x2, studyStats·progress·clock·sprint S=2x1/M=2x2, habits S=2x1/M=2x2/L=4x3. 단일 출처는 packages/schema의 BLOCK_SIZES.
-- 창: 앱이 그리는 타이틀바 36px(titleBarStyle hiddenInset) + 보드 16:10. setAspectRatio(16/10, { height: 36 }).
+- 창: 앱이 그리는 타이틀바 36px(titleBarStyle hiddenInset). 일반 창 경계와 최대화 여부를 기기별로 저장한다. 모니터 연결/해제·작업 영역/배율 변경 시 현재 화면에 맞춘다.
 - 이미지 블록/스티커 업로드는 PNG/JPG/WebP 허용, 펫 이미지는 PNG만.
 - 펫 이동 방식(작은 창 이동 vs 하단 오버레이)은 M0 스파이크 결과로 결정.
 
@@ -110,6 +110,12 @@ macOS와 Windows x64용 데스크탑 앱. 사용자가 일반 창 안의 "보드
 
 ## 마일스톤
 
+- [x] **모니터 맞춤 창 크기 (2026-11-18, 사용자 요청)**
+  - 창의 16:10 강제 비율을 제거하고 최대화 여부와 일반 창 크기를 함께 복원한다.
+  - 화면 변경 시 가장 많이 겹치는 모니터의 작업 영역으로 보정하며, 최대화·전체 화면·최소화 동작을 구분한다.
+  - 일반 페이지는 창을 채우고 보드는 전체 레이아웃이 보이도록 균일 축소한다. 사진/글자 비율과 저장된 테마는 바꾸지 않는다.
+  - 순수 창 경계/화면 이벤트/저장 테스트 및 macOS·Windows 실제 Electron 최대화·재실행·복원 검사를 추가했다.
+
 - [x] **이미지 위젯 칸 단위 크기 (2026-10-26, 사용자 정정 반영)**
   - 이미지 위젯은 자유 배치로 전환하지 않는다. 네 모서리 드래그와 가로·세로 칸 입력으로 1×1~8×5 그리드에 맞춘다.
   - 기존 S/M/L/W를 유지하며, 직접 지정한 칸 수는 이미지 블록의 선택적 `span`에 저장한다. 이동·복제·겹침 검증에도 같은 칸 수를 사용한다.
@@ -130,7 +136,7 @@ macOS와 Windows x64용 데스크탑 앱. 사용자가 일반 창 안의 "보드
   - 타입 있는 IPC + main 재검증. themes, assets.import, settings, todo/calendar/timer CRUD.
 
 - [x] **M2 보드 렌더러(읽기 전용)**
-  - 순수 React. 논리 캔버스를 transform: scale로 균일 스케일. setAspectRatio로 창 비율 잠금(extraSize 고려), 최소 창 크기, 창 크기/위치 저장·복원.
+  - 순수 React. 논리 캔버스를 transform: scale로 균일 스케일. 창은 자유 비율이며 최소 창 크기, 일반 창 경계와 최대화 상태를 저장·복원한다.
   - 렌더 순서: 배경 → back 자유 아이템 → 그리드 블록 → front 자유 아이템(레이어 내 z 순서).
   - StyleSchema/DecorSchema → CSS 변환 함수(shadow 프리셋 매핑 등). 원시 CSS 문자열 경로 금지.
   - calendar/todo/timer는 크기별 플레이스홀더. image 블록은 fit/focus/zoom/shape 반영. 스티커 레지스트리(builtin + asset).

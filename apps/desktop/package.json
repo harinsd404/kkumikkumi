@@ -1,6 +1,6 @@
 {
   "name": "@kkumikkumi/desktop",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "private": true,
   "description": "꾸미꾸미",
   "main": "./out/main/index.js",
@@ -13,7 +13,8 @@
     "test:images": "node scripts/test-images.mjs",
     "dist": "electron-vite build && electron-builder --mac --arm64",
     "dist:win": "electron-vite build && electron-builder --win --x64",
-    "test:editor": "node scripts/test-editor.mjs"
+    "test:editor": "node scripts/test-editor.mjs",
+    "test:window": "node scripts/test-window.mjs"
   },
   "dependencies": {
     "sharp": "0.35.5"
